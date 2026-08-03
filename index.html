@@ -126,9 +126,7 @@ body{min-width:1160px}
 .card-comment-edit{height:24px;border:0;border-radius:999px;background:#EAF8FD;color:#007EA8;font-size:10px;font-weight:860;padding:0 8px;cursor:pointer}
 .card-comment-preview{font-size:11px;line-height:1.35;color:#56636C;min-height:15px;white-space:pre-wrap}
 .card-comment-preview.empty{color:#A0AAB2}
-.card-comment-overlay{position:absolute;left:20px;right:20px;top:74px;z-index:6;background:rgba(31,38,43,.94);color:#fff;border-radius:16px;padding:12px 13px;box-shadow:0 18px 42px rgba(31,38,43,.22);font-size:12px;line-height:1.45;opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .16s ease,transform .16s ease;white-space:pre-wrap}
-.kpi-card.has-comment:hover .card-comment-overlay{opacity:1;transform:translateY(0)}
-.card-comment-overlay b{display:block;margin-bottom:4px;color:#BFEAF6;font-size:11px}
+
 .metric-definition-drawer{position:fixed;right:20px;top:20px;bottom:20px;z-index:50;width:min(460px,calc(100vw - 40px));overflow:auto;background:#fff;border:1px solid #DCE8EE;border-radius:24px;box-shadow:0 28px 70px rgba(31,38,43,.22);padding:18px}.metric-definition-drawer[hidden]{display:none}.metric-definition-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid #EAF0F4;padding-bottom:14px;margin-bottom:14px}.metric-definition-head span{display:block;font-size:10px;color:var(--blue-dark);font-weight:900;letter-spacing:.08em;text-transform:uppercase}.metric-definition-head h2{font-size:21px;line-height:1.15;margin:5px 0 0;color:var(--ink);letter-spacing:-.04em}.metric-definition-close{height:30px;width:30px;border:0;border-radius:50%;background:#F1F5F8;color:#53616B;font-size:18px;cursor:pointer}.metric-definition-body{display:grid;gap:12px}.metric-definition-purpose{margin:0;padding:11px 12px;border-radius:14px;background:#F7FBFD;color:#39434B;font-size:13px;line-height:1.45}.metric-definition-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric-definition-grid div{border:1px solid #EAF0F4;border-radius:13px;padding:9px;background:#fff}.metric-definition-grid span,.metric-definition-section h3{display:block;margin:0 0 4px;color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.03em;text-transform:uppercase}.metric-definition-grid b{display:block;color:var(--ink);font-size:12px;line-height:1.35}.metric-definition-section{border-top:1px solid #EEF2F5;padding-top:11px}.metric-definition-section ul{display:grid;gap:5px;margin:0;padding-left:17px;color:#44515A;font-size:12px;line-height:1.4}.metric-definition-status{display:inline-flex;width:max-content;border-radius:999px;padding:5px 8px;background:#FFF7DE;color:#8D6500;font-size:11px;font-weight:900}
 /* [2026-07-19] top-chart-preserved UX refresh — 기존 월별 stacked bar chart를 유지하되, 빈님 피드백에 따라 주요 써머리는 좌상단에 두고 차트/축 라벨 겹침을 방지한다. */
 .summary-card{background:linear-gradient(180deg,#FFFFFF 0%,#F8FCFD 100%);border-color:#DDEAF0;border-radius:30px;padding:22px 24px 20px;box-shadow:0 0 0 1px rgba(31,38,43,.045),0 18px 44px rgba(31,38,43,.075);overflow:visible}
@@ -623,7 +621,7 @@ body{min-width:1160px}
         <div class="kpi-card-actions"><button type="button" class="metric-definition-open" data-metric-definition-open>정의</button><span class="status watch" data-card-status>관찰</span></div>
       </header>
       <div class="revenue-hero" aria-label="라이브매출 핵심 숫자">
-        <div class="metric-big primary monthly-card"><span data-card-primary-label>금월 누적 예측</span><strong data-card-primary-value>1.84억</strong><div class="monthly-sub"><em data-card-target>목표 2.12억</em><em class="mom" data-card-delta>전월 -33.3%</em><em class="next-forecast" data-card-next-forecast>차월예측 2.17억</em></div></div>
+        <div class="metric-big primary monthly-card"><span data-card-primary-label>금월 누적 예측</span><strong data-card-primary-value>1.84억</strong><div class="monthly-sub"><em data-card-target>목표 2.12억</em><em class="mom" data-card-delta>전월 -33.3%</em><em class="next-forecast" data-card-next-forecast>차월예측 2.17억</em></div><button type="button" class="sales-breakdown-trigger" aria-describedby="livePackageProgress">패키지 진행</button><div id="livePackageProgress" class="sales-breakdown-popover" role="tooltip" data-card-package-progress><div class="sales-breakdown-head"><span>7월 패키지별 진행</span><em>30건</em></div><ul class="sales-breakdown-list"><li class="sales-breakdown-row"><span>에센셜 <small>15건</small></span></li><li class="sales-breakdown-row"><span>스마트 <small>9건</small></span></li><li class="sales-breakdown-row"><span>시그니처 <small>6건</small></span></li></ul><div class="sales-breakdown-total"><span>진행 합계</span><b>30건</b></div></div></div>
         <div class="metric-big rate rate-ring-card watch" data-card-rate-card><span>달성률</span><div class="rate-ring" data-card-ring style="--p:86.8;--ring:#F3B83F"><div><strong data-card-rate>86.8%</strong><em data-card-rate-basis>월간 기준</em></div></div></div>
       </div>
       <div class="metric-value-grid weekly-metric-table" data-card-metric-grid aria-label="라이브매출 기간 비교">
@@ -864,8 +862,42 @@ window.__MBD_SOT_DATA__ = {"meta":{"title":"MBD H2 KR Dashboard","built_at_kst":
    if(!rows.length)return `<div class="sales-breakdown-head"><span>${esc(month)} 판매 구성</span><em>0건</em></div><p class="sales-breakdown-empty">계약 시작일 기준 판매 구성이 없습니다.</p>`;
    const list=rows.map(row=>`<li class="sales-breakdown-row"><span>${esc(row.label)} <small>${esc(row.count)}건</small></span><b>${esc(row.value_label)}</b></li>`).join('');
    return `<div class="sales-breakdown-head"><span>${esc(month)} 판매 구성</span><em>${count}건</em></div><ul class="sales-breakdown-list">${list}</ul><div class="sales-breakdown-total"><span>커머스 귀속 금액 합계</span><b>${esc(item?.actual_label||item?.actual_eok_label||'-')}</b></div>`;
- }
- const definitionDrawer=$('#metricDefinitionDrawer'); const definitionTitle=$('#metricDefinitionTitle'); const definitionBody=$('#metricDefinitionBody');
+   }
+   // [2026-08-03] 라이브매출: 동일 매출 원천(live.cost_raw)의 AF 패키지비 행을 패키지별 진행 건수로 집계. 금액은 이 팝오버에 중복 노출하지 않는다.
+   const LIVE_PACKAGE_PROGRESS=Object.freeze({
+   month:{
+     '2026-01':[{label:'에센셜',count:8},{label:'시그니처',count:6},{label:'스마트',count:2}],
+     '2026-02':[{label:'시그니처',count:7},{label:'에센셜',count:6},{label:'스마트',count:2},{label:'재방송',count:2}],
+     '2026-03':[{label:'에센셜',count:13},{label:'시그니처',count:8},{label:'스마트',count:2}],
+     '2026-04':[{label:'에센셜',count:17},{label:'시그니처',count:4},{label:'스마트',count:2},{label:'재방송',count:2}],
+     '2026-05':[{label:'에센셜',count:12},{label:'시그니처',count:6},{label:'스마트',count:5},{label:'미디어패키지 - 시그니처',count:2},{label:'재방송',count:1}],
+     '2026-06':[{label:'에센셜',count:18},{label:'시그니처',count:13},{label:'스마트',count:5}],
+     '2026-07':[{label:'에센셜',count:15},{label:'스마트',count:9},{label:'시그니처',count:6}],
+     '2026-08':[{label:'에센셜',count:17},{label:'스마트',count:13},{label:'시그니처',count:8}],
+     '2026-09':[],'2026-10':[],'2026-11':[],'2026-12':[]
+   },
+   week:{
+     '2026-05-04':[{label:'시그니처',count:2},{label:'스마트',count:1},{label:'에센셜',count:1}],
+     '2026-05-11':[{label:'에센셜',count:3},{label:'스마트',count:2},{label:'미디어패키지 - 시그니처',count:1},{label:'시그니처',count:1}],
+     '2026-05-18':[{label:'에센셜',count:6},{label:'미디어패키지 - 시그니처',count:1},{label:'시그니처',count:1}],
+     '2026-05-25':[{label:'스마트',count:2},{label:'시그니처',count:2},{label:'에센셜',count:2}],
+     '2026-06-01':[{label:'에센셜',count:5},{label:'시그니처',count:3}],
+     '2026-06-08':[{label:'시그니처',count:6},{label:'에센셜',count:6},{label:'스마트',count:1}],
+     '2026-06-15':[{label:'에센셜',count:7},{label:'스마트',count:3},{label:'시그니처',count:2}],
+     '2026-06-22':[{label:'스마트',count:1},{label:'시그니처',count:1}],
+     '2026-06-29':[{label:'에센셜',count:2},{label:'시그니처',count:1}],
+     '2026-07-06':[{label:'에센셜',count:5},{label:'스마트',count:2},{label:'시그니처',count:2}],
+     '2026-07-13':[{label:'에센셜',count:5},{label:'시그니처',count:2},{label:'스마트',count:1}],
+     '2026-07-20':[{label:'스마트',count:4},{label:'에센셜',count:3},{label:'시그니처',count:1}]
+   }
+   });
+   function renderLivePackageProgress(period,item){
+   const rows=LIVE_PACKAGE_PROGRESS[period]?.[item?.id]||[]; const count=rows.reduce((sum,row)=>sum+Number(row.count||0),0); const label=period==='week'?(item?.short_label||item?.label||'선택주'):(item?.label||'선택월');
+   if(!rows.length)return `<div class="sales-breakdown-head"><span>${esc(label)} 패키지별 진행</span><em>0건</em></div><p class="sales-breakdown-empty">진행 패키지 원천이 없습니다.</p>`;
+   const list=rows.map(row=>`<li class="sales-breakdown-row"><span>${esc(row.label)} <small>${esc(row.count)}건</small></span></li>`).join('');
+   return `<div class="sales-breakdown-head"><span>${esc(label)} 패키지별 진행</span><em>${count}건</em></div><ul class="sales-breakdown-list">${list}</ul><div class="sales-breakdown-total"><span>진행 합계</span><b>${count}건</b></div>`;
+   }
+   const definitionDrawer=$('#metricDefinitionDrawer'); const definitionTitle=$('#metricDefinitionTitle'); const definitionBody=$('#metricDefinitionBody');
  function openMetricDefinition(metricId){
    const m=data.metric_contract_snapshot?.metrics?.[metricId]; if(!m||!definitionDrawer||!definitionBody)return;
    const target=m.target_presentation||{}; const targetStatus=String(target.status||'provisional').toUpperCase();
@@ -920,6 +952,10 @@ window.__MBD_SOT_DATA__ = {"meta":{"title":"MBD H2 KR Dashboard","built_at_kst":
      const salesBreakdown=card.querySelector('[data-card-sales-breakdown]'); if(salesBreakdown){
        salesBreakdown.innerHTML=renderAdIntSalesBreakdown(period,item);
        const trigger=card.querySelector('.sales-breakdown-trigger'); if(trigger){trigger.textContent=period==='week'?'월별 구성':'판매 구성'; trigger.setAttribute('aria-label',`${item.label||'선택 기간'} ${period==='week'?'월별 ':' '}판매 구성 보기`);}
+     }
+     const packageProgress=card.querySelector('[data-card-package-progress]'); if(packageProgress){
+       packageProgress.innerHTML=renderLivePackageProgress(period,item);
+       const trigger=card.querySelector('.sales-breakdown-trigger'); if(trigger){trigger.textContent='패키지 진행'; trigger.setAttribute('aria-label',`${item.label||'선택 기간'} 패키지별 진행 건수 보기`);}
      }
      const grid=card.querySelector('[data-card-metric-grid]'); if(grid){
        const first=period==='week'?'선택주':'선택월'; const deltaName=period==='week'?'WoW':'MoM';
@@ -1046,7 +1082,6 @@ function updateLiveGmvQualityCard(period,p,idx){
      const zone=document.createElement('div'); zone.className='card-comment-zone';
      zone.innerHTML='<div class="card-comment-head"><span>월별 코멘트 · 이 브라우저 저장</span><button type="button" class="card-comment-edit">수정</button></div><div class="card-comment-preview empty"></div>';
      foot.appendChild(zone);
-     const overlay=document.createElement('div'); overlay.className='card-comment-overlay'; card.appendChild(overlay);
      zone.querySelector('.card-comment-edit')?.addEventListener('click',e=>{
        e.stopPropagation();
        const team=commentTeam(card); const key=commentKey(team); const current=localStorage.getItem(key)||defaultComment(team,commentPeriodId())||'';
@@ -1059,10 +1094,9 @@ function updateLiveGmvQualityCard(period,p,idx){
  }
  function renderCardComment(card){
    const team=commentTeam(card); const saved=localStorage.getItem(commentKey(team)); const sample=defaultComment(team,commentPeriodId()); const text=saved||'';
-   const preview=card.querySelector('.card-comment-preview'); const overlay=card.querySelector('.card-comment-overlay');
+   const preview=card.querySelector('.card-comment-preview');
    if(preview){preview.textContent=text||sample||'수정 버튼으로 이 월/블록 코멘트 추가'; preview.classList.toggle('empty',!text);}
-   if(overlay)overlay.innerHTML=text?`<b>${esc(commentLabel(card))} · ${esc(trendPeriodLabel(activeSummaryPeriod,(topSummary[activeSummaryPeriod]?.periods||[])[summarySelection[activeSummaryPeriod]||0]))}</b>${esc(text)}`:'';
-   card.classList.toggle('has-comment',!!text);
+
  }
  function renderAllComments(){ensureCommentWidgets(); $$('[data-sync-revenue-card],[data-sync-quality-card]').forEach(renderCardComment);}
  renderSummaryPeriod('month',summarySelection.month||0);
@@ -1074,6 +1108,8 @@ function updateLiveGmvQualityCard(period,p,idx){
  function renderAllRaw(){renderPreview(data.raw_previews[$('#allRawSelector').value],'#allRawTable','#allRawInfo',$('#allRawSearch').value)}
  $$('.raw-tab').forEach(b=>b.addEventListener('click',()=>selectRawTeam(b.dataset.rawTeam))); $('#teamRawSearch')?.addEventListener('input',renderTeamRaw); $('#allRawSelector')?.addEventListener('change',renderAllRaw); $('#allRawSearch')?.addEventListener('input',renderAllRaw);
  selectRawTeam(activeRawTeam); renderAllRaw();
+ // 팝오버 버튼 클릭/Enter는 카드의 원천 데이터 탭 이동으로 전파하지 않는다.
+ $$('.sales-breakdown-trigger').forEach(button=>button.addEventListener('click',event=>event.stopPropagation()));
  $$('[data-team-card]').forEach(el=>el.addEventListener('click',()=>{activate('raw'); $('#teamRawSearch').value=''; selectRawTeam(el.dataset.teamCard);}));
 })();
 </script>
