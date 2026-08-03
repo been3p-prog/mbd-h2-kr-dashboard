@@ -159,6 +159,8 @@ body{min-width:1160px}
 .mbar:nth-child(1) i{animation-delay:.36s}.mbar:nth-child(2) i{animation-delay:.40s}.mbar:nth-child(3) i{animation-delay:.44s}.mbar:nth-child(4) i{animation-delay:.48s}.mbar:nth-child(5) i{animation-delay:.52s}.mbar:nth-child(6) i{animation-delay:.56s}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 @media(max-width:960px){body{min-width:0}.shell{padding:20px}.kpi-row{grid-template-columns:1fr}.rate-ring{width:88px;height:88px}.tabs{overflow:auto}}
+/* [2026-08-03] 라이브 패키지 진행: 전월 대비 건수 증감을 각 패키지와 합계 옆에 표시한다. */
+.sales-breakdown-row .package-progress-delta{font-size:10px;line-height:1;font-weight:850;white-space:nowrap}.sales-breakdown-total b .package-progress-delta{display:inline-block;margin-left:5px;font-size:10px;letter-spacing:0}
 </style>
 </head>
 <body>
@@ -621,7 +623,7 @@ body{min-width:1160px}
         <div class="kpi-card-actions"><button type="button" class="metric-definition-open" data-metric-definition-open>정의</button><span class="status watch" data-card-status>관찰</span></div>
       </header>
       <div class="revenue-hero" aria-label="라이브매출 핵심 숫자">
-        <div class="metric-big primary monthly-card"><span data-card-primary-label>금월 누적 예측</span><strong data-card-primary-value>1.84억</strong><div class="monthly-sub"><em data-card-target>목표 2.12억</em><em class="mom" data-card-delta>전월 -33.3%</em><em class="next-forecast" data-card-next-forecast>차월예측 2.17억</em></div><button type="button" class="sales-breakdown-trigger" aria-describedby="livePackageProgress">패키지 진행</button><div id="livePackageProgress" class="sales-breakdown-popover" role="tooltip" data-card-package-progress><div class="sales-breakdown-head"><span>7월 패키지별 진행</span><em>30건</em></div><ul class="sales-breakdown-list"><li class="sales-breakdown-row"><span>에센셜 <small>15건</small></span></li><li class="sales-breakdown-row"><span>스마트 <small>9건</small></span></li><li class="sales-breakdown-row"><span>시그니처 <small>6건</small></span></li></ul><div class="sales-breakdown-total"><span>진행 합계</span><b>30건</b></div></div></div>
+        <div class="metric-big primary monthly-card"><span data-card-primary-label>금월 누적 예측</span><strong data-card-primary-value>1.84억</strong><div class="monthly-sub"><em data-card-target>목표 2.12억</em><em class="mom" data-card-delta>전월 -33.3%</em><em class="next-forecast" data-card-next-forecast>차월예측 2.17억</em></div><button type="button" class="sales-breakdown-trigger" aria-describedby="livePackageProgress">패키지 진행</button><div id="livePackageProgress" class="sales-breakdown-popover" role="tooltip" data-card-package-progress><div class="sales-breakdown-head"><span>7월 패키지별 진행</span><em>30건</em></div><ul class="sales-breakdown-list"><li class="sales-breakdown-row"><span>에센셜 <small>15건</small></span><b class="package-progress-delta delta-down">전월 -3건</b></li><li class="sales-breakdown-row"><span>스마트 <small>9건</small></span><b class="package-progress-delta delta-up">전월 +4건</b></li><li class="sales-breakdown-row"><span>시그니처 <small>6건</small></span><b class="package-progress-delta delta-down">전월 -7건</b></li></ul><div class="sales-breakdown-total"><span>진행 합계</span><b>30건 <span class="package-progress-delta delta-down">전월 -6건</span></b></div></div></div>
         <div class="metric-big rate rate-ring-card watch" data-card-rate-card><span>달성률</span><div class="rate-ring" data-card-ring style="--p:86.8;--ring:#F3B83F"><div><strong data-card-rate>86.8%</strong><em data-card-rate-basis>월간 기준</em></div></div></div>
       </div>
       <div class="metric-value-grid weekly-metric-table" data-card-metric-grid aria-label="라이브매출 기간 비교">
@@ -891,11 +893,16 @@ window.__MBD_SOT_DATA__ = {"meta":{"title":"MBD H2 KR Dashboard","built_at_kst":
      '2026-07-20':[{label:'스마트',count:4},{label:'에센셜',count:3},{label:'시그니처',count:1}]
    }
    });
+   // [2026-08-03] 라이브 패키지 진행: 월 단위에서만 같은 AF 패키지비 원천의 직전월 건수와 비교한다.
+   function previousMonthId(id){const match=String(id||'').match(/^(\d{4})-(\d{2})$/); if(!match)return null; const date=new Date(Number(match[1]),Number(match[2])-2,1); return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;}
+   function packageProgressDeltaMarkup(delta){const n=Number(delta); if(!Number.isFinite(n))return ''; return `<span class="package-progress-delta ${deltaClass(n)}">전월 ${n>0?'+':''}${n}건</span>`;}
    function renderLivePackageProgress(period,item){
    const rows=LIVE_PACKAGE_PROGRESS[period]?.[item?.id]||[]; const count=rows.reduce((sum,row)=>sum+Number(row.count||0),0); const label=period==='week'?(item?.short_label||item?.label||'선택주'):(item?.label||'선택월');
    if(!rows.length)return `<div class="sales-breakdown-head"><span>${esc(label)} 패키지별 진행</span><em>0건</em></div><p class="sales-breakdown-empty">진행 패키지 원천이 없습니다.</p>`;
-   const list=rows.map(row=>`<li class="sales-breakdown-row"><span>${esc(row.label)} <small>${esc(row.count)}건</small></span></li>`).join('');
-   return `<div class="sales-breakdown-head"><span>${esc(label)} 패키지별 진행</span><em>${count}건</em></div><ul class="sales-breakdown-list">${list}</ul><div class="sales-breakdown-total"><span>진행 합계</span><b>${count}건</b></div>`;
+   const previousRows=period==='month'?(LIVE_PACKAGE_PROGRESS.month?.[previousMonthId(item?.id)]||null):null; const previousByLabel=new Map((previousRows||[]).map(row=>[row.label,Number(row.count||0)])); const currentLabels=new Set(rows.map(row=>row.label)); const displayRows=previousRows?[...rows,...previousRows.filter(row=>!currentLabels.has(row.label)).map(row=>({...row,count:0}))]:rows;
+   const list=displayRows.map(row=>{const delta=previousRows?Number(row.count||0)-(previousByLabel.get(row.label)||0):null; return `<li class="sales-breakdown-row"><span>${esc(row.label)} <small>${esc(row.count)}건</small></span>${delta===null?'':`<b class="package-progress-delta ${deltaClass(delta)}">전월 ${delta>0?'+':''}${delta}건</b>`}</li>`;}).join('');
+   const previousTotal=previousRows?previousRows.reduce((sum,row)=>sum+Number(row.count||0),0):null; const totalDelta=previousTotal===null?null:count-previousTotal;
+   return `<div class="sales-breakdown-head"><span>${esc(label)} 패키지별 진행</span><em>${count}건</em></div><ul class="sales-breakdown-list">${list}</ul><div class="sales-breakdown-total"><span>진행 합계</span><b>${count}건${totalDelta===null?'':` ${packageProgressDeltaMarkup(totalDelta)}`}</b></div>`;
    }
    const definitionDrawer=$('#metricDefinitionDrawer'); const definitionTitle=$('#metricDefinitionTitle'); const definitionBody=$('#metricDefinitionBody');
  function openMetricDefinition(metricId){
