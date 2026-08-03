@@ -75,6 +75,8 @@ body{min-width:1160px}
 .metric-big{border-radius:18px;padding:14px 14px 13px;background:#F8FAFB;border:1px solid #EAF0F4;min-width:0}
 .metric-big.primary{background:linear-gradient(180deg,#F1FBFE,#FFFFFF);border-color:#D8F0F8}.metric-big.rate.good strong{color:var(--green)}.metric-big.rate.watch strong{color:#B98200}.metric-big.rate.risk strong{color:var(--coral)}.metric-big.rate.source_needed strong{color:#6F7A83}
 .metric-big span{display:block;font-size:12px;color:var(--muted);font-weight:850;margin-bottom:4px}.metric-big strong{display:block;font-size:31px;line-height:1.16;letter-spacing:-.05em;color:var(--ink);white-space:nowrap}.metric-big em{display:block;margin-top:5px;font-style:normal;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.monthly-sub{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.monthly-sub em{display:inline-flex;margin:0;padding:3px 7px;border-radius:999px;background:#FFFFFF;border:1px solid #EAF0F4;line-height:1;color:var(--muted)}.monthly-sub em.mom{color:#C34A4A;background:#FFF7F7;border-color:#FFE0E0}
+/* [2026-08-03] 통광마 판매 구성 hover — 선택월 계약 유형/귀속액을 KPI 숫자 바로 옆에서 확인한다. */
+.monthly-card{position:relative;overflow:visible}.sales-breakdown-trigger{display:inline-flex;align-items:center;gap:4px;margin:8px 0 0;padding:0;border:0;background:transparent;color:#007EA8;font:inherit;font-size:10px;font-weight:880;line-height:1;cursor:help}.sales-breakdown-trigger::after{content:'i';display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border:1px solid #9EDDEC;border-radius:50%;font-size:9px;font-family:Georgia,serif;font-weight:700}.sales-breakdown-trigger:hover{color:#00698B}.sales-breakdown-trigger:focus-visible{outline:2px solid #35C5F0;outline-offset:3px;border-radius:4px}.sales-breakdown-popover{position:absolute;z-index:20;top:calc(100% + 8px);left:0;width:calc(200% + 10px);max-width:calc(100vw - 56px);padding:11px 12px 10px;border:1px solid #BFEAF6;border-radius:14px;background:rgba(255,255,255,.98);box-shadow:0 14px 28px rgba(31,38,43,.14);opacity:0;pointer-events:none;transform:translateY(-4px);transform-origin:top left;transition:opacity .16s cubic-bezier(.23,1,.32,1),transform .16s cubic-bezier(.23,1,.32,1)}.monthly-card:hover .sales-breakdown-popover,.sales-breakdown-trigger:focus-visible + .sales-breakdown-popover{opacity:1;transform:translateY(0)}.sales-breakdown-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:7px;border-bottom:1px solid #EAF0F4}.sales-breakdown-head span{margin:0;color:#007EA8;font-size:10px;font-weight:900;letter-spacing:.02em}.sales-breakdown-head em{margin:0!important;color:#6F7A83;font-size:10px!important;font-weight:760}.sales-breakdown-list{display:grid;gap:5px;margin:8px 0 0;padding:0;list-style:none}.sales-breakdown-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:baseline}.sales-breakdown-row span{margin:0;font-size:11px;color:#44515A;font-weight:760;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sales-breakdown-row span small{display:inline;margin-left:4px;font-size:10px;color:#8A969F;font-weight:700}.sales-breakdown-row b{font-size:12px;line-height:1;color:var(--ink);font-weight:880;white-space:nowrap}.sales-breakdown-total{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:9px;padding-top:8px;border-top:1px solid #EAF0F4}.sales-breakdown-total span{margin:0;font-size:10px;color:var(--muted);font-weight:820}.sales-breakdown-total b{font-size:14px;line-height:1;color:var(--ink);font-weight:900;letter-spacing:-.03em}.sales-breakdown-empty{margin:8px 0 0;font-size:11px;color:var(--muted);line-height:1.35}
 .metric-big.rate-ring-card{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:4px;padding:12px 14px 10px}.metric-big.rate-ring-card>span{align-self:flex-start;margin-bottom:0}.rate-ring{width:94px;height:94px;border-radius:50%;padding:8px;background:conic-gradient(var(--ring) calc(var(--p)*1%), #E8EEF3 0);box-shadow:inset 0 0 0 1px rgba(31,38,43,.04)}.rate-ring>div{height:100%;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;flex-direction:column;box-shadow:inset 0 0 0 1px #EEF2F5}.rate-ring strong{font-size:22px!important;line-height:1.05!important;letter-spacing:-.055em!important;color:var(--ink)}.rate-ring em{margin-top:2px!important;font-size:10px!important;color:var(--muted);max-width:72px;text-align:center}
 .metric-value-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid #EAF0F4;border-radius:16px;overflow:hidden;background:#FBFCFD}
 .metric-value{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:3px;min-width:0;background:transparent;border:0;border-right:1px solid #EAF0F4;border-radius:0;padding:8px 10px}.metric-value:nth-child(3n){border-right:0}.metric-value span{display:block;font-size:10px;color:var(--muted);font-weight:700;margin:0;white-space:nowrap;letter-spacing:.01em;text-transform:none}.metric-value b{display:block;font-size:17px;line-height:1.08;color:var(--ink);font-weight:780;letter-spacing:-.04em;white-space:nowrap}
@@ -603,7 +605,7 @@ body{min-width:1160px}
         <div class="kpi-card-actions"><button type="button" class="metric-definition-open" data-metric-definition-open>정의</button><span class="status risk" data-card-status>리스크</span></div>
       </header>
       <div class="revenue-hero" aria-label="통광마 핵심 숫자">
-        <div class="metric-big primary monthly-card"><span data-card-primary-label>금월 누적 예측</span><strong data-card-primary-value>5,400만</strong><div class="monthly-sub"><em data-card-target>목표 2.00억</em><em class="mom" data-card-delta>전월 -10.0%</em><em class="next-forecast muted" data-card-next-forecast>차월예측 2,909만</em></div></div>
+        <div class="metric-big primary monthly-card" data-sales-breakdown-card><span data-card-primary-label>금월 누적 예측</span><strong data-card-primary-value>5,400만</strong><div class="monthly-sub"><em data-card-target>목표 2.00억</em><em class="mom" data-card-delta>전월 -10.0%</em><em class="next-forecast muted" data-card-next-forecast>차월예측 2,909만</em></div><button type="button" class="sales-breakdown-trigger" aria-describedby="adIntSalesBreakdown">판매 구성</button><div id="adIntSalesBreakdown" class="sales-breakdown-popover" data-card-sales-breakdown role="tooltip"><div class="sales-breakdown-head"><span>7월 판매 구성</span><em>3건</em></div><ul class="sales-breakdown-list"><li class="sales-breakdown-row"><span>컴팩트PKG <small>1건</small></span><b>2,000만</b></li><li class="sales-breakdown-row"><span>정부지원 <small>1건</small></span><b>3,400만</b></li><li class="sales-breakdown-row"><span>무상지원 <small>1건</small></span><b>0원</b></li></ul><div class="sales-breakdown-total"><span>커머스 귀속 금액 합계</span><b>5,400만</b></div></div></div>
         <div class="metric-big rate rate-ring-card risk" data-card-rate-card><span>달성률</span><div class="rate-ring" data-card-ring style="--p:27.0;--ring:#FF7777"><div><strong data-card-rate>27.0%</strong><em data-card-rate-basis>월간 기준</em></div></div></div>
       </div>
       <div class="metric-value-grid weekly-metric-table" data-card-metric-grid aria-label="통광마 기간 비교">
@@ -841,6 +843,28 @@ window.__MBD_SOT_DATA__ = {"meta":{"title":"MBD H2 KR Dashboard","built_at_kst":
 (() => {
  const data=window.__MBD_SOT_DATA__; const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>[...r.querySelectorAll(s)];
  const esc=v=>String(v??'').replace(/[&<>]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[ch]));
+ // [2026-08-03] 통광마 hover drilldown — ad_int.contract의 계약 시작월·유형별 커머스 귀속 금액을 브랜드명 없이 표시한다.
+ const AD_INT_MONTHLY_SALES_BREAKDOWN=Object.freeze({
+   '2026-01':[{label:'배너형',count:1,value_label:'0원'},{label:'카플친형',count:2,value_label:'2.00억'},{label:'미디어PKG',count:1,value_label:'3,000만'}],
+   '2026-02':[],
+   '2026-03':[{label:'배너형',count:1,value_label:'5,000만'},{label:'미디어PKG',count:1,value_label:'3,000만'}],
+   '2026-04':[{label:'무상지원',count:1,value_label:'0원'},{label:'컴팩트PKG',count:1,value_label:'2,000만'}],
+   '2026-05':[{label:'카플친형',count:1,value_label:'5,000만'},{label:'미디어PKG',count:1,value_label:'2,500만'}],
+   '2026-06':[{label:'미디어PKG',count:1,value_label:'3,500만'},{label:'컴팩트PKG',count:1,value_label:'2,500만'}],
+   '2026-07':[{label:'컴팩트PKG',count:1,value_label:'2,000만'},{label:'정부지원',count:1,value_label:'3,400만'},{label:'무상지원',count:1,value_label:'0원'}],
+   '2026-08':[{label:'미디어PKG',count:1,value_label:'2,000만'},{label:'정부지원',count:2,value_label:'909만'}],
+   '2026-09':[{label:'컴팩트PKG',count:2,value_label:'4,333만'}],
+   '2026-10':[],
+   '2026-11':[{label:'컴팩트PKG',count:1,value_label:'2,333만'}],
+   '2026-12':[]
+ });
+ function renderAdIntSalesBreakdown(period,item){
+   if(period!=='month')return `<div class="sales-breakdown-head"><span>선택주 판매 구성</span><em>월 단위 제공</em></div><p class="sales-breakdown-empty">계약 유형별 판매 구성은 월별 추이에서 확인할 수 있습니다.</p>`;
+   const rows=AD_INT_MONTHLY_SALES_BREAKDOWN[item?.id]||[]; const count=rows.reduce((sum,row)=>sum+Number(row.count||0),0); const month=String(item?.label||item?.id||'선택월');
+   if(!rows.length)return `<div class="sales-breakdown-head"><span>${esc(month)} 판매 구성</span><em>0건</em></div><p class="sales-breakdown-empty">계약 시작일 기준 판매 구성이 없습니다.</p>`;
+   const list=rows.map(row=>`<li class="sales-breakdown-row"><span>${esc(row.label)} <small>${esc(row.count)}건</small></span><b>${esc(row.value_label)}</b></li>`).join('');
+   return `<div class="sales-breakdown-head"><span>${esc(month)} 판매 구성</span><em>${count}건</em></div><ul class="sales-breakdown-list">${list}</ul><div class="sales-breakdown-total"><span>커머스 귀속 금액 합계</span><b>${esc(item?.actual_label||item?.actual_eok_label||'-')}</b></div>`;
+ }
  const definitionDrawer=$('#metricDefinitionDrawer'); const definitionTitle=$('#metricDefinitionTitle'); const definitionBody=$('#metricDefinitionBody');
  function openMetricDefinition(metricId){
    const m=data.metric_contract_snapshot?.metrics?.[metricId]; if(!m||!definitionDrawer||!definitionBody)return;
@@ -893,6 +917,10 @@ window.__MBD_SOT_DATA__ = {"meta":{"title":"MBD H2 KR Dashboard","built_at_kst":
      const rate=card.querySelector('[data-card-rate]'); if(rate)rate.textContent=item.pct_label||'-';
      const basis=card.querySelector('[data-card-rate-basis]'); if(basis)basis.textContent=period==='week'?'주간 기준':'월간 기준';
      const nextFc=card.querySelector('[data-card-next-forecast]'); if(nextFc){nextFc.textContent=period==='week'?'차월예측 월단위 전환':`차월예측 ${item.next_forecast_label||'-'}`; nextFc.style.display=period==='week'?'none':'';}
+     const salesBreakdown=card.querySelector('[data-card-sales-breakdown]'); if(salesBreakdown){
+       salesBreakdown.innerHTML=renderAdIntSalesBreakdown(period,item);
+       const trigger=card.querySelector('.sales-breakdown-trigger'); if(trigger){trigger.textContent=period==='week'?'월별 구성':'판매 구성'; trigger.setAttribute('aria-label',`${item.label||'선택 기간'} ${period==='week'?'월별 ':' '}판매 구성 보기`);}
+     }
      const grid=card.querySelector('[data-card-metric-grid]'); if(grid){
        const first=period==='week'?'선택주':'선택월'; const deltaName=period==='week'?'WoW':'MoM';
        grid.innerHTML=`<div class="metric-value"><span>${first}</span><b>${esc(item.actual_label||item.actual_eok_label||'-')}</b></div><div class="metric-value"><span>${deltaName}</span><b>${esc(item.mom_label||'-')}</b></div><div class="metric-value"><span>달성률</span><b>${esc(item.pct_label||'-')}</b></div>`;
