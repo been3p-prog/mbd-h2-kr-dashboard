@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="mbd-ux-contract" content="MBD_UX_CANARY_V1" />
 <title>MBD H2 KR 대시보드</title>
 <style>
 :root {
@@ -142,7 +143,7 @@ body{min-width:1160px}
 /* [2026-07-19] chart-shape parity with Kimi mockup — 얇고 라벨 많은 기존 리포트 차트를 굵은 둥근 막대/부드러운 grid/선택월 halo 톤으로 맞춘다. */
 .summary-chart{min-height:420px;padding:22px 24px 20px;border-radius:26px;background:#fff;border-color:#DDEAF0}
 /* [2026-07-19] Kimi QC fix — 월/주 toggle이 상단 범례를 가리지 않도록 차트 제목과 범례를 2줄 구조로 분리한다. */
-.summary-chart-head{display:grid;grid-template-columns:1fr;align-items:flex-start;gap:10px;margin-bottom:16px;padding-right:176px}.summary-chart-head strong{font-size:0;line-height:1;min-width:0;color:var(--ink)}.summary-chart-head strong::before{content:'1ST · MONTHLY KR TREND';display:block;margin-bottom:6px;font-size:11px;font-weight:950;letter-spacing:.08em;color:var(--blue-dark);text-transform:uppercase}.summary-chart-head strong::after{content:'월별 총매출 구성은 그대로 상단에 둡니다.';display:block;font-size:29px;line-height:1.12;font-weight:900;letter-spacing:-.045em;color:var(--ink)}
+.summary-chart-head{display:grid;grid-template-columns:1fr;align-items:flex-start;gap:10px;margin-bottom:16px;padding-right:176px}.summary-chart-head strong{font-size:0;line-height:1;min-width:0;color:var(--ink)}.summary-chart-head strong::before{content:'MONTHLY KR TREND';display:block;margin-bottom:6px;font-size:11px;font-weight:950;letter-spacing:.08em;color:var(--blue-dark);text-transform:uppercase}.summary-chart-head strong::after{content:'월별 총매출 구성은 그대로 상단에 둡니다.';display:block;font-size:29px;line-height:1.12;font-weight:900;letter-spacing:-.045em;color:var(--ink)}
 .stack-legend{border:0;background:transparent;padding:0;gap:11px;max-width:none;justify-content:flex-start}.stack-legend-item{font-size:12px;font-weight:850}.stack-legend-item i{width:9px;height:9px;border-radius:50%}.stack-legend-item i{background:#35C5F0}.stack-legend-item.ad-int i{background:#FFB36B}.stack-legend-item.live i{background:#00B894}.stack-legend-item.owned-youtube i{background:#8067E8}.stack-legend-item.target-line-legend i{background:#1F262B}
 .axis-chart{grid-template-columns:44px 1fr;grid-template-rows:278px 30px;gap:0 9px;padding:8px 0 0}.y-axis-title{grid-row:1;grid-column:1;align-self:start;justify-self:start;font-size:11px;color:#71808A}.x-axis-title{grid-row:2;grid-column:2;align-self:end;font-size:11px;color:#71808A}.chart-plot{grid-row:1;grid-column:2;height:278px;border:0;background:#fff;padding:18px 4px 0;overflow:visible}.chart-grid-line{left:0;right:0;border-top:1px dashed rgba(184,201,212,.74)}.chart-grid-line span{right:calc(100% + 9px);margin-right:0;font-size:11px;color:#6F7A83;font-weight:720}.stack-bars{position:absolute;z-index:3;inset:18px 4px 27px 4px;height:auto;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px;align-items:end;padding:0}.stack-month{height:100%;justify-content:flex-end}.stack-bar{width:min(46px,82%);border-radius:12px 12px 5px 5px;background:transparent;box-shadow:none}.stack-month.current .stack-bar{outline:3px solid rgba(53,197,240,.42);outline-offset:5px;box-shadow:0 0 0 8px rgba(53,197,240,.13)}.stack-seg{background:#35C5F0}.stack-seg.ad-int{background:#FFB36B}.stack-seg.live{background:#00B894}.stack-seg.owned-youtube{background:#8067E8}.target-marker{width:min(56px,100%);border-top:2px dashed rgba(31,38,43,.46)}.gap-label{background:transparent;border:0!important;color:#FF6F78;font-size:10px;font-weight:950;bottom:calc(var(--target-h) + 14px);padding:0}.gap-label.over{display:none}.stack-total{bottom:calc(var(--bar-h) + 10px);font-size:11px;background:rgba(255,255,255,.78);border:0;box-shadow:0 2px 8px rgba(31,38,43,.05);border-radius:8px;padding:2px 5px}.stack-month-label{bottom:-21px;font-size:11px;color:#63717B;font-weight:850}.stack-month.current .stack-month-label{color:var(--ink)}
 /* [2026-07-19] user correction — 주요 써머리를 좌상단으로 돌리고, y축 제목/20억 라벨 겹침을 구조적으로 분리한다. */
@@ -162,27 +163,52 @@ body{min-width:1160px}
 /* [2026-08-03] 라이브 패키지 진행: 전월 대비 건수 증감을 각 패키지와 합계 옆에 표시한다. */
 .sales-breakdown-row .package-progress-delta{font-size:10px;line-height:1;font-weight:850;white-space:nowrap}.sales-breakdown-total b .package-progress-delta{display:inline-block;margin-left:5px;font-size:10px;letter-spacing:0}
 .summary-freshness{display:flex;align-items:flex-start;gap:8px;border:1px solid #FFD8A8;background:#FFF9EF;color:#8A5A00;border-radius:14px;padding:10px 12px;font-size:12px;font-weight:760;line-height:1.45}.summary-freshness::before{content:'주의';display:inline-flex;flex:none;border-radius:999px;background:#FFE8C7;color:#A15C00;padding:2px 7px;font-size:10px;font-weight:950}.summary-freshness[hidden]{display:none}
+
+/* [2026-08-05] MBD_UX_CANARY_V1 — decision-first, source-visible, responsive UI-only hotfix. */
+body[data-ux-contract="decision-first-v1"]{min-width:0;overflow-x:hidden;background:linear-gradient(180deg,#F7FAFC 0,#F4F7F9 100%)}
+body[data-ux-contract="decision-first-v1"] .shell{max-width:1480px;padding:24px 32px 80px}
+.brand{gap:11px}.brand-dot{width:32px;height:32px;border-radius:11px}.brand-copy{display:grid;gap:2px}.brand-copy strong{font-size:15px;color:var(--ink);letter-spacing:-.025em}.brand-copy small{font-size:11px;color:var(--muted);font-weight:720}
+.topbar{padding:8px 0 16px}.pill{padding:7px 11px;background:#fff;border-color:#E1E9EE;font-weight:760}.pill-primary{background:#EAF8FD;border-color:#CBEAF4;color:#007EA8;font-weight:900}
+.tabs{top:0;padding:9px 0 11px;margin-bottom:10px}.tab{height:36px;padding:0 14px}.tab:focus-visible,.summary-period-toggle:focus-visible,.trend-bridge-controls button:focus-visible,.trend-bridge-controls select:focus-visible,.metric-definition-open:focus-visible,.sales-breakdown-trigger:focus-visible,.stack-month:focus-visible{outline:3px solid rgba(53,197,240,.35);outline-offset:3px}
+.summary-card{margin:0 0 14px;padding:18px 20px 20px;border-radius:26px;background:#fff;border-color:#DEE8ED;box-shadow:0 1px 0 rgba(31,38,43,.04),0 12px 34px rgba(31,38,43,.055)}
+.summary-period-tabs{right:20px;top:18px;background:#F1F5F7;border-color:#E2E9ED}.summary-freshness{margin:0 190px 12px 0}
+.summary-period-view{grid-template-columns:minmax(0,1.5fr) minmax(340px,.75fr);gap:18px;align-items:stretch}.summary-period-view.active{display:grid}
+.summary-chart{order:1;display:flex;flex-direction:column;height:100%;min-height:0;padding:20px 22px 16px;border-radius:20px;background:#FBFCFD;border:1px solid #E6EDF1;box-shadow:none}
+.summary-main{order:2;padding:44px 0 0;gap:10px;align-content:start}.summary-eyebrow{font-size:10px;letter-spacing:.1em;color:#71808A}.summary-main h1{font-size:28px;line-height:1.08}.summary-main p{font-size:12px;line-height:1.45;max-width:420px}.summary-period-current{padding:7px 10px;font-size:11px;background:#EFFAFF;border-color:#D5EDF6}
+.summary-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.summary-kpis div{padding:11px 12px;border-radius:14px;background:#F7F9FA;border:1px solid #E9EEF1}.summary-kpis span{font-size:10px}.summary-kpis b{font-size:21px}.summary-kpis small{font-size:9px}
+.gap-diagnosis-panel{padding:12px;border-radius:15px;gap:8px}.gap-diagnosis-head b{font-size:16px}.gap-diagnosis-row{grid-template-columns:64px 62px minmax(0,1fr);padding:7px 8px}.gap-diagnosis-row strong{font-size:10px}
+.summary-chart-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;padding-right:0}.summary-chart-head strong{font-size:24px;line-height:1.1;letter-spacing:-.045em}.summary-chart-head strong::before,.summary-chart-head strong::after{display:none!important;content:none!important}.stack-legend{max-width:460px;justify-content:flex-end;row-gap:6px}.stack-legend-item{font-size:10px}
+.axis-chart{flex:1;grid-template-columns:60px minmax(0,1fr);grid-template-rows:minmax(340px,1fr) 28px;gap:0 8px;padding:14px 0 0}.chart-plot{height:100%;min-height:340px}.summary-note{font-size:10px;line-height:1.45;margin-top:8px;color:#7A8790}
+.trend-bridge-banner{margin:0 0 14px;padding:11px 14px;border-radius:16px;background:#fff;border:1px solid #DCE7EC;box-shadow:none}.trend-bridge-copy span{color:#007EA8}.trend-bridge-copy strong{color:var(--ink)}.trend-bridge-copy em{color:var(--muted)}.trend-bridge-controls button,.trend-bridge-controls select{height:32px;background:#F6F9FA;border-color:#DFE8EC;color:var(--ink)}.trend-bridge-controls select option{color:var(--ink)}
+.section-intro{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:14px 2px 12px}.section-intro span{display:block;font-size:10px;letter-spacing:.08em;color:#71808A;font-weight:900}.section-intro h2{margin:4px 0 0;font-size:25px;line-height:1.08;color:var(--ink);letter-spacing:-.045em}.section-intro p{margin:0;max-width:460px;color:var(--muted);font-size:12px;line-height:1.45;text-align:right}
+.primary-kpis{gap:14px;margin-top:0}.kpi-row{gap:14px;align-items:start}.revenue-row{grid-template-columns:repeat(3,minmax(0,1fr))}.quality-row{grid-template-columns:minmax(0,1.25fr) minmax(0,.85fr);align-items:start}
+.kpi-card{min-height:0;padding:18px;border-radius:20px;gap:12px;cursor:default;box-shadow:0 1px 0 rgba(31,38,43,.04),0 10px 28px rgba(31,38,43,.05);transition:border-color .16s ease,box-shadow .16s ease}.kpi-card:hover{transform:none;box-shadow:0 1px 0 rgba(31,38,43,.05),0 14px 32px rgba(31,38,43,.07)}.quality-card,.owned-four-card{min-height:0}.kpi-card-head{padding-bottom:10px}.kpi-card-head h2{font-size:20px}.revenue-hero{gap:8px}.metric-big{padding:13px;border-radius:14px}.metric-big strong{font-size:27px}.rate-ring{width:84px;height:84px}.rate-ring::before{width:64px;height:64px}.metric-value-grid{gap:6px}.month-strip{height:75px}.team-foot{margin-top:2px}.foot-diagnostic{padding:11px}.foot-diagnostic-list{gap:5px}.card-comment-zone{border-radius:12px}
+.youtube-target-hero{padding:13px;border-radius:15px}.youtube-target-main strong{font-size:30px}.youtube-insight-block{padding:11px}.owned-metric-grid{gap:8px}.owned-metric-card{padding:10px;border-radius:14px}.owned-program-block,.live-drilldown-block{border-radius:14px}.owned-program-grid,.live-program-grid,.live-package-grid{gap:6px}.monthly-highlights{margin-top:16px;padding:18px;border-radius:20px}.monthly-highlights-head{margin-bottom:12px}.monthly-highlight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.metric-definition-drawer{border-radius:20px}
+@media(max-width:1180px){.summary-period-view{grid-template-columns:1fr}.summary-chart{order:1}.summary-main{order:2;padding-top:0}.summary-period-tabs{position:static;margin:0 0 12px auto}.summary-freshness{margin-right:0}.summary-chart-head{align-items:flex-start}.summary-chart-head .stack-legend{justify-content:flex-start}.quality-row{grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr)}}
+@media(max-width:960px){body[data-ux-contract="decision-first-v1"] .shell{padding:18px 20px 64px}.revenue-row,.quality-row{grid-template-columns:1fr}.kpi-card{width:100%}.section-intro{align-items:flex-start}.section-intro p{text-align:left}.topbar{align-items:flex-start}.topmeta{max-width:52%}}
+@media(max-width:720px){body[data-ux-contract="decision-first-v1"] .shell{padding:12px 12px 48px}.topbar{display:grid;gap:12px}.topmeta{max-width:none;justify-content:flex-start}.pill{font-size:10px;padding:6px 9px}.tabs{margin:0 -12px 8px;padding:8px 12px;overflow-x:auto;scrollbar-width:none}.tab{flex:0 0 auto}.summary-card{padding:12px;border-radius:18px}.summary-period-tabs{width:100%;margin-bottom:10px}.summary-period-toggle{flex:1}.summary-chart{overflow-x:auto;padding:16px 12px 12px;border-radius:15px}.summary-chart-head{display:grid;gap:8px}.summary-chart-head::after{content:'막대를 좌우로 넘겨 12개월 확인';font-size:10px;font-weight:780;color:#71808A}.summary-chart-head strong{font-size:21px}.stack-legend{justify-content:flex-start;max-width:none}.axis-chart{min-width:620px;grid-template-columns:54px minmax(0,1fr)}.summary-main{padding:0}.summary-main h1{font-size:24px}.summary-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.summary-kpis b{font-size:19px}.gap-diagnosis-row{grid-template-columns:56px 58px minmax(0,1fr)}.trend-bridge-banner{align-items:stretch}.trend-bridge-copy{display:grid;gap:4px}.trend-bridge-controls{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto}.trend-bridge-controls select{min-width:0}.section-intro{display:grid;gap:7px}.section-intro h2{font-size:23px}.section-intro p{max-width:none}.kpi-card{padding:15px;border-radius:17px}.revenue-hero{grid-template-columns:minmax(0,1fr) auto}.owned-metric-grid{grid-template-columns:1fr}.monthly-highlight-grid{grid-template-columns:1fr}.metric-definition-drawer{inset:8px;width:auto;border-radius:16px}}
 </style>
 </head>
-<body>
+<body data-ux-contract="decision-first-v1">
 <div class="shell">
-  <div class="topbar"><div class="brand"><span class="brand-dot"></span><span>MBD H2 KR 대시보드</span></div><div class="topmeta"><span class="pill">2026-07</span><span class="pill">2026-07-20~2026-07-26</span><span class="pill">읽기 전용</span></div></div>
-  <nav class="tabs"><button class="tab active" data-tab="overview">KR 현황</button><button class="tab" data-tab="raw">원천 데이터</button><button class="tab" data-tab="budget">예산/비용</button><button class="tab" data-tab="detail">상세/검토</button></nav>
+  <div class="topbar"><div class="brand"><span class="brand-dot" aria-hidden="true"></span><span class="brand-copy"><strong>MBD H2 KR 대시보드</strong><small>매출 목표와 GAP을 한눈에</small></span></div><div class="topmeta"><span class="pill pill-primary">FORECAST 2026-08</span><span class="pill">RAW 08-05</span><span class="pill">읽기 전용</span></div></div>
+  <nav class="tabs" role="tablist" aria-label="대시보드 영역"><button class="tab active" role="tab" aria-selected="true" aria-controls="overview" data-tab="overview">KR 현황</button><button class="tab" role="tab" aria-selected="false" aria-controls="raw" data-tab="raw">원천 데이터</button><button class="tab" role="tab" aria-selected="false" aria-controls="budget" data-tab="budget">예산/비용</button><button class="tab" role="tab" aria-selected="false" aria-controls="detail" data-tab="detail">상세/검토</button></nav>
   <section id="overview" class="panel active">
     
-    <section class="summary-card" aria-label="상단 써머리 총매출 기간별 트렌드">
+    <section class="summary-card" aria-label="총매출 추세와 선택 기간 판정">
       <div class="summary-period-tabs" role="tablist" aria-label="대시보드 기간 단위 선택">
-        <button class="summary-period-toggle active" type="button" data-summary-period="month">월단위</button>
-        <button class="summary-period-toggle" type="button" data-summary-period="week">주단위</button>
+        <button class="summary-period-toggle active" type="button" role="tab" aria-selected="true" data-summary-period="month">월단위</button>
+        <button class="summary-period-toggle" type="button" role="tab" aria-selected="false" data-summary-period="week">주단위</button>
       </div>
       <div class="summary-freshness" data-dashboard-freshness hidden></div>
       
       <div class="summary-period-view active" data-period-view="month">
         <div class="summary-main">
-          <div class="summary-eyebrow">상단 써머리 · 총매출</div>
-          <h1 data-summary-heading="month">월별 KR 매출 트렌드 · 마감예측 기준</h1>
-          <p>주로 보이는 숫자는 선택월 마감예측/월전체 기준입니다. RAW 누적은 기준일과 원천이 확인된 경우에만 별도로 노출합니다.</p>
-          <div class="summary-period-current">선택 기준 로딩 중</div>
+          <div class="summary-eyebrow">선택 기간 판정</div>
+          <h1 data-summary-heading="month">8월 매출 판정</h1>
+          <p>선택월 마감예측과 확정 RAW 누적을 분리해 보여줍니다.</p>
+          <div class="summary-period-current" aria-live="polite">선택 기준 로딩 중</div>
           <div class="summary-kpis" aria-label="선택월 마감예측 핵심 카드">
             <div><span>선택월 마감예측</span><b>10.2억</b></div>
             <div><span>현재 RAW 누적</span><b class="delta-flat">1.2억</b><small>RAW 누적 · 8/1~8/5</small></div>
@@ -374,10 +400,10 @@ body{min-width:1160px}
       
       <div class="summary-period-view" data-period-view="week">
         <div class="summary-main">
-          <div class="summary-eyebrow">상단 써머리 · 총매출</div>
-          <h1 data-summary-heading="week">주별 KR 매출 트렌드</h1>
-          <p>ISO week 기준 주차별 누적막대로 보고, 일반광고·통광마·라이브 매출만 B22N 범위로 집계합니다.</p>
-          <div class="summary-period-current">현재 기준 · 26년 30주차 (7/20-7/26)</div>
+          <div class="summary-eyebrow">선택 기간 판정</div>
+          <h1 data-summary-heading="week">주간 매출 판정</h1>
+          <p>선택 주차의 총매출·목표 GAP·팀별 원인을 한 흐름으로 보여줍니다.</p>
+          <div class="summary-period-current" aria-live="polite">현재 기준 · 26년 30주차 (7/20-7/26)</div>
           <div class="summary-kpis" aria-label="주간 총매출 핵심 카드">
             <div><span>주간 총매출</span><b>2.12억</b></div>
             <div><span>WoW</span><b class="delta-down">-32.2%</b><small></small></div>
@@ -578,6 +604,10 @@ body{min-width:1160px}
         <select id="trendPeriodSelect" aria-label="조회 기간 선택"></select>
         <button type="button" id="trendNext" aria-label="다음 기간">다음 →</button>
       </div>
+    </div>
+    <div class="section-intro" aria-labelledby="teamKpiTitle">
+      <div><span>선택 기간 상세</span><h2 id="teamKpiTitle">팀별 목표 달성</h2></div>
+      <p>매출 3개 지표와 질적 2개 지표를 같은 기간 기준으로 읽습니다.</p>
     </div>
     <!-- [2026-08-03] 통광마 매출은 시트 내 정부지원·무상지원 행까지 커머스 귀속 금액으로 포함 — 빈님 지표 정의 정정. -->
     <!-- [2026-08-05] August RAW cumulative recovery — 8/1~8/5 source-cut from the 2026-08-05 08:08 KST DuckDB mirror; monthly forecast remains separate. -->
@@ -924,7 +954,10 @@ window.__MBD_SOT_DATA__ = {"meta":{"title":"MBD H2 KR Dashboard","built_at_kst":
  $('[data-metric-definition-close]')?.addEventListener('click',closeMetricDefinition);
  document.addEventListener('keydown',event=>{if(event.key==='Escape')closeMetricDefinition();});
  let activeRawTeam=Object.keys(data.team_raw||{})[0];
- function activate(name){ $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name)); $$('.panel').forEach(p=>p.classList.toggle('active',p.id===name)); }
+ function activate(name){
+   $$('.tab').forEach(b=>{const active=b.dataset.tab===name;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;});
+   $$('.panel').forEach(p=>p.classList.toggle('active',p.id===name));
+ }
  $$('.tab').forEach(b=>b.addEventListener('click',()=>activate(b.dataset.tab)));
  const topSummary=window.__TOP_SUMMARY_DATA__||{};
  const REVENUE_SCOPE=Object.freeze(['ad_gen','ad_int','live']);
@@ -1143,13 +1176,14 @@ function updateLiveGmvQualityCard(period,p,idx){
    const pack=topSummary[period]||{periods:[]}; const periods=pack.periods||[]; if(!periods.length)return;
    idx=Math.max(0,Math.min(Number(idx)||0,periods.length-1)); activeSummaryPeriod=period; summarySelection[period]=idx;
    const p=periods[idx]; const label=trendPeriodLabel(period,p); const view=document.querySelector(`.summary-period-view[data-period-view="${period}"]`);
-   $$('.summary-period-toggle').forEach(x=>x.classList.toggle('active',x.dataset.summaryPeriod===period));
+   $$('.summary-period-toggle').forEach(x=>{const active=x.dataset.summaryPeriod===period;x.classList.toggle('active',active);x.setAttribute('aria-selected',String(active));x.tabIndex=active?0:-1;});
    $$('.summary-period-view').forEach(v=>v.classList.toggle('active',v.dataset.periodView===period));
    if(view){
      const allSegments=p.segments||[]; const segments=scopedSummarySegments(p); const scopeFiltered=segments.length!==allSegments.length;
      const scopedTotal=segments.reduce((sum,seg)=>sum+Number(seg.value||0),0); const scopedTarget=segments.reduce((sum,seg)=>sum+Number(seg.target||0),0); const scopedGap=scopedTarget-scopedTotal; const scopedAchievement=scopedTarget>0?scopedTotal/scopedTarget*100:null;
      const rawFloor=period!=='week' && p.current_actual!==null && p.current_actual!==undefined && Number(p.current_actual)>Number(p.total||0)+1;
      const totalLabel=period==='week'?'주간 총매출':(rawFloor?'선택월 총매출':'선택월 마감예측'); const deltaLabel=trendDeltaLabel(period); const targetLabel=period==='week'?'주 목표':'월 목표';
+     const heading=view.querySelector('[data-summary-heading]'); if(heading)heading.textContent=period==='month'?`${label} 매출 판정`:`${label} 주간 판정`;
      const cur=view.querySelector('.summary-period-current'); if(cur)cur.textContent=`선택 기준 · ${label}`;
      const kpi=view.querySelector('.summary-kpis'); if(kpi){
        const raw=rawActualPresentation(period,p);
@@ -1167,7 +1201,9 @@ function updateLiveGmvQualityCard(period,p,idx){
      if(period==='week')renderScopedWeekChart(idx);
      view.querySelectorAll('.stack-month').forEach((bar,i)=>bar.classList.toggle('current',i===idx));
    }
-   const topmeta=$$('.topmeta .pill'); if(topmeta[0])topmeta[0].textContent=period==='month'?(p.ym||label):label; if(topmeta[1])topmeta[1].textContent=`데이터 ${String(data.meta?.built_at_kst||data.meta?.today||'-').slice(0,10)}`;
+   const topmeta=$$('.topmeta .pill'); const rawMeta=window.__AUG_RAW_RECOVERY_META__||{};
+   if(topmeta[0])topmeta[0].textContent=period==='month'?`FORECAST ${p.ym||label}`:`WEEK ${label}`;
+   if(topmeta[1])topmeta[1].textContent=period==='month'&&p.ym===rawMeta.ym&&rawMeta.as_of?`RAW ${String(rawMeta.as_of).slice(5)}`:`DATA ${String(data.meta?.built_at_kst||data.meta?.today||'-').slice(0,10)}`;
    $('#trendBridgeKicker')&&($('#trendBridgeKicker').textContent=trendKicker(period));
    $('#trendBridgeTitle')&&($('#trendBridgeTitle').textContent=label);
    $('#trendBridgeCaption')&&($('#trendBridgeCaption').textContent='차트 막대 또는 선택값으로 과거 월/주차를 조회합니다. 아래 KR 카드도 선택 기준으로 동기화됩니다.');
