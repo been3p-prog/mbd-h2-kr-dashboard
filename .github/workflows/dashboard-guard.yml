@@ -1,0 +1,53 @@
+name: dashboard-guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 0 * * *" # 09:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run dashboard regression tests
+        run: python -m unittest scripts/test_verify_dashboard.py -v
+      - name: Check scope, selected-period rendering, and RAW semantics
+        run: python scripts/verify_dashboard.py index.html
+      - name: Render the dashboard in headless Chrome
+        run: python scripts/smoke_dashboard.py index.html
+      - name: Enforce the 48-hour freshness SLA on scheduled probes
+        if: github.event_name == 'schedule'
+        run: python scripts/verify_dashboard.py index.html --require-fresh
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Deploy verified dashboard
+        id: deployment
+        uses: actions/deploy-pages@v4

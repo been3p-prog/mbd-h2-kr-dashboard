@@ -161,6 +161,7 @@ body{min-width:1160px}
 @media(max-width:960px){body{min-width:0}.shell{padding:20px}.kpi-row{grid-template-columns:1fr}.rate-ring{width:88px;height:88px}.tabs{overflow:auto}}
 /* [2026-08-03] 라이브 패키지 진행: 전월 대비 건수 증감을 각 패키지와 합계 옆에 표시한다. */
 .sales-breakdown-row .package-progress-delta{font-size:10px;line-height:1;font-weight:850;white-space:nowrap}.sales-breakdown-total b .package-progress-delta{display:inline-block;margin-left:5px;font-size:10px;letter-spacing:0}
+.summary-freshness{display:flex;align-items:flex-start;gap:8px;border:1px solid #FFD8A8;background:#FFF9EF;color:#8A5A00;border-radius:14px;padding:10px 12px;font-size:12px;font-weight:760;line-height:1.45}.summary-freshness::before{content:'주의';display:inline-flex;flex:none;border-radius:999px;background:#FFE8C7;color:#A15C00;padding:2px 7px;font-size:10px;font-weight:950}.summary-freshness[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -174,20 +175,21 @@ body{min-width:1160px}
         <button class="summary-period-toggle active" type="button" data-summary-period="month">월단위</button>
         <button class="summary-period-toggle" type="button" data-summary-period="week">주단위</button>
       </div>
+      <div class="summary-freshness" data-dashboard-freshness hidden></div>
       
       <div class="summary-period-view active" data-period-view="month">
         <div class="summary-main">
           <div class="summary-eyebrow">상단 써머리 · 총매출</div>
           <h1 data-summary-heading="month">월별 KR 매출 트렌드 · 마감예측 기준</h1>
-          <p>주로 보이는 숫자는 선택월 마감예측/월전체 기준입니다. 현재 RAW 누적 현황은 보조값으로 같이 노출합니다.</p>
-          <div class="summary-period-current">현재 기준 · 2026년 7월</div>
+          <p>주로 보이는 숫자는 선택월 마감예측/월전체 기준입니다. RAW 누적은 기준일과 원천이 확인된 경우에만 별도로 노출합니다.</p>
+          <div class="summary-period-current">선택 기준 로딩 중</div>
           <div class="summary-kpis" aria-label="선택월 마감예측 핵심 카드">
-            <div><span>선택월 마감예측</span><b>10.6억</b></div>
-            <div><span>현재 RAW 누적</span><b class="delta-flat">10.5억</b><small>RAW 누적 · 7/1~7/30</small></div>
-            <div><span>월 목표</span><b>13.8억</b></div>
-            <div><span>목표 대비</span><b class="achievement-watch">미달 3.2억</b><small>달성률 76.8%</small></div>
+            <div><span>선택월 마감예측</span><b>-</b></div>
+            <div><span>현재 RAW 누적</span><b class="delta-flat">미연결</b><small>RAW 기준일/원천 확인 필요</small></div>
+            <div><span>월 목표</span><b>-</b></div>
+            <div><span>목표 대비</span><b class="achievement-watch">계산 중</b><small>선택월 로딩 중</small></div>
           </div>
-          <div class='gap-diagnosis-panel' data-gap-diagnosis><div class='gap-diagnosis-head'><span>7월 미달 원인</span><b>가장 큰 문제: 통광마 · 1.5억</b><em>총 미달의 51%</em></div><div class='gap-diagnosis-list'><div class='gap-diagnosis-row ad-int'><span>통광마</span><b>1.5억</b><em>목표 2.0억 · 표시 5,400만 · 현재 5,400만</em></div><div class='gap-diagnosis-row ad-gen'><span>일반광고</span><b>6,108만</b><em>목표 8.7억 · 표시 8.0억 · 현재 7.9억</em></div><div class='gap-diagnosis-row owned-youtube'><span>온드미디어</span><b>5,000만</b><em>목표 1.0억 · 표시 5,000만 · 현재 5,000만</em></div><div class='gap-diagnosis-row live'><span>라이브</span><b>2,800만</b><em>목표 2.1억 · 표시 1.8억 · 현재 1.8억</em></div></div></div>
+          <div class='gap-diagnosis-panel' data-gap-diagnosis><div class='gap-diagnosis-head'><span>선택월 미달 원인</span><b>선택월 계산 중</b><em>화면 데이터 로딩 중</em></div></div>
           <div class="summary-splits"><div class='summary-split ad-gen' data-summary-segment='ad_gen'><span>일반광고</span><b>8.05억</b><div class='summary-split-metrics'><em class='mom-value delta-down'><small>MoM</small>-10.6%</em><em class='rate-value'><small>달성률</small>92.9%</em></div></div><div class='summary-split ad-int' data-summary-segment='ad_int'><span>통광마</span><b>2,000만</b><div class='summary-split-metrics'><em class='mom-value delta-down'><small>MoM</small>-66.7%</em><em class='rate-value'><small>달성률</small>10.0%</em></div></div><div class='summary-split live' data-summary-segment='live'><span>라이브</span><b>1.84억</b><div class='summary-split-metrics'><em class='mom-value delta-down'><small>MoM</small>-33.3%</em><em class='rate-value'><small>달성률</small>86.8%</em></div></div><div class='summary-split owned-youtube' data-summary-segment='owned_youtube_ad'><span>온드미디어</span><b>5,000만</b><div class='summary-split-metrics'><em class='mom-value delta-down'><small>MoM</small>-28.6%</em><em class='rate-value'><small>달성률</small>50.0%</em></div></div></div>
         </div>
         <div class="summary-chart">
@@ -374,7 +376,7 @@ body{min-width:1160px}
         <div class="summary-main">
           <div class="summary-eyebrow">상단 써머리 · 총매출</div>
           <h1 data-summary-heading="week">주별 KR 매출 트렌드</h1>
-          <p>ISO week 기준 주차별 누적막대로 보고, 온드미디어 광고매출은 월 확정값을 해당 주 날짜 수로 일할 환산합니다.</p>
+          <p>ISO week 기준 주차별 누적막대로 보고, 일반광고·통광마·라이브 매출만 B22N 범위로 집계합니다.</p>
           <div class="summary-period-current">현재 기준 · 26년 30주차 (7/20-7/26)</div>
           <div class="summary-kpis" aria-label="주간 총매출 핵심 카드">
             <div><span>주간 총매출</span><b>2.12억</b></div>
@@ -923,8 +925,104 @@ window.__MBD_SOT_DATA__ = {"meta":{"title":"MBD H2 KR Dashboard","built_at_kst":
  function activate(name){ $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name)); $$('.panel').forEach(p=>p.classList.toggle('active',p.id===name)); }
  $$('.tab').forEach(b=>b.addEventListener('click',()=>activate(b.dataset.tab)));
  const topSummary=window.__TOP_SUMMARY_DATA__||{};
+ const REVENUE_SCOPE=Object.freeze(['ad_gen','ad_int','live']);
+ const REVENUE_SCOPE_SET=new Set(REVENUE_SCOPE);
+ function defaultMonthSelection(){
+   const periods=topSummary.month?.periods||[];
+   const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit'}).formatToParts(new Date());
+   const year=parts.find(x=>x.type==='year')?.value; const month=parts.find(x=>x.type==='month')?.value;
+   const currentYm=year&&month?`${year}-${month}`:''; const idx=periods.findIndex(p=>p.ym===currentYm);
+   return idx>=0?idx:(topSummary.month?.current_index||0);
+ }
  let activeSummaryPeriod='month';
- const summarySelection={month:topSummary.month?.current_index||0,week:topSummary.week?.current_index||0};
+ const summarySelection={month:defaultMonthSelection(),week:topSummary.week?.current_index||0};
+ function scopedSummarySegments(p){return (p?.segments||[]).filter(seg=>REVENUE_SCOPE_SET.has(seg.team));}
+ function rawActualPresentation(period,p){
+   if(period==='week')return {label:trendDeltaLabel(period),value:p?.total_mom_label||'-',small:'',className:deltaClass(p?.total_mom),verified:true};
+   const basis=String(p?.current_actual_basis||'').trim(); const verified=/RAW\s*누적|\d{1,2}\/\d{1,2}\s*[~\-]\s*\d{1,2}\/\d{1,2}/i.test(basis) && basis!=='월전체 집계';
+   if(!verified)return {label:'현재 RAW 누적',value:'미연결',small:basis==='월전체 집계'?'월전체 집계값은 RAW 누적으로 표시하지 않음':'RAW 기준일/원천 확인 필요',className:'delta-flat',verified:false};
+   return {label:'현재 RAW 누적',value:p?.current_actual_eok_label||p?.current_actual_label||'-',small:basis,className:'delta-flat',verified:true};
+ }
+ function formatKrw(value){
+   const amount=Number(value||0); const abs=Math.abs(amount); const sign=amount<0?'-':'';
+   if(abs>=1e8){const digits=abs>=1e9?1:2;return `${sign}${(abs/1e8).toFixed(digits)}억`;}
+   if(abs>=1e4)return `${sign}${Math.round(abs/1e4).toLocaleString('ko-KR')}만`;
+   return `${sign}${Math.round(abs).toLocaleString('ko-KR')}`;
+ }
+ function renderGapDiagnosis(period,p){
+   const view=document.querySelector(`.summary-period-view[data-period-view="${period}"]`); const panel=view?.querySelector('[data-gap-diagnosis]'); if(!panel)return;
+   const rows=scopedSummarySegments(p).map(seg=>({...seg,displayGap:Math.max(0,Number(seg.gap??(Number(seg.target||0)-Number(seg.value||0))))})).filter(seg=>seg.displayGap>0).sort((a,b)=>b.displayGap-a.displayGap);
+   const periodName=period==='month'?(p?.month_label||trendPeriodLabel(period,p)):(p?.month_label||p?.short_label||'선택주');
+   if(!rows.length){panel.classList.add('clear');panel.innerHTML=`<div class='gap-diagnosis-head'><span>${esc(periodName)} 미달 원인</span><b>선택 기간 목표 달성/초과</b><em>추가 진단 필요 없음</em></div>`;return;}
+   panel.classList.remove('clear'); const totalGap=rows.reduce((sum,row)=>sum+row.displayGap,0); const biggest=rows[0]; const share=totalGap>0?Math.round(biggest.displayGap/totalGap*100):0;
+   const list=rows.map(row=>`<div class='gap-diagnosis-row ${esc(row.class||'')}'><span>${esc(row.summary_label||row.label||row.team||'-')}</span><b>${esc(row.gap_abs_label||row.gap_label||'-')}</b><em>목표 ${esc(row.target_label||'-')} · 마감예측 ${esc(row.value_eok_label||row.value_label||'-')}</em></div>`).join('');
+   panel.innerHTML=`<div class='gap-diagnosis-head'><span>${esc(periodName)} 미달 원인</span><b>가장 큰 문제: ${esc(biggest.summary_label||biggest.label||biggest.team||'-')} · ${esc(biggest.gap_abs_label||biggest.gap_label||'-')}</b><em>총 미달의 ${share}%</em></div><div class='gap-diagnosis-list'>${list}</div>`;
+ }
+ function renderScopedMonthChart(idx){
+   const periods=topSummary.month?.periods||[];
+   const chart=document.querySelector('.summary-period-view[data-period-view="month"] .summary-chart');
+   if(!chart||!periods.length)return;
+   const selectedIndex=Math.max(0,Math.min(Number(idx)||0,periods.length-1));
+   const points=periods.map((p,index)=>{
+     const segments=scopedSummarySegments(p);
+     const total=segments.reduce((sum,seg)=>sum+Number(seg.value||0),0);
+     const target=segments.reduce((sum,seg)=>sum+Number(seg.target||0),0);
+     return {p,index,segments,total,target};
+   });
+   const maxValue=Math.max(5e8,...points.flatMap(point=>[point.total,point.target]));
+   const chartMax=Math.ceil(maxValue/5e8)*5e8;
+   const grid=[0,.25,.5,.75,1].map(ratio=>`<div class="chart-grid-line" style="bottom:${(ratio*100).toFixed(4)}%"><span>${esc(formatKrw(chartMax*ratio))}</span></div>`).join('');
+   const legend=[['ad-gen','일반광고'],['ad-int','통광마'],['live','라이브']].map(([klass,label])=>`<span class="stack-legend-item ${klass}"><i></i>${label}</span>`).join('');
+   const bars=points.map(point=>{
+     const totalHeight=Math.max(0,point.total/chartMax*100); const targetHeight=Math.max(0,point.target/chartMax*100); const gap=point.target-point.total;
+     const gapClass=gap>0?'under':gap<0?'over':'met'; const gapLabel=gap>0?`미달 ${formatKrw(gap)}`:gap<0?`초과 ${formatKrw(Math.abs(gap))}`:'달성';
+     const segmentMarkup=point.segments.map(seg=>{const ratio=point.total>0?Math.max(0,Number(seg.value||0))/point.total*100:0; return `<i class="stack-seg ${esc(seg.class||'')}" style="height:${ratio.toFixed(4)}%" aria-label="${esc(seg.summary_label||seg.label||seg.team||'-')} ${esc(formatKrw(seg.value||0))}"></i>`;}).join('');
+     const tooltipRows=point.segments.map(seg=>`<div><span>${esc(seg.summary_label||seg.label||seg.team||'-')}</span><b>${esc(formatKrw(seg.value||0))}</b><em>${esc(seg.achievement_label||'-')}</em></div>`).join('');
+     const edge=point.index===0?' edge-left':point.index===points.length-1?' edge-right':'';
+     return `<div class="stack-month${point.index===selectedIndex?' current':''}${edge}" tabindex="0" role="button" data-period-index="${point.index}" data-period-id="${esc(point.p.ym||String(point.index))}" style="--bar-h:${totalHeight.toFixed(4)}%;--target-h:${targetHeight.toFixed(4)}%" aria-label="${esc(point.p.month_label||point.p.ym||'선택월')} B22N 매출 ${esc(formatKrw(point.total))} 목표 ${esc(formatKrw(point.target))} ${esc(gapLabel)}"><div class="bar-tooltip" role="tooltip"><strong>${esc(point.p.month_label||point.p.ym||'선택월')} B22N 상세</strong><div><span>총매출</span><b>${esc(formatKrw(point.total))}</b><em></em></div><div><span>월 목표</span><b>${esc(formatKrw(point.target))}</b><em>${esc(gapLabel)}</em></div>${tooltipRows}</div><div class="stack-total">${esc(formatKrw(point.total))}</div><div class="gap-label ${gapClass}" title="${esc(gapLabel)}">${esc(gapLabel)}</div><div class="target-marker" title="${esc(point.p.month_label||point.p.ym||'선택월')} 목표 ${esc(formatKrw(point.target))}"></div><div class="stack-bar" style="height:${totalHeight.toFixed(4)}%" title="${esc(point.p.month_label||point.p.ym||'선택월')} B22N 매출 ${esc(formatKrw(point.total))} / 목표 ${esc(formatKrw(point.target))}">${segmentMarkup}</div><div class="stack-month-label">${esc(point.p.month_label||point.p.ym||'-')}</div></div>`;
+   }).join('');
+   chart.innerHTML=`<div class="summary-chart-head"><strong>월별 총매출 구성</strong><div class="stack-legend">${legend}<span class="stack-legend-item target-line-legend"><i></i>월 목표</span></div></div><div class="axis-chart" aria-label="B22N 월별 매출 stacked bar chart"><div class="chart-plot">${grid}<div class="stack-bars">${bars}</div></div><div class="x-axis-title">B22N 매출 범위 · 일반광고 / 통광마 / 라이브</div></div>`;
+   chart.querySelectorAll('.stack-month').forEach(button=>{
+     button.addEventListener('click',()=>renderSummaryPeriod('month',Number(button.dataset.periodIndex)));
+     button.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();renderSummaryPeriod('month',Number(button.dataset.periodIndex));}});
+   });
+ }
+ function renderScopedWeekChart(idx){
+   const periods=topSummary.week?.periods||[];
+   const chart=document.querySelector('.summary-period-view[data-period-view="week"] .summary-chart');
+   if(!chart||!periods.length)return;
+   const selectedIndex=Math.max(0,Math.min(Number(idx)||0,periods.length-1));
+   const points=periods.map((p,index)=>{
+     const segments=scopedSummarySegments(p);
+     const total=segments.reduce((sum,seg)=>sum+Number(seg.value||0),0);
+     const target=segments.reduce((sum,seg)=>sum+Number(seg.target||0),0);
+     return {p,index,segments,total,target};
+   });
+   const maxValue=Math.max(1e8,...points.flatMap(point=>[point.total,point.target]));
+   const chartMax=Math.ceil(maxValue/1e8)*1e8;
+   const grid=[0,.2,.4,.6,.8,1].map(ratio=>`<div class="chart-grid-line" style="bottom:${(ratio*100).toFixed(4)}%"><span>${esc(formatKrw(chartMax*ratio))}</span></div>`).join('');
+   const legend=[['ad-gen','일반광고'],['ad-int','통광마'],['live','라이브']].map(([klass,label])=>`<span class="stack-legend-item ${klass}"><i></i>${label}</span>`).join('');
+   const bars=points.map(point=>{
+     const totalHeight=Math.max(0,point.total/chartMax*100); const targetHeight=Math.max(0,point.target/chartMax*100); const gap=point.target-point.total;
+     const gapClass=gap>0?'under':gap<0?'over':'met'; const gapLabel=gap>0?`미달 ${formatKrw(gap)}`:gap<0?`초과 ${formatKrw(Math.abs(gap))}`:'달성';
+     const segmentMarkup=point.segments.map(seg=>{const ratio=point.total>0?Math.max(0,Number(seg.value||0))/point.total*100:0; return `<i class="stack-seg ${esc(seg.class||'')}" style="height:${ratio.toFixed(4)}%" aria-label="${esc(seg.summary_label||seg.label||seg.team||'-')} ${esc(formatKrw(seg.value||0))}"></i>`;}).join('');
+     const tooltipRows=point.segments.map(seg=>`<div><span>${esc(seg.summary_label||seg.label||seg.team||'-')}</span><b>${esc(formatKrw(seg.value||0))}</b><em>${esc(seg.achievement_label||'-')}</em></div>`).join('');
+     const edge=point.index===0?' edge-left':point.index===points.length-1?' edge-right':'';
+     const label=point.p.short_label||point.p.month_label||point.p.ym||'선택주';
+     return `<div class="stack-month${point.index===selectedIndex?' current':''}${edge}" tabindex="0" role="button" data-period-index="${point.index}" data-period-id="${esc(point.p.ym||String(point.index))}" style="--bar-h:${totalHeight.toFixed(4)}%;--target-h:${targetHeight.toFixed(4)}%" aria-label="${esc(label)} B22N 매출 ${esc(formatKrw(point.total))} 목표 ${esc(formatKrw(point.target))} ${esc(gapLabel)}"><div class="bar-tooltip" role="tooltip"><strong>${esc(label)} B22N 상세</strong><div><span>총매출</span><b>${esc(formatKrw(point.total))}</b><em></em></div><div><span>주 목표</span><b>${esc(formatKrw(point.target))}</b><em>${esc(gapLabel)}</em></div>${tooltipRows}</div><div class="stack-total">${esc(formatKrw(point.total))}</div><div class="gap-label ${gapClass}" title="${esc(gapLabel)}">${esc(gapLabel)}</div><div class="target-marker" title="${esc(label)} 목표 ${esc(formatKrw(point.target))}"></div><div class="stack-bar" style="height:${totalHeight.toFixed(4)}%" title="${esc(label)} B22N 매출 ${esc(formatKrw(point.total))} / 목표 ${esc(formatKrw(point.target))}">${segmentMarkup}</div><div class="stack-month-label">${esc(label)}</div></div>`;
+   }).join('');
+   chart.innerHTML=`<div class="summary-chart-head"><strong>주별 B22N 매출 구성</strong><div class="stack-legend">${legend}<span class="stack-legend-item target-line-legend"><i></i>주 목표</span></div></div><div class="axis-chart" aria-label="B22N 주별 매출 stacked bar chart"><div class="chart-plot">${grid}<div class="stack-bars">${bars}</div></div><div class="x-axis-title">ISO week · B22N 매출 범위 · 일반광고 / 통광마 / 라이브</div></div>`;
+   chart.querySelectorAll('.stack-month').forEach(button=>{
+     button.addEventListener('click',()=>renderSummaryPeriod('week',Number(button.dataset.periodIndex)));
+     button.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();renderSummaryPeriod('week',Number(button.dataset.periodIndex));}});
+   });
+ }
+ function renderFreshnessWarning(){
+   const warning=document.querySelector('[data-dashboard-freshness]'); if(!warning)return;
+   const raw=data.meta?.built_at_kst||data.meta?.today; const parsed=raw?new Date(String(raw).length===10?`${raw}T00:00:00+09:00`:raw):null;
+   const ageHours=parsed&&!Number.isNaN(parsed.getTime())?(Date.now()-parsed.getTime())/36e5:null; const stale=ageHours!==null&&ageHours>48;
+   warning.hidden=!stale; warning.textContent=stale?`최신 데이터 ${String(raw).slice(0,10)} 기준 · ${Math.floor(ageHours/24)}일 경과. 선택월 변경은 데이터 새로고침이 아닙니다.`:'';
+ }
  function trendPeriodLabel(period,p){
    if(!p)return '-';
    if(period==='month'){ const parts=String(p.ym||'').split('-'); return parts.length>=2?`${parts[0]}년 ${Number(parts[1])}월`:(p.month_label||p.ym||'-'); }
@@ -1046,23 +1144,28 @@ function updateLiveGmvQualityCard(period,p,idx){
    $$('.summary-period-toggle').forEach(x=>x.classList.toggle('active',x.dataset.summaryPeriod===period));
    $$('.summary-period-view').forEach(v=>v.classList.toggle('active',v.dataset.periodView===period));
    if(view){
+     const allSegments=p.segments||[]; const segments=scopedSummarySegments(p); const scopeFiltered=segments.length!==allSegments.length;
+     const scopedTotal=segments.reduce((sum,seg)=>sum+Number(seg.value||0),0); const scopedTarget=segments.reduce((sum,seg)=>sum+Number(seg.target||0),0); const scopedGap=scopedTarget-scopedTotal; const scopedAchievement=scopedTarget>0?scopedTotal/scopedTarget*100:null;
      const rawFloor=period!=='week' && p.current_actual!==null && p.current_actual!==undefined && Number(p.current_actual)>Number(p.total||0)+1;
      const totalLabel=period==='week'?'주간 총매출':(rawFloor?'선택월 총매출':'선택월 마감예측'); const deltaLabel=trendDeltaLabel(period); const targetLabel=period==='week'?'주 목표':'월 목표';
      const cur=view.querySelector('.summary-period-current'); if(cur)cur.textContent=`선택 기준 · ${label}`;
      const kpi=view.querySelector('.summary-kpis'); if(kpi){
-       const secondLabel=period==='week'?deltaLabel:'현재 RAW 누적';
-       const secondValue=period==='week'?(p.total_mom_label||'-'):(p.current_actual_eok_label||p.current_actual_label||'-');
-       const secondClass=period==='week'?deltaClass(p.total_mom):'delta-flat';
-       const secondSmall=period==='week'?'':(p.current_actual_basis||'');
-       const primaryValue=p.forecast_eok_label||p.total_eok_label||p.total_label||'-';
-       const targetValue=p.target_label||'-';
-       const gapValue=p.gap_label||p.achievement_label||'-';
-       const gapSmall=period==='week'?'':`달성률 ${p.achievement_label||'-'}`;
-       kpi.innerHTML=`<div><span>${esc(totalLabel)}</span><b>${esc(primaryValue)}</b></div><div><span>${esc(secondLabel)}</span><b class="${secondClass}">${esc(secondValue)}</b><small>${esc(secondSmall)}</small></div><div><span>${esc(targetLabel)}</span><b>${esc(targetValue)}</b></div><div><span>목표 대비</span><b class="${achievementClass(p.achievement)}">${esc(gapValue)}</b><small>${esc(gapSmall)}</small></div>`;
+       const raw=rawActualPresentation(period,p);
+       const primaryValue=scopeFiltered?formatKrw(scopedTotal):(p.forecast_eok_label||p.total_eok_label||p.total_label||'-');
+       const targetValue=scopeFiltered?formatKrw(scopedTarget):(p.target_label||'-');
+       const achievementValue=scopeFiltered?scopedAchievement:p.achievement;
+       const achievementText=Number.isFinite(Number(achievementValue))?`${Number(achievementValue).toFixed(1)}%`:'-';
+       const gapValue=scopeFiltered?`${scopedGap>=0?'미달':'초과'} ${formatKrw(Math.abs(scopedGap))}`:(p.gap_label||p.achievement_label||'-');
+       const gapSmall=period==='week'?'':`달성률 ${scopeFiltered?achievementText:(p.achievement_label||'-')}`;
+       kpi.innerHTML=`<div><span>${esc(totalLabel)}</span><b>${esc(primaryValue)}</b></div><div><span>${esc(raw.label)}</span><b class="${esc(raw.className)}">${esc(raw.value)}</b><small>${esc(raw.small)}</small></div><div><span>${esc(targetLabel)}</span><b>${esc(targetValue)}</b></div><div><span>목표 대비</span><b class="${achievementClass(achievementValue)}">${esc(gapValue)}</b><small>${esc(gapSmall)}</small></div>`;
      }
-     const split=view.querySelector('.summary-splits'); if(split){split.innerHTML=(p.segments||[]).map(seg=>`<div class='summary-split ${esc(seg.class||'')}' data-summary-segment='${esc(seg.team||'')}'><span>${esc(seg.summary_label||seg.label||'-')}</span><b>${esc(seg.value_eok_label||seg.value_label||'-')}</b><div class='summary-split-metrics'><em class='mom-value ${deltaClass(seg.mom)}'><small>${esc(deltaLabel)}</small>${esc(seg.mom_label||'-')}</em><em class='rate-value'><small>달성률</small>${esc(seg.achievement_label||'-')}</em></div></div>`).join('');}
+     const split=view.querySelector('.summary-splits'); if(split){split.innerHTML=segments.map(seg=>`<div class='summary-split ${esc(seg.class||'')}' data-summary-segment='${esc(seg.team||'')}'><span>${esc(seg.summary_label||seg.label||'-')}</span><b>${esc(seg.value_eok_label||seg.value_label||'-')}</b><div class='summary-split-metrics'><em class='mom-value ${deltaClass(seg.mom)}'><small>${esc(deltaLabel)}</small>${esc(seg.mom_label||'-')}</em><em class='rate-value'><small>달성률</small>${esc(seg.achievement_label||'-')}</em></div></div>`).join('');}
+     renderGapDiagnosis(period,p);
+     if(period==='month')renderScopedMonthChart(idx);
+     if(period==='week')renderScopedWeekChart(idx);
      view.querySelectorAll('.stack-month').forEach((bar,i)=>bar.classList.toggle('current',i===idx));
    }
+   const topmeta=$$('.topmeta .pill'); if(topmeta[0])topmeta[0].textContent=period==='month'?(p.ym||label):label; if(topmeta[1])topmeta[1].textContent=`데이터 ${String(data.meta?.built_at_kst||data.meta?.today||'-').slice(0,10)}`;
    $('#trendBridgeKicker')&&($('#trendBridgeKicker').textContent=trendKicker(period));
    $('#trendBridgeTitle')&&($('#trendBridgeTitle').textContent=label);
    $('#trendBridgeCaption')&&($('#trendBridgeCaption').textContent='차트 막대 또는 선택값으로 과거 월/주차를 조회합니다. 아래 KR 카드도 선택 기준으로 동기화됩니다.');
@@ -1106,6 +1209,7 @@ function updateLiveGmvQualityCard(period,p,idx){
 
  }
  function renderAllComments(){ensureCommentWidgets(); $$('[data-sync-revenue-card],[data-sync-quality-card]').forEach(renderCardComment);}
+ renderFreshnessWarning();
  renderSummaryPeriod('month',summarySelection.month||0);
  renderAllComments();
  function renderPreview(pack, tableSel, infoSel, query){ if(!pack)return; const q=(query||'').trim().toLowerCase(); const rows=pack.rows.filter(row=>row.join(' ').toLowerCase().includes(q)); $(tableSel+' thead').innerHTML='<tr>'+pack.columns.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr>'; $(tableSel+' tbody').innerHTML=rows.map(row=>'<tr>'+row.map(v=>`<td>${esc(v)}</td>`).join('')+'</tr>').join(''); $(infoSel).textContent=`표시 ${rows.length} / 샘플 ${pack.rows.length}건 · 숨긴 열 ${pack.removed_columns?.length||0}개`; }
