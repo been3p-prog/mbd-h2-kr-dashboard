@@ -110,8 +110,12 @@ def main() -> int:
     expected_month = str(int(month))
     if f"선택 기준 · {expected_label}" not in visible_text:
         errors.append(f"selected-period label mismatch: expected {expected_label}")
-    if f"{expected_month}월 미달 원인" not in visible_text:
-        errors.append(f"selected-period diagnosis mismatch: expected {expected_month}월")
+    # [2026-08-06] 판정 카드 계약 변경 — 미달 팀만이 아니라 3팀의 마감예측·목표·GAP을 모두 렌더링해야 한다.
+    if f"{expected_month}월 3팀 매출 요약" not in visible_text:
+        errors.append(f"selected-period three-team summary mismatch: expected {expected_month}월")
+    decision_teams = set(re.findall(r'data-gap-team="([^"]+)"', month_html))
+    if decision_teams != {"ad_gen", "ad_int", "live"}:
+        errors.append(f"decision summary team mismatch: {sorted(decision_teams)}")
 
     if "온드·YT 광고" in visible_text:
         errors.append("owned YouTube advertising leaked into the rendered B22N revenue chart")

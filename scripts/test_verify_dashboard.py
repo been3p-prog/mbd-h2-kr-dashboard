@@ -91,6 +91,33 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("전월대비 -2.6% | 최근 3개월 평균대비 -9.3%", self.html)
         self.assertIn("전월 동일자 대비 -22.7% | 최근 3개월 동일자 평균대비 -22.6%", self.html)
 
+    def test_decision_panel_includes_all_three_teams_with_forecast_as_primary(self):
+        start = self.html.index("function renderGapDiagnosis")
+        end = self.html.index("function renderScopedMonthChart", start)
+        renderer = self.html[start:end]
+        self.assertIn("3팀 매출 요약", renderer)
+        self.assertIn("data-gap-team='${esc(row.team||'')}'", renderer)
+        self.assertIn("마감예측", renderer)
+        self.assertIn("미달팀 GAP의", renderer)
+        self.assertIn("GAP", renderer)
+        self.assertNotIn(".filter(seg=>seg.displayGap>0)", renderer)
+
+    def test_lower_cards_use_selected_summary_segment_as_revenue_sot(self):
+        self.assertIn("const summarySeg=scopedSummarySegments(p).find(seg=>seg.team===team);", self.html)
+        self.assertIn("actual_label:baseItem.actual_label||summarySeg.value_eok_label||summarySeg.value_label", self.html)
+        self.assertIn("pct_label:summarySeg.achievement_label", self.html)
+        top = extract_json_assignment(self.html, "__TOP_SUMMARY_DATA__")
+        sot = extract_json_assignment(self.html, "__MBD_SOT_DATA__")
+        for month in top["month"]["periods"]:
+            for segment in (s for s in month["segments"] if s["team"] in ALLOWED_REVENUE_TEAMS):
+                lower = next(p for p in sot["lower_revenue_card_periods"][segment["team"]]["month"] if p["id"] == month["ym"])
+                if lower["actual"] is None:
+                    continue
+                self.assertEqual(lower["actual"], segment["value"], f'{month["ym"]} {segment["team"]} actual')
+                self.assertEqual(lower["target"], segment["target"], f'{month["ym"]} {segment["team"]} target')
+                if lower["pct"] is not None and segment["achievement"] is not None:
+                    self.assertAlmostEqual(lower["pct"], segment["achievement"], msg=f'{month["ym"]} {segment["team"]} achievement')
+
     def test_mobile_summary_grid_is_single_column_without_implicit_overflow(self):
         self.assertIn(
             'body[data-ux-contract="figma-editorial-v2"] .summary-period-view{width:100%;min-width:0;grid-template-columns:minmax(0,1fr);grid-template-areas:"kpis" "chart" "main"}',
