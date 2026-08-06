@@ -165,8 +165,8 @@ body{min-width:1160px}
 .summary-freshness{display:flex;align-items:flex-start;gap:8px;border:1px solid #FFD8A8;background:#FFF9EF;color:#8A5A00;border-radius:14px;padding:10px 12px;font-size:12px;font-weight:760;line-height:1.45}.summary-freshness::before{content:'주의';display:inline-flex;flex:none;border-radius:999px;background:#FFE8C7;color:#A15C00;padding:2px 7px;font-size:10px;font-weight:950}.summary-freshness[hidden]{display:none}
 
 /* [2026-08-05] MBD_UX_CANARY_V1 — decision-first, source-visible, responsive UI-only hotfix. */
-body[data-ux-contract="decision-first-v1"]{min-width:0;overflow-x:hidden;background:linear-gradient(180deg,#F7FAFC 0,#F4F7F9 100%)}
-body[data-ux-contract="decision-first-v1"] .shell{max-width:1480px;padding:24px 32px 80px}
+body[data-ux-contract="figma-editorial-v2"]{min-width:0;overflow-x:hidden;background:linear-gradient(180deg,#F7FAFC 0,#F4F7F9 100%)}
+body[data-ux-contract="figma-editorial-v2"] .shell{max-width:1480px;padding:24px 32px 80px}
 .brand{gap:11px}.brand-dot{width:32px;height:32px;border-radius:11px}.brand-copy{display:grid;gap:2px}.brand-copy strong{font-size:15px;color:var(--ink);letter-spacing:-.025em}.brand-copy small{font-size:11px;color:var(--muted);font-weight:720}
 .topbar{padding:8px 0 16px}.pill{padding:7px 11px;background:#fff;border-color:#E1E9EE;font-weight:760}.pill-primary{background:#EAF8FD;border-color:#CBEAF4;color:#007EA8;font-weight:900}
 .tabs{top:0;padding:9px 0 11px;margin-bottom:10px}.tab{height:36px;padding:0 14px}.tab:focus-visible,.summary-period-toggle:focus-visible,.trend-bridge-controls button:focus-visible,.trend-bridge-controls select:focus-visible,.metric-definition-open:focus-visible,.sales-breakdown-trigger:focus-visible,.stack-month:focus-visible{outline:3px solid rgba(53,197,240,.35);outline-offset:3px}
@@ -186,11 +186,206 @@ body[data-ux-contract="decision-first-v1"] .shell{max-width:1480px;padding:24px 
 .youtube-target-hero{padding:13px;border-radius:15px}.youtube-target-main strong{font-size:30px}.youtube-insight-block{padding:11px}.owned-metric-grid{gap:8px}.owned-metric-card{padding:10px;border-radius:14px}.owned-program-block,.live-drilldown-block{border-radius:14px}.owned-program-grid,.live-program-grid,.live-package-grid{gap:6px}.monthly-highlights{margin-top:16px;padding:18px;border-radius:20px}.monthly-highlights-head{margin-bottom:12px}.monthly-highlight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .metric-definition-drawer{border-radius:20px}
 @media(max-width:1180px){.summary-period-view{grid-template-columns:1fr}.summary-chart{order:1}.summary-main{order:2;padding-top:0}.summary-period-tabs{position:static;margin:0 0 12px auto}.summary-freshness{margin-right:0}.summary-chart-head{align-items:flex-start}.summary-chart-head .stack-legend{justify-content:flex-start}.quality-row{grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr)}}
-@media(max-width:960px){body[data-ux-contract="decision-first-v1"] .shell{padding:18px 20px 64px}.revenue-row,.quality-row{grid-template-columns:1fr}.kpi-card{width:100%}.section-intro{align-items:flex-start}.section-intro p{text-align:left}.topbar{align-items:flex-start}.topmeta{max-width:52%}}
-@media(max-width:720px){body[data-ux-contract="decision-first-v1"] .shell{padding:12px 12px 48px}.topbar{display:grid;gap:12px}.topmeta{max-width:none;justify-content:flex-start}.pill{font-size:10px;padding:6px 9px}.tabs{margin:0 -12px 8px;padding:8px 12px;overflow-x:auto;scrollbar-width:none}.tab{flex:0 0 auto}.summary-card{padding:12px;border-radius:18px}.summary-period-tabs{width:100%;margin-bottom:10px}.summary-period-toggle{flex:1}.summary-chart{overflow-x:auto;padding:16px 12px 12px;border-radius:15px}.summary-chart-head{display:grid;gap:8px}.summary-chart-head::after{content:'막대를 좌우로 넘겨 12개월 확인';font-size:10px;font-weight:780;color:#71808A}.summary-chart-head strong{font-size:21px}.stack-legend{justify-content:flex-start;max-width:none}.axis-chart{min-width:620px;grid-template-columns:54px minmax(0,1fr)}.summary-main{padding:0}.summary-main h1{font-size:24px}.summary-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.summary-kpis b{font-size:19px}.gap-diagnosis-row{grid-template-columns:56px 58px minmax(0,1fr)}.trend-bridge-banner{align-items:stretch}.trend-bridge-copy{display:grid;gap:4px}.trend-bridge-controls{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto}.trend-bridge-controls select{min-width:0}.section-intro{display:grid;gap:7px}.section-intro h2{font-size:23px}.section-intro p{max-width:none}.kpi-card{padding:15px;border-radius:17px}.revenue-hero{grid-template-columns:minmax(0,1fr) auto}.owned-metric-grid{grid-template-columns:1fr}.monthly-highlight-grid{grid-template-columns:1fr}.metric-definition-drawer{inset:8px;width:auto;border-radius:16px}}
+@media(max-width:960px){body[data-ux-contract="figma-editorial-v2"] .shell{padding:18px 20px 64px}.revenue-row,.quality-row{grid-template-columns:1fr}.kpi-card{width:100%}.section-intro{align-items:flex-start}.section-intro p{text-align:left}.topbar{align-items:flex-start}.topmeta{max-width:52%}}
+@media(max-width:720px){body[data-ux-contract="figma-editorial-v2"] .shell{padding:12px 12px 48px}.topbar{display:grid;gap:12px}.topmeta{max-width:none;justify-content:flex-start}.pill{font-size:10px;padding:6px 9px}.tabs{margin:0 -12px 8px;padding:8px 12px;overflow-x:auto;scrollbar-width:none}.tab{flex:0 0 auto}.summary-card{padding:12px;border-radius:18px}.summary-period-tabs{width:100%;margin-bottom:10px}.summary-period-toggle{flex:1}.summary-chart{overflow-x:auto;padding:16px 12px 12px;border-radius:15px}.summary-chart-head{display:grid;gap:8px}.summary-chart-head::after{content:'막대를 좌우로 넘겨 12개월 확인';font-size:10px;font-weight:780;color:#71808A}.summary-chart-head strong{font-size:21px}.stack-legend{justify-content:flex-start;max-width:none}.axis-chart{min-width:620px;grid-template-columns:54px minmax(0,1fr)}.summary-main{padding:0}.summary-main h1{font-size:24px}.summary-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.summary-kpis b{font-size:19px}.gap-diagnosis-row{grid-template-columns:56px 58px minmax(0,1fr)}.trend-bridge-banner{align-items:stretch}.trend-bridge-copy{display:grid;gap:4px}.trend-bridge-controls{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto}.trend-bridge-controls select{min-width:0}.section-intro{display:grid;gap:7px}.section-intro h2{font-size:23px}.section-intro p{max-width:none}.kpi-card{padding:15px;border-radius:17px}.revenue-hero{grid-template-columns:minmax(0,1fr) auto}.owned-metric-grid{grid-template-columns:1fr}.monthly-highlight-grid{grid-template-columns:1fr}.metric-definition-drawer{inset:8px;width:auto;border-radius:16px}}
+
+/* FIGMA_EDITORIAL_V2 */
+body[data-ux-contract="figma-editorial-v2"]{
+  --canvas:#F7F7F4;
+  --surface:#FFFFFF;
+  --ink:#262626;
+  --body:#3F3F3F;
+  --muted:#747474;
+  --line:#DEDEDA;
+  --accent:#3567F6;
+  --accent-soft:#EEF2FF;
+  --risk:#D38800;
+  --risk-soft:#FFF5E5;
+  --positive:#2AA876;
+  --positive-soft:#EAF8F1;
+  min-width:0;
+  overflow-x:hidden;
+  color:var(--ink);
+  background:var(--canvas);
+  font-family:Pretendard,"Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;
+}
+body[data-ux-contract="figma-editorial-v2"] .shell{max-width:1520px;padding:40px 40px 96px}
+body[data-ux-contract="figma-editorial-v2"] .topbar{align-items:flex-end;padding:0 0 22px}
+body[data-ux-contract="figma-editorial-v2"] .brand{align-items:flex-start;gap:0}
+body[data-ux-contract="figma-editorial-v2"] .brand-dot{display:none}
+body[data-ux-contract="figma-editorial-v2"] .brand-copy{gap:7px}
+body[data-ux-contract="figma-editorial-v2"] .brand-copy strong{font-size:32px;line-height:1.08;letter-spacing:-.055em;font-weight:820}
+body[data-ux-contract="figma-editorial-v2"] .brand-copy small{font-size:14px;color:var(--muted);font-weight:520}
+body[data-ux-contract="figma-editorial-v2"] .topmeta{gap:7px}
+body[data-ux-contract="figma-editorial-v2"] .pill{padding:9px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#666;font-size:11px;font-weight:760;box-shadow:none;backdrop-filter:none}
+body[data-ux-contract="figma-editorial-v2"] .pill-primary{border-color:#CFDAFF;background:var(--accent-soft);color:var(--accent)}
+body[data-ux-contract="figma-editorial-v2"] .tabs{position:sticky;top:0;z-index:10;gap:4px;margin:0 0 24px;padding:10px 0;background:rgba(247,247,244,.95);border-bottom:1px solid var(--line);backdrop-filter:none}
+body[data-ux-contract="figma-editorial-v2"] .tab{height:36px;padding:0 14px;border:1px solid transparent;border-radius:10px;background:transparent;box-shadow:none;color:#6C6C6C;font-size:12px;font-weight:720}
+body[data-ux-contract="figma-editorial-v2"] .tab.active{border-color:#CFDAFF;background:var(--accent-soft);color:var(--accent)}
+body[data-ux-contract="figma-editorial-v2"] .summary-card{margin:0;padding:0;overflow:visible;border:0;border-radius:0;background:transparent;box-shadow:none}
+body[data-ux-contract="figma-editorial-v2"] .summary-period-tabs{position:static;display:flex;width:max-content;margin:0 0 12px auto;padding:4px;border:1px solid var(--line);border-radius:12px;background:#fff}
+body[data-ux-contract="figma-editorial-v2"] .summary-period-toggle{height:32px;border-radius:8px;color:#777;font-size:11px;font-weight:760}
+body[data-ux-contract="figma-editorial-v2"] .summary-period-toggle.active{background:var(--accent);color:#fff}
+body[data-ux-contract="figma-editorial-v2"] .summary-freshness{margin:0 0 16px;padding:10px 12px;border:1px solid #EAD9B8;border-radius:12px;background:#FFF9EF;color:#7C6030;box-shadow:none}
+body[data-ux-contract="figma-editorial-v2"] .summary-period-view{display:none;grid-template-columns:minmax(0,1.7fr) minmax(340px,.78fr);grid-template-areas:"kpis kpis" "chart main";gap:24px;align-items:start}
+body[data-ux-contract="figma-editorial-v2"] .summary-period-view.active{display:grid}
+body[data-ux-contract="figma-editorial-v2"] .summary-kpis{grid-area:kpis;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+body[data-ux-contract="figma-editorial-v2"] .summary-kpis>div{min-height:112px;padding:20px 22px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:none}
+body[data-ux-contract="figma-editorial-v2"] .summary-kpis span{margin-bottom:13px;color:#6F6F6F;font-size:12px;font-weight:700}
+body[data-ux-contract="figma-editorial-v2"] .summary-kpis b{font-size:36px;line-height:1;letter-spacing:-.055em}
+body[data-ux-contract="figma-editorial-v2"] .summary-kpis small{margin-top:10px;color:#7A7A7A;font-size:11px;line-height:1.35}
+body[data-ux-contract="figma-editorial-v2"] .summary-chart{grid-area:chart;order:initial;min-height:548px;padding:24px 26px 20px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:none}
+body[data-ux-contract="figma-editorial-v2"] .summary-chart-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:0 0 16px;padding:0}
+body[data-ux-contract="figma-editorial-v2"] .summary-chart-head strong{font-size:22px;line-height:1.2;letter-spacing:-.035em}
+body[data-ux-contract="figma-editorial-v2"] .summary-chart-head strong::before,
+body[data-ux-contract="figma-editorial-v2"] .summary-chart-head strong::after{content:none;display:none}
+body[data-ux-contract="figma-editorial-v2"] .stack-legend{gap:10px;padding:0;border:0;border-radius:0;background:transparent}
+body[data-ux-contract="figma-editorial-v2"] .stack-legend-item{font-size:10px;color:#777}
+body[data-ux-contract="figma-editorial-v2"] .stack-legend-item i{width:10px;height:10px;border-radius:3px}
+body[data-ux-contract="figma-editorial-v2"] .stack-legend-item.ad-gen i,
+body[data-ux-contract="figma-editorial-v2"] .stack-seg.ad-gen{background:#3567F6}
+body[data-ux-contract="figma-editorial-v2"] .stack-legend-item.ad-int i,
+body[data-ux-contract="figma-editorial-v2"] .stack-seg.ad-int{background:#7891F7}
+body[data-ux-contract="figma-editorial-v2"] .stack-legend-item.live i,
+body[data-ux-contract="figma-editorial-v2"] .stack-seg.live{background:#AABBF9}
+body[data-ux-contract="figma-editorial-v2"] .stack-legend-item.owned-youtube i,
+body[data-ux-contract="figma-editorial-v2"] .stack-seg.owned-youtube{background:#D9E1FB}
+body[data-ux-contract="figma-editorial-v2"] .chart-plot{height:390px;background:#fff}
+body[data-ux-contract="figma-editorial-v2"] .axis-chart{grid-template-rows:18px 390px 40px}
+body[data-ux-contract="figma-editorial-v2"] .chart-grid-line{border-color:#ECECE8}
+body[data-ux-contract="figma-editorial-v2"] .stack-bar{width:min(54px,64%);border-radius:6px 6px 2px 2px;background:#ECEEF4}
+body[data-ux-contract="figma-editorial-v2"] .stack-month.current::before{inset:-10px -8px -8px;border:2px solid var(--accent);border-radius:12px;background:transparent}
+body[data-ux-contract="figma-editorial-v2"] .stack-total{font-size:11px;color:#555}
+body[data-ux-contract="figma-editorial-v2"] .gap-label{font-size:9px;font-weight:750}
+body[data-ux-contract="figma-editorial-v2"] .gap-label.under{color:#C65353}
+body[data-ux-contract="figma-editorial-v2"] .gap-label.over{color:var(--positive)}
+body[data-ux-contract="figma-editorial-v2"] .target-marker{border-color:#919191;opacity:.55}
+body[data-ux-contract="figma-editorial-v2"] .summary-note{margin-top:10px;color:#8A8A8A;font-size:10px;line-height:1.45}
+body[data-ux-contract="figma-editorial-v2"] .summary-main{grid-area:main;order:initial;display:flex;min-height:548px;padding:24px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:none;gap:14px}
+body[data-ux-contract="figma-editorial-v2"] .summary-eyebrow{font-size:10px;color:var(--accent);letter-spacing:.08em}
+body[data-ux-contract="figma-editorial-v2"] .summary-main h1{font-size:28px;line-height:1.12;letter-spacing:-.045em}
+body[data-ux-contract="figma-editorial-v2"] .summary-main p{font-size:12px;line-height:1.5;color:#777}
+body[data-ux-contract="figma-editorial-v2"] .summary-period-current{align-self:stretch;padding:10px 12px;border:0;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:11px}
+body[data-ux-contract="figma-editorial-v2"] .gap-diagnosis-panel{margin-top:2px;padding:16px;border:1px solid #E8D6B8;border-radius:14px;background:#FFFDF8}
+body[data-ux-contract="figma-editorial-v2"] .gap-diagnosis-panel.clear{border-color:#CFE8DD;background:#FBFFFD}
+body[data-ux-contract="figma-editorial-v2"] .gap-diagnosis-head span{color:var(--risk);font-size:10px}
+body[data-ux-contract="figma-editorial-v2"] .gap-diagnosis-head b{font-size:17px}
+body[data-ux-contract="figma-editorial-v2"] .gap-diagnosis-row{padding:10px 0;border-color:#E8E8E4;background:transparent}
+body[data-ux-contract="figma-editorial-v2"] .summary-splits{display:none!important}
+body[data-ux-contract="figma-editorial-v2"] .trend-bridge-banner{margin:20px 0 26px;padding:14px 18px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:none}
+body[data-ux-contract="figma-editorial-v2"] .trend-bridge-copy span{color:var(--accent)}
+body[data-ux-contract="figma-editorial-v2"] .trend-bridge-copy strong{color:var(--ink)}
+body[data-ux-contract="figma-editorial-v2"] .trend-bridge-copy em{color:#7A7A7A}
+body[data-ux-contract="figma-editorial-v2"] .trend-bridge-controls button,
+body[data-ux-contract="figma-editorial-v2"] .trend-bridge-controls select{border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);box-shadow:none}
+body[data-ux-contract="figma-editorial-v2"] .section-intro{align-items:end;padding:20px 2px 14px}
+body[data-ux-contract="figma-editorial-v2"] .section-intro span{color:var(--accent)}
+body[data-ux-contract="figma-editorial-v2"] .section-intro h2{font-size:27px}
+body[data-ux-contract="figma-editorial-v2"] .section-intro p{color:#777}
+body[data-ux-contract="figma-editorial-v2"] .primary-kpis{gap:18px}
+body[data-ux-contract="figma-editorial-v2"] .kpi-row{gap:18px}
+body[data-ux-contract="figma-editorial-v2"] .revenue-row{grid-template-columns:repeat(3,minmax(0,1fr))}
+body[data-ux-contract="figma-editorial-v2"] .quality-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+body[data-ux-contract="figma-editorial-v2"] .kpi-card{min-height:0;padding:22px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:none;gap:14px;cursor:default;transition:border-color .15s ease}
+body[data-ux-contract="figma-editorial-v2"] .kpi-card:hover{transform:none;border-color:#C8C8C2;box-shadow:none}
+body[data-ux-contract="figma-editorial-v2"] .kpi-card-head{padding-bottom:14px;border-color:#E9E9E5}
+body[data-ux-contract="figma-editorial-v2"] .kpi-card-head h2{font-size:22px}
+body[data-ux-contract="figma-editorial-v2"] .team-code{color:#777;font-size:9px;letter-spacing:.07em}
+body[data-ux-contract="figma-editorial-v2"] .metric-definition-open{padding:7px 10px;border:0;border-radius:9px;background:var(--accent-soft);color:var(--accent);font-size:10px}
+body[data-ux-contract="figma-editorial-v2"] .status{border:0;border-radius:999px;padding:7px 11px;font-size:10px}
+body[data-ux-contract="figma-editorial-v2"] .status.good,
+body[data-ux-contract="figma-editorial-v2"] .status.confirmed{background:var(--positive-soft);color:var(--positive)}
+body[data-ux-contract="figma-editorial-v2"] .status.watch,
+body[data-ux-contract="figma-editorial-v2"] .status.source_needed,
+body[data-ux-contract="figma-editorial-v2"] .status.risk{background:var(--risk-soft);color:var(--risk)}
+body[data-ux-contract="figma-editorial-v2"] .status.owned{background:var(--accent-soft);color:var(--accent)}
+body[data-ux-contract="figma-editorial-v2"] .revenue-hero{grid-template-columns:minmax(0,1fr) 148px;gap:12px}
+body[data-ux-contract="figma-editorial-v2"] .metric-big{padding:16px;border:1px solid #E8E8E4;border-radius:14px;background:#fff}
+body[data-ux-contract="figma-editorial-v2"] .metric-big.primary{border-color:#D9E1FB;background:#FCFDFF}
+body[data-ux-contract="figma-editorial-v2"] .metric-big strong{font-size:38px}
+body[data-ux-contract="figma-editorial-v2"] .rate-ring-card{background:#FAFAF8}
+body[data-ux-contract="figma-editorial-v2"] .rate-ring{width:104px;height:104px;background:conic-gradient(var(--ring,var(--risk)) calc(var(--p)*1%),#ECEDEB 0)}
+body[data-ux-contract="figma-editorial-v2"] .rate-ring::after{inset:9px;background:#fff}
+body[data-ux-contract="figma-editorial-v2"] .rate-ring strong{font-size:22px;color:var(--ink)}
+body[data-ux-contract="figma-editorial-v2"] .metric-value-grid{border:1px solid #E7E7E2;border-radius:12px;background:#fff}
+body[data-ux-contract="figma-editorial-v2"] .metric-value{padding:11px;border-color:#ECECE8}
+body[data-ux-contract="figma-editorial-v2"] .month-strip{padding:12px 10px;border:1px solid #E7E7E2;border-radius:12px;background:#FAFAF8}
+body[data-ux-contract="figma-editorial-v2"] .mbar i{background:#C9D3F8}
+body[data-ux-contract="figma-editorial-v2"] .mbar.good i{background:var(--accent)}
+body[data-ux-contract="figma-editorial-v2"] .mbar.watch i{background:#8CA2F7}
+body[data-ux-contract="figma-editorial-v2"] .mbar.risk i{background:#D8B06A}
+body[data-ux-contract="figma-editorial-v2"] .mbar.current{background:var(--accent-soft);box-shadow:0 0 0 1px #C8D5FF}
+body[data-ux-contract="figma-editorial-v2"] .monthly-card{min-width:0}
+body[data-ux-contract="figma-editorial-v2"] .sales-breakdown-popover{left:auto;right:0;max-width:min(460px,calc(100vw - 32px));transform-origin:top right}
+body[data-ux-contract="figma-editorial-v2"] .sales-breakdown-trigger:focus + .sales-breakdown-popover{opacity:1;transform:translateY(0);pointer-events:auto}
+body[data-ux-contract="figma-editorial-v2"] .team-foot{margin-top:2px;padding-top:12px;border-color:#E9E9E5}
+body[data-ux-contract="figma-editorial-v2"] .foot-diagnostic-lead{color:#555}
+body[data-ux-contract="figma-editorial-v2"] .revenue-card .foot-diagnostic-list,
+body[data-ux-contract="figma-editorial-v2"] .revenue-card .foot-diagnostic>small{display:none}
+body[data-ux-contract="figma-editorial-v2"] .card-comment-zone{border-color:#D8E1FF;background:#FBFCFF;border-radius:11px}
+body[data-ux-contract="figma-editorial-v2"] .youtube-target-hero{border-color:#D8E1FB;border-radius:14px;background:#FCFDFF}
+body[data-ux-contract="figma-editorial-v2"] .youtube-target-judgement{background:var(--accent-soft);color:var(--accent)}
+body[data-ux-contract="figma-editorial-v2"] .youtube-insight-block,
+body[data-ux-contract="figma-editorial-v2"] .owned-metric-card,
+body[data-ux-contract="figma-editorial-v2"] .owned-program-block,
+body[data-ux-contract="figma-editorial-v2"] .live-drilldown-block{border-color:#E7E7E2;border-radius:14px;background:#FAFAF8}
+body[data-ux-contract="figma-editorial-v2"] .owned-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+body[data-ux-contract="figma-editorial-v2"] .monthly-highlights{margin-top:20px;padding:22px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:none}
+body[data-ux-contract="figma-editorial-v2"] .monthly-highlight-card{border-color:#E5E5E1;border-radius:14px;background:#fff}
+body[data-ux-contract="figma-editorial-v2"] .highlight{border-color:#D5E9E2;background:#FBFFFD}
+body[data-ux-contract="figma-editorial-v2"] .lowlight{border-color:#EAD8D2;background:#FFFDFB}
+body[data-ux-contract="figma-editorial-v2"] .table-card{border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:none}
+body[data-ux-contract="figma-editorial-v2"] .metric-definition-drawer{position:fixed;inset:16px 16px 16px auto;width:min(460px,calc(100vw - 32px));border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:0 20px 60px rgba(30,30,30,.12)}
+body[data-ux-contract="figma-editorial-v2"] .metric-definition-purpose{border-color:#D8E1FB;background:var(--accent-soft)}
+@media(max-width:1180px){
+  body[data-ux-contract="figma-editorial-v2"] .summary-period-view{grid-template-columns:minmax(0,1.45fr) minmax(320px,.85fr)}
+  body[data-ux-contract="figma-editorial-v2"] .summary-chart-head{display:grid}
+  body[data-ux-contract="figma-editorial-v2"] .stack-legend{justify-content:flex-start}
+}
+@media(max-width:980px){
+  body[data-ux-contract="figma-editorial-v2"] .shell{padding:28px 22px 72px}
+  body[data-ux-contract="figma-editorial-v2"] .summary-period-view{grid-template-columns:1fr;grid-template-areas:"kpis" "chart" "main"}
+  body[data-ux-contract="figma-editorial-v2"] .summary-main{min-height:0}
+  body[data-ux-contract="figma-editorial-v2"] .revenue-row,
+  body[data-ux-contract="figma-editorial-v2"] .quality-row{grid-template-columns:1fr}
+  body[data-ux-contract="figma-editorial-v2"] .section-intro{align-items:flex-start}
+  body[data-ux-contract="figma-editorial-v2"] .section-intro p{text-align:left}
+}
+@media(max-width:720px){
+  body[data-ux-contract="figma-editorial-v2"] .shell{padding:18px 12px 56px}
+  body[data-ux-contract="figma-editorial-v2"] .topbar{display:grid;gap:14px}
+  body[data-ux-contract="figma-editorial-v2"] .brand-copy strong{font-size:26px}
+  body[data-ux-contract="figma-editorial-v2"] .topmeta{justify-content:flex-start}
+  body[data-ux-contract="figma-editorial-v2"] .tabs{margin:0 -12px 18px;padding:8px 12px;overflow-x:auto}
+  body[data-ux-contract="figma-editorial-v2"] .tab{flex:0 0 auto}
+  body[data-ux-contract="figma-editorial-v2"] .summary-period-tabs{width:100%}
+  body[data-ux-contract="figma-editorial-v2"] .summary-period-toggle{flex:1}
+  body[data-ux-contract="figma-editorial-v2"] .summary-freshness{max-width:100%;white-space:normal;overflow:hidden}
+  body[data-ux-contract="figma-editorial-v2"] .summary-period-view{width:100%;min-width:0;grid-template-columns:minmax(0,1fr)}
+  body[data-ux-contract="figma-editorial-v2"] .summary-kpis{width:100%;min-width:0;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  body[data-ux-contract="figma-editorial-v2"] .summary-kpis>div{min-width:0;min-height:98px;padding:15px;overflow:hidden}
+  body[data-ux-contract="figma-editorial-v2"] .summary-kpis b{font-size:24px;white-space:normal;overflow-wrap:anywhere}
+  body[data-ux-contract="figma-editorial-v2"] .summary-chart{width:100%;min-width:0;min-height:480px;padding:18px 14px;overflow-x:auto}
+  body[data-ux-contract="figma-editorial-v2"] .summary-chart-head{min-width:650px}
+  body[data-ux-contract="figma-editorial-v2"] .axis-chart{min-width:650px;grid-template-columns:44px minmax(0,1fr)}
+  body[data-ux-contract="figma-editorial-v2"] .summary-main{width:100%;min-width:0;padding:18px}
+  body[data-ux-contract="figma-editorial-v2"] .summary-main h1{font-size:24px}
+  body[data-ux-contract="figma-editorial-v2"] .trend-bridge-banner{display:grid;gap:12px}
+  body[data-ux-contract="figma-editorial-v2"] .trend-bridge-controls{display:grid;grid-template-columns:auto minmax(0,1fr) auto;width:100%}
+  body[data-ux-contract="figma-editorial-v2"] .section-intro{display:grid;gap:7px}
+  body[data-ux-contract="figma-editorial-v2"] .kpi-card{padding:17px;border-radius:17px}
+  body[data-ux-contract="figma-editorial-v2"] .revenue-hero{grid-template-columns:minmax(0,1fr) 118px}
+  body[data-ux-contract="figma-editorial-v2"] .metric-big strong{font-size:32px}
+  body[data-ux-contract="figma-editorial-v2"] .rate-ring{width:88px;height:88px}
+  body[data-ux-contract="figma-editorial-v2"] .rate-ring strong{font-size:20px!important}
+  body[data-ux-contract="figma-editorial-v2"] .sales-breakdown-popover{left:0;right:auto;max-width:calc(100vw - 32px);transform-origin:top left}
+  body[data-ux-contract="figma-editorial-v2"] .owned-metric-grid{grid-template-columns:1fr}
+  body[data-ux-contract="figma-editorial-v2"] .monthly-highlight-grid{grid-template-columns:1fr}
+  body[data-ux-contract="figma-editorial-v2"] .metric-definition-drawer{inset:0;width:100vw;max-width:none;border-radius:0}
+}
 </style>
 </head>
-<body data-ux-contract="decision-first-v1">
+<body data-ux-contract="figma-editorial-v2">
 <div class="shell">
   <div class="topbar"><div class="brand"><span class="brand-dot" aria-hidden="true"></span><span class="brand-copy"><strong>MBD H2 KR 대시보드</strong><small>매출 목표와 GAP을 한눈에</small></span></div><div class="topmeta"><span class="pill pill-primary">FORECAST 2026-08</span><span class="pill">RAW 08-05</span><span class="pill">읽기 전용</span></div></div>
   <nav class="tabs" role="tablist" aria-label="대시보드 영역"><button class="tab active" role="tab" aria-selected="true" aria-controls="overview" data-tab="overview">KR 현황</button><button class="tab" role="tab" aria-selected="false" aria-controls="raw" data-tab="raw">원천 데이터</button><button class="tab" role="tab" aria-selected="false" aria-controls="budget" data-tab="budget">예산/비용</button><button class="tab" role="tab" aria-selected="false" aria-controls="detail" data-tab="detail">상세/검토</button></nav>
@@ -204,17 +399,18 @@ body[data-ux-contract="decision-first-v1"] .shell{max-width:1480px;padding:24px 
       <div class="summary-freshness" data-dashboard-freshness hidden></div>
       
       <div class="summary-period-view active" data-period-view="month">
+        <!-- [2026-08-06] FIGMA_EDITORIAL_V2 — 헤드라인 4카드를 summary-main 밖으로 올려 상단 전체 폭을 쓰게 한다(데이터/JS 셀렉터는 period view 스코프라 그대로 동작). -->
+        <div class="summary-kpis" aria-label="선택월 마감예측 핵심 카드">
+          <div><span>선택월 마감예측</span><b>10.2억</b></div>
+          <div><span>현재 RAW 누적</span><b class="delta-flat">1.2억</b><small>RAW 누적 · 8/1~8/5</small></div>
+          <div><span>월 목표</span><b>14.9억</b></div>
+          <div><span>목표 대비</span><b class="achievement-watch">미달 4.7억</b><small>달성률 68.2%</small></div>
+        </div>
         <div class="summary-main">
           <div class="summary-eyebrow">선택 기간 판정</div>
           <h1 data-summary-heading="month">8월 매출 판정</h1>
           <p>선택월 마감예측과 확정 RAW 누적을 분리해 보여줍니다.</p>
           <div class="summary-period-current" aria-live="polite">선택 기준 로딩 중</div>
-          <div class="summary-kpis" aria-label="선택월 마감예측 핵심 카드">
-            <div><span>선택월 마감예측</span><b>10.2억</b></div>
-            <div><span>현재 RAW 누적</span><b class="delta-flat">1.2억</b><small>RAW 누적 · 8/1~8/5</small></div>
-            <div><span>월 목표</span><b>14.9억</b></div>
-            <div><span>목표 대비</span><b class="achievement-watch">미달 4.7억</b><small>달성률 68.2%</small></div>
-          </div>
           <div class='gap-diagnosis-panel' data-gap-diagnosis><div class='gap-diagnosis-head'><span>선택월 미달 원인</span><b>선택월 계산 중</b><em>화면 데이터 로딩 중</em></div></div>
           <div class="summary-splits"><div class='summary-split ad-gen' data-summary-segment='ad_gen'><span>일반광고</span><b>8.05억</b><div class='summary-split-metrics'><em class='mom-value delta-down'><small>MoM</small>-10.6%</em><em class='rate-value'><small>달성률</small>92.9%</em></div></div><div class='summary-split ad-int' data-summary-segment='ad_int'><span>통광마</span><b>2,000만</b><div class='summary-split-metrics'><em class='mom-value delta-down'><small>MoM</small>-66.7%</em><em class='rate-value'><small>달성률</small>10.0%</em></div></div><div class='summary-split live' data-summary-segment='live'><span>라이브</span><b>1.84억</b><div class='summary-split-metrics'><em class='mom-value delta-down'><small>MoM</small>-33.3%</em><em class='rate-value'><small>달성률</small>86.8%</em></div></div><div class='summary-split owned-youtube' data-summary-segment='owned_youtube_ad'><span>온드미디어</span><b>5,000만</b><div class='summary-split-metrics'><em class='mom-value delta-down'><small>MoM</small>-28.6%</em><em class='rate-value'><small>달성률</small>50.0%</em></div></div></div>
         </div>
@@ -399,17 +595,17 @@ body[data-ux-contract="decision-first-v1"] .shell{max-width:1480px;padding:24px 
         
       
       <div class="summary-period-view" data-period-view="week">
+        <div class="summary-kpis" aria-label="주간 총매출 핵심 카드">
+          <div><span>주간 총매출</span><b>2.12억</b></div>
+          <div><span>WoW</span><b class="delta-down">-32.2%</b><small></small></div>
+          <div><span>주 목표</span><b>3.1억</b></div>
+          <div><span>목표 대비</span><b class="achievement-risk">미달 9,950만</b><small></small></div>
+        </div>
         <div class="summary-main">
           <div class="summary-eyebrow">선택 기간 판정</div>
           <h1 data-summary-heading="week">주간 매출 판정</h1>
           <p>선택 주차의 총매출·목표 GAP·팀별 원인을 한 흐름으로 보여줍니다.</p>
           <div class="summary-period-current" aria-live="polite">현재 기준 · 26년 30주차 (7/20-7/26)</div>
-          <div class="summary-kpis" aria-label="주간 총매출 핵심 카드">
-            <div><span>주간 총매출</span><b>2.12억</b></div>
-            <div><span>WoW</span><b class="delta-down">-32.2%</b><small></small></div>
-            <div><span>주 목표</span><b>3.1억</b></div>
-            <div><span>목표 대비</span><b class="achievement-risk">미달 9,950만</b><small></small></div>
-          </div>
           <div class='gap-diagnosis-panel clear' data-gap-diagnosis><div class='gap-diagnosis-head'><span>미달 원인</span><b>선택 기간 목표 달성/초과</b><em>추가 진단 필요 없음</em></div></div>
           <div class="summary-splits"><div class='summary-split ad-gen' data-summary-segment='ad_gen'><span>일반광고</span><b>1.55억</b><div class='summary-split-metrics'><em class='mom-value delta-down'><small>WoW</small>-38.1%</em><em class='rate-value'><small>달성률</small>79.4%</em></div></div><div class='summary-split ad-int' data-summary-segment='ad_int'><span>통광마</span><b>0.0억</b><div class='summary-split-metrics'><em class='mom-value delta-flat'><small>WoW</small>-</em><em class='rate-value'><small>달성률</small>0.0%</em></div></div><div class='summary-split live' data-summary-segment='live'><span>라이브</span><b>4,500만</b><div class='summary-split-metrics'><em class='mom-value delta-down'><small>WoW</small>-10.0%</em><em class='rate-value'><small>달성률</small>94.0%</em></div></div><div class='summary-split owned-youtube' data-summary-segment='owned_youtube_ad'><span>온드미디어</span><b>1,129만</b><div class='summary-split-metrics'><em class='mom-value delta-flat'><small>WoW</small>0.0%</em><em class='rate-value'><small>달성률</small>50.0%</em></div></div></div>
         </div>
@@ -960,6 +1156,8 @@ window.__MBD_SOT_DATA__ = {"meta":{"title":"MBD H2 KR Dashboard","built_at_kst":
  }
  $$('.tab').forEach(b=>b.addEventListener('click',()=>activate(b.dataset.tab)));
  const topSummary=window.__TOP_SUMMARY_DATA__||{};
+ // Keep keyboard/screen-reader order aligned with the visible chart → decision flow.
+ $$('.summary-period-view').forEach(view=>{const chart=view.querySelector('.summary-chart');const main=view.querySelector('.summary-main');if(chart&&main)view.insertBefore(chart,main);});
  const REVENUE_SCOPE=Object.freeze(['ad_gen','ad_int','live']);
  const REVENUE_SCOPE_SET=new Set(REVENUE_SCOPE);
  function defaultMonthSelection(){
