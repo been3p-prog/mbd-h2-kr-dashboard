@@ -134,6 +134,52 @@ class DashboardGuardTest(unittest.TestCase):
         errors = verify(mutated, self.now)
         self.assertTrue(any("freshness warning must remain visible" in error for error in errors))
 
+    # [2026-08-06] 질적 KPI 세로형 레이아웃 계약 — 유튜브와 라이브를 각각 전체 폭으로 읽게 한다.
+    def test_quality_cards_use_vertical_full_width_editorial_layout(self):
+        self.assertIn('class="kpi-row quality-row quality-editorial-stack"', self.html)
+        self.assertEqual(self.html.count('class="kpi-card quality-card quality-wide-card'), 2)
+        self.assertIn('body[data-ux-contract="figma-editorial-v2"] .quality-editorial-stack{display:grid;grid-template-columns:minmax(0,1fr)', self.html)
+
+    def test_youtube_quality_has_format_summary_content_rows_and_editable_insight(self):
+        for marker in (
+            'data-youtube-format-summary',
+            'data-youtube-content-list',
+            'data-youtube-content-row',
+            'data-quality-insight-editor="owned_youtube"',
+            '키 인사이트 · 이 브라우저 저장',
+        ):
+            self.assertIn(marker, self.html)
+        self.assertIn('renderYoutubeFormatSummary', self.html)
+        self.assertIn('renderYoutubeContentRows', self.html)
+
+    def test_live_quality_has_package_summary_and_broadcast_sheet_insights(self):
+        for marker in (
+            'data-live-package-summary',
+            'data-live-broadcast-list',
+            'data-live-broadcast-row',
+            'data-live-sheet-insight',
+            '시트 인사이트',
+        ):
+            self.assertIn(marker, self.html)
+        self.assertIn('renderLivePackageSummary', self.html)
+        self.assertIn('renderLiveBroadcastRows', self.html)
+
+    def test_quality_detail_payload_reconciles_to_certified_period_counts(self):
+        self.assertIn('window.__QUALITY_DETAIL_DATA__ =', self.html)
+        detail = extract_json_assignment(self.html, "__QUALITY_DETAIL_DATA__")
+        sot = extract_json_assignment(self.html, "__MBD_SOT_DATA__")
+        for period_type in ("month", "week"):
+            for item in sot["quality_card_periods"]["owned_youtube"][period_type]:
+                rows = detail["owned_youtube"][period_type][item["id"]]["content_rows"]
+                self.assertEqual(len(rows), item["posts"], f'youtube {period_type} {item["id"]}')
+                self.assertTrue(all(row["type_label"] in {"LF", "SF"} for row in rows))
+            for item in sot["quality_card_periods"]["live_gmv"][period_type]:
+                rows = detail["live_gmv"][period_type][item["id"]]["broadcast_rows"]
+                self.assertEqual(len(rows), item["broadcast_count"], f'live count {period_type} {item["id"]}')
+                self.assertEqual(sum(row["gmv"] for row in rows), round(item["total_gmv"] or 0), f'live total {period_type} {item["id"]}')
+                self.assertTrue(all(row["gmv"] > 0 for row in rows))
+                self.assertTrue(all(row["insight_source"] in {"공식 회고", "내부 회고", "미작성"} for row in rows))
+
 
 if __name__ == "__main__":
     unittest.main()
