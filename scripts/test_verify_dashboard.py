@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from verify_dashboard import ALLOWED_REVENUE_TEAMS, verify
+from verify_dashboard import ALLOWED_REVENUE_TEAMS, extract_json_assignment, verify
 
 
 class DashboardGuardTest(unittest.TestCase):
@@ -70,6 +70,32 @@ class DashboardGuardTest(unittest.TestCase):
         mutated = self.html.replace("'ad_gen','ad_int','live']", "'ad_gen','ad_int','live','ogam']", 1)
         errors = verify(mutated, self.now)
         self.assertTrue(any("runtime revenue scope mismatch" in error for error in errors))
+
+    def test_august_live_target_is_source_target_not_doubled(self):
+        top = extract_json_assignment(self.html, "__TOP_SUMMARY_DATA__")
+        august = next(p for p in top["month"]["periods"] if p["ym"] == "2026-08")
+        live = next(segment for segment in august["segments"] if segment["team"] == "live")
+        self.assertEqual(live["target"], 212_000_000.0)
+        self.assertEqual(august["target"], 1_277_682_548.0)
+        scoped_targets = sum(segment["target"] for segment in august["segments"] if segment["team"] in ALLOWED_REVENUE_TEAMS)
+        self.assertAlmostEqual(august["target"], scoped_targets)
+        self.assertEqual(live["target_label"], "2.1억")
+
+    def test_august_summary_cards_preserve_reference_comparisons(self):
+        top = extract_json_assignment(self.html, "__TOP_SUMMARY_DATA__")
+        august = next(p for p in top["month"]["periods"] if p["ym"] == "2026-08")
+        self.assertEqual(august["forecast_prev_delta_label"], "-2.6%")
+        self.assertEqual(august["forecast_trailing3_delta_label"], "-9.3%")
+        self.assertEqual(august["actual_same_day_prev_delta_label"], "-22.7%")
+        self.assertEqual(august["actual_same_day_trailing3_delta_label"], "-22.6%")
+        self.assertIn("전월대비 -2.6% | 최근 3개월 평균대비 -9.3%", self.html)
+        self.assertIn("전월 동일자 대비 -22.7% | 최근 3개월 동일자 평균대비 -22.6%", self.html)
+
+    def test_mobile_summary_grid_is_single_column_without_implicit_overflow(self):
+        self.assertIn(
+            'body[data-ux-contract="figma-editorial-v2"] .summary-period-view{width:100%;min-width:0;grid-template-columns:minmax(0,1fr);grid-template-areas:"kpis" "chart" "main"}',
+            self.html,
+        )
 
     def test_freshness_warning_cannot_be_nested_in_month_view(self):
         warning = '<div class="summary-freshness" data-dashboard-freshness hidden></div>'
