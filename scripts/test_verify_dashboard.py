@@ -68,6 +68,21 @@ class DashboardGuardTest(unittest.TestCase):
             for duplicate in ("월 목표", "GAP", "달성률"):
                 self.assertNotIn(duplicate, tip_html)
 
+    def test_government_tooltips_use_canonical_project_subrows(self):
+        attrs = re.findall(r'<div class="team" data-tip="([^"]+)"', self.html)
+        tips = [html_mod.unescape(value) for value in attrs
+                if "일반광고 ·" in html_mod.unescape(value)]
+        july = next(tip for tip in tips if "일반광고 · 7월" in tip)
+        september = next(tip for tip in tips if "일반광고 · 9월" in tip)
+        self.assertIn('class="gsubs"', july)
+        self.assertIn("TOPS", july)
+        self.assertIn("기타 정부지원", july)
+        self.assertIn('class="gsubs"', september)
+        self.assertIn("경기도주식회사", september)
+        self.assertIn("기타 정부지원", september)
+        for raw_comment in ("정부지원사업 TOPS", "경기도 주식회사"):
+            self.assertNotIn(raw_comment, "".join(tips))
+
     def test_pages_workflow_uploads_index_only(self):
         workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /
                     "dashboard-guard.yml").read_text(encoding="utf-8")
