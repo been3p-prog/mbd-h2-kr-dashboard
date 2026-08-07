@@ -4,11 +4,12 @@
 임의 HTML 경로에서 동작(기본 index.html). 월 드롭다운(#msel)으로 현재월→대체월 전환 후
 location.hash 갱신·선택월 가시성 변화·소스 링크 존재·콘솔/페이지 에러 부재를 검증하고,
 데스크톱 1440x900·모바일 390x844 두 뷰포트에서 가로 오버플로가 0인지 확인한다.
-설치/다운로드 없이 시스템 Chrome 만 사용.
+Playwright 제어 + 시스템 Chrome으로 요청한 CSS viewport를 정확히 강제한다.
 """
 from __future__ import annotations
 
 import html as html_lib
+import importlib
 import json
 import re
 import shutil
@@ -16,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import cast
 
 VIEWPORTS = ((1440, 900, "desktop"), (390, 844, "mobile"))
 SELECTED_OPTION_RE = re.compile(r'<option value="(\d+)" selected>')
@@ -63,6 +65,16 @@ def _probe_script(target_month: int) -> str:
         "out.links={live:!!document.querySelector('a[href*=\"1Kw-IMgnP\"]'),"
         "yt:!!document.querySelector('a[href*=\"1mMkGwBuWr\"]'),"
         "okr:!!document.querySelector('a[href*=\"1DgciUq9HLVs\"]')};"
+        "var rest=document.querySelector('.mvr[data-m=\"'+sel.value+'\"]');"
+        "var futureRoots=document.querySelectorAll('.mv[data-phase=\"future\"]');"
+        "var futureForbidden=Array.prototype.reduce.call(futureRoots,function(n,x){"
+        "var tips=Array.prototype.map.call(x.querySelectorAll('[data-tip]'),function(t){return t.dataset.tip||'';}).join(' ');"
+        "return n+(/GAP|달성률|▼/.test((x.textContent||'')+' '+tips)?1:0);},0);"
+        "out.lower={visibleRest:(rest&&getComputedStyle(rest).display!=='none')?1:0,"
+        "teamCards:rest?rest.querySelectorAll('.team').length:0,"
+        "qualityCards:rest?rest.querySelectorAll('.quality-card').length:0,"
+        "rawRowTables:document.querySelectorAll('.livetbl,.raw-row-table').length,"
+        "futureRootCount:futureRoots.length,futureForbiddenCount:futureForbidden};"
         "out.errors=(window.__smoke_errors||[]).slice(0,20);"
         "}catch(e){out.fatal=String(e)+' | '+((e&&e.stack)||'');}"
         "var d=document.createElement('div');d.id='smoke-result';d.textContent=JSON.stringify(out);"
@@ -81,25 +93,25 @@ def render_dom(instrumented: str, width: int, height: int):
         handle.write(instrumented)
         render_path = Path(handle.name)
     try:
-        return subprocess.run(
-            [
-                find_chrome(),
-                "--headless=new",
-                "--disable-gpu",
-                "--no-sandbox",
-                "--hide-scrollbars",
-                "--allow-file-access-from-files",
-                f"--window-size={width},{height}",
-                "--force-device-scale-factor=1",
-                "--virtual-time-budget=3000",
-                "--dump-dom",
-                render_path.as_uri(),
-            ],
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=60,
-        )
+        try:
+            sync_playwright = importlib.import_module("playwright.sync_api").sync_playwright
+        except (ImportError, ModuleNotFoundError):
+            return subprocess.CompletedProcess(
+                ["playwright"], 70, "",
+                "playwright package missing; exact CSS viewport smoke cannot run")
+        try:
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(
+                    executable_path=find_chrome(), headless=True,
+                    args=["--no-sandbox", "--disable-gpu", "--hide-scrollbars"])
+                page = browser.new_page(viewport={"width": width, "height": height})
+                page.goto(render_path.as_uri(), wait_until="load", timeout=30_000)
+                page.wait_for_timeout(150)
+                dumped = page.content()
+                browser.close()
+            return subprocess.CompletedProcess(["playwright"], 0, dumped, "")
+        except Exception as exc:
+            return subprocess.CompletedProcess(["playwright"], 71, "", f"{type(exc).__name__}: {exc}")
     finally:
         render_path.unlink(missing_ok=True)
 
@@ -141,15 +153,34 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
     doc = result.get("doc") or {}
     sw, cw = doc.get("sw"), doc.get("cw")
     bsw, iw = doc.get("bsw"), doc.get("iw")
-    if not (isinstance(sw, int) and isinstance(cw, int) and sw <= cw):
-        errors.append(f"{tag}: horizontal overflow docElement scrollWidth={sw} > clientWidth={cw}")
-    if not (isinstance(bsw, int) and isinstance(iw, int) and bsw <= iw):
-        errors.append(f"{tag}: horizontal overflow body scrollWidth={bsw} > innerWidth={iw}")
-    if tag == "desktop" and iw != width:
+    if not all(isinstance(value, int) for value in (sw, cw, bsw, iw)):
+        errors.append(f"{tag}: invalid viewport metrics sw={sw}, cw={cw}, bsw={bsw}, iw={iw}")
+    else:
+        sw_i, cw_i, bsw_i, iw_i = cast(int, sw), cast(int, cw), cast(int, bsw), cast(int, iw)
+        if sw_i > cw_i:
+            errors.append(f"{tag}: horizontal overflow docElement scrollWidth={sw_i} > clientWidth={cw_i}")
+        if bsw_i > iw_i:
+            errors.append(f"{tag}: horizontal overflow body scrollWidth={bsw_i} > innerWidth={iw_i}")
+    if iw != width:
         errors.append(f"{tag}: CSS viewport {iw}px != requested width {width}px")
-    if tag == "mobile" and not (isinstance(iw, int) and 0 < iw <= 920):
-        errors.append(
-            f"{tag}: CSS viewport {iw}px is outside the <=920px responsive breakpoint")
+    lower = result.get("lower")
+    if not isinstance(lower, dict):
+        errors.append(f"{tag}: lower-card acceptance evidence missing")
+    else:
+        if lower.get("visibleRest") != 1:
+            errors.append(f"{tag}: lower-card selected month is not visible")
+        if lower.get("teamCards") != 3:
+            errors.append(f"{tag}: lower-card teamCards={lower.get('teamCards')} != 3")
+        if lower.get("qualityCards") != 2:
+            errors.append(f"{tag}: lower-card qualityCards={lower.get('qualityCards')} != 2")
+        if lower.get("rawRowTables") != 0:
+            errors.append(f"{tag}: public raw-row tables={lower.get('rawRowTables')} != 0")
+        if not isinstance(lower.get("futureRootCount"), int) or lower.get("futureRootCount") <= 0:
+            errors.append(f"{tag}: future negative-control roots missing")
+        if lower.get("futureForbiddenCount") != 0:
+            errors.append(
+                f"{tag}: future forbidden GAP/achievement/decline labels="
+                f"{lower.get('futureForbiddenCount')} != 0")
     if switch_expected:
         if result.get("optionCount") != 12:
             errors.append(f"{tag}: month selector has {result.get('optionCount')} options (expected 12)")
@@ -200,8 +231,8 @@ def main() -> int:
     print(
         f"month_switch={current}->{target}; overflow=0; "
         f"css_widths=desktop:{observed_widths.get('desktop')},"
-        f"mobile:{observed_widths.get('mobile')} (requested mobile 390; Chrome min may be 500); "
-        "source_links=present"
+        f"mobile:{observed_widths.get('mobile')}; "
+        "source_links=present; lower_cards=green; future_negative_control=green"
     )
     return 0
 

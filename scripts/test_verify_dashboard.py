@@ -42,6 +42,23 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertNotIn("ogam", vd.ALLOWED_REVENUE_TEAMS)
         self.assertEqual(vd.MANIFEST_SCOPE, ["ad_gen", "ad_int", "live"])
 
+    def test_public_html_contains_aggregate_quality_only(self):
+        self.assertNotIn('class="livetbl"', self.html)
+        self.assertNotIn("시트 인사이트 전문", self.html)
+        self.assertNotIn("youtube.com/watch?v=", self.html)
+        self.assertNotIn("콘텐츠별 성과", self.html)
+
+    def test_manifest_live_average_target_is_fixed_to_one_eok(self):
+        _, manifest = vd.extract_manifest(self.html)
+        self.assertEqual(manifest.get("live_avg_gmv_target_won"), 100_000_000)
+
+    def test_pages_workflow_uploads_index_only(self):
+        workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /
+                    "dashboard-guard.yml").read_text(encoding="utf-8")
+        self.assertIn("path: _site", workflow)
+        self.assertIn("cp index.html _site/index.html", workflow)
+        self.assertNotIn("path: .\n", workflow)
+
     # ── 구 payload 재출현 (negative control) ────────────────────────
     def test_legacy_top_summary_payload_reappearance_fails(self):
         bad = self.html.replace(
@@ -162,17 +179,42 @@ class SmokeViewportPolicyTest(unittest.TestCase):
         return {
             "doc": {"sw": width, "cw": width, "bsw": width, "iw": width},
             "errors": [],
+            "lower": {
+                "visibleRest": 1,
+                "teamCards": 3,
+                "qualityCards": 2,
+                "rawRowTables": 0,
+                "futureRootCount": 9,
+                "futureForbiddenCount": 0,
+            },
         }
 
-    def test_mobile_chrome_min_width_within_responsive_breakpoint_is_accepted(self):
+    def test_mobile_css_viewport_must_match_requested_390(self):
         errors = sd._check_viewport(
             self._result(500), 390, 844, "mobile", switch_expected=None)
+        self.assertTrue(any("requested width" in e for e in errors))
+
+    def test_exact_mobile_width_with_lower_contract_is_accepted(self):
+        errors = sd._check_viewport(
+            self._result(390), 390, 844, "mobile", switch_expected=None)
         self.assertEqual(errors, [])
+
+    def test_missing_lower_card_evidence_fails(self):
+        result = self._result(390)
+        result.pop("lower")
+        errors = sd._check_viewport(result, 390, 844, "mobile", switch_expected=None)
+        self.assertTrue(any("lower-card" in e for e in errors))
+
+    def test_future_forbidden_labels_fail(self):
+        result = self._result(390)
+        result["lower"]["futureForbiddenCount"] = 1
+        errors = sd._check_viewport(result, 390, 844, "mobile", switch_expected=None)
+        self.assertTrue(any("future" in e and "forbidden" in e for e in errors))
 
     def test_mobile_width_outside_responsive_breakpoint_fails(self):
         errors = sd._check_viewport(
             self._result(1000), 390, 844, "mobile", switch_expected=None)
-        self.assertTrue(any("responsive breakpoint" in e for e in errors))
+        self.assertTrue(any("requested width" in e for e in errors))
 
     def test_desktop_css_viewport_must_match_requested_width(self):
         errors = sd._check_viewport(

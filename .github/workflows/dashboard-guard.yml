@@ -25,6 +25,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Install exact-viewport smoke dependency
+        run: python -m pip install playwright==1.55.0
       - name: Run dashboard regression tests
         run: python -m unittest scripts/test_verify_dashboard.py -v
       - name: Check scope, selected-period rendering, and RAW semantics
@@ -45,9 +47,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Prepare index-only Pages artifact
+        run: |
+          rm -rf _site
+          mkdir _site
+          cp index.html _site/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - name: Deploy verified dashboard
         id: deployment
         uses: actions/deploy-pages@v4

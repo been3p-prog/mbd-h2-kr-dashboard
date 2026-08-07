@@ -49,10 +49,11 @@ MANIFEST_RE = re.compile(
 MANIFEST_SCHEMA = "mbd-public-guard-v1"
 MANIFEST_GENERATOR = "mbd-dash-v5/render_venus.py"
 MANIFEST_SCOPE = ["ad_gen", "ad_int", "live"]
+LIVE_AVG_GMV_TARGET = 100_000_000
 MANIFEST_ALLOWED_KEYS = frozenset({
     "schema", "built_at_kst", "source_snapshot_as_of", "source_status",
     "default_month", "public_scope", "raw_rows_included", "generator",
-    "source_payload_sha256"})
+    "source_payload_sha256", "live_avg_gmv_target_won"})
 MANIFEST_MAX_BYTES = 4096
 MANIFEST_SOURCE_KEYS = (
     "revenue_mirror", "live_quality", "yt_quality", "okr_targets", "owned_media")
@@ -128,6 +129,10 @@ def _check_manifest(html: str, now: dt.datetime, require_fresh: bool, errors: li
         errors.append("manifest raw_rows_included must be false")
     if manifest.get("public_scope") != MANIFEST_SCOPE:
         errors.append(f"manifest public_scope {manifest.get('public_scope')!r} != {MANIFEST_SCOPE}")
+    if manifest.get("live_avg_gmv_target_won") != LIVE_AVG_GMV_TARGET:
+        errors.append(
+            f"manifest live_avg_gmv_target_won {manifest.get('live_avg_gmv_target_won')!r} "
+            f"!= {LIVE_AVG_GMV_TARGET}")
     if manifest.get("generator") != MANIFEST_GENERATOR:
         errors.append(f"manifest generator {manifest.get('generator')!r} != {MANIFEST_GENERATOR!r}")
     default_month = manifest.get("default_month")
@@ -234,6 +239,11 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     for tok in INTERNAL_PATH_TOKENS:
         if tok in html:
             errors.append(f"internal filesystem path leaked: {tok!r}")
+
+    # 공개본은 aggregate-only. manifest 선언만 믿지 않고 실제 HTML도 negative-control.
+    for marker in ('class="livetbl"', "시트 인사이트 전문", "youtube.com/watch?v=", "콘텐츠별 성과"):
+        if marker in html:
+            errors.append(f"public raw-row marker present: {marker!r}")
 
     # 9) 세로 기둥 마커 필수 · 가로 막대 semantics 금지
     for tok in VERTICAL_MARKERS:
