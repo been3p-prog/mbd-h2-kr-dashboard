@@ -3,8 +3,10 @@
 #   /tmp LIVE 후보를 주입해 결정론적으로 돌린다(CI 기본은 약화하지 않음).
 #   now 는 manifest built_at 에서 파생 → 배포일자에 관계없이 freshness 판정이 안정적.
 import datetime as dt
+import html as html_mod
 import json
 import os
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -51,6 +53,20 @@ class DashboardGuardTest(unittest.TestCase):
     def test_manifest_live_average_target_is_fixed_to_one_eok(self):
         _, manifest = vd.extract_manifest(self.html)
         self.assertEqual(manifest.get("live_avg_gmv_target_won"), 100_000_000)
+
+    # [2026-08-07] 일반광고 hover는 보이는 KPI 반복이 아니라 3유형 금액+MoM이어야 한다.
+    def test_all_months_have_three_way_adgen_mix_tooltips(self):
+        attrs = re.findall(r'<div class="team" data-tip="([^"]+)"', self.html)
+        adgen_tips = [html_mod.unescape(value) for value in attrs
+                      if "일반광고 ·" in html_mod.unescape(value)]
+        self.assertEqual(len(adgen_tips), 12)
+        for tip_html in adgen_tips:
+            self.assertEqual(tip_html.count('class="tr"'), 3)
+            for bucket in ("유상", "무상", "정부지원"):
+                self.assertIn(bucket, tip_html)
+            self.assertEqual(tip_html.count("MoM "), 3)
+            for duplicate in ("월 목표", "GAP", "달성률"):
+                self.assertNotIn(duplicate, tip_html)
 
     def test_pages_workflow_uploads_index_only(self):
         workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /
