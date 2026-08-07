@@ -69,7 +69,7 @@ def _probe_script(target_month: int) -> str:
         "var futureRoots=document.querySelectorAll('.mv[data-phase=\"future\"]');"
         "var futureForbidden=Array.prototype.reduce.call(futureRoots,function(n,x){"
         "var tips=Array.prototype.map.call(x.querySelectorAll('[data-tip]'),function(t){return t.dataset.tip||'';}).join(' ');"
-        "return n+(/GAP|달성률|▼/.test((x.textContent||'')+' '+tips)?1:0);},0);"
+        "return n+(/GAP|달성률|▼|미달/.test((x.textContent||'')+' '+tips)?1:0);},0);"
         "out.lower={visibleRest:(rest&&getComputedStyle(rest).display!=='none')?1:0,"
         "teamCards:rest?rest.querySelectorAll('.team').length:0,"
         "qualityCards:rest?rest.querySelectorAll('.quality-card').length:0,"
@@ -179,7 +179,7 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
             errors.append(f"{tag}: future negative-control roots missing")
         if lower.get("futureForbiddenCount") != 0:
             errors.append(
-                f"{tag}: future forbidden GAP/achievement/decline labels="
+                f"{tag}: future forbidden gap/achievement/decline/miss labels="
                 f"{lower.get('futureForbiddenCount')} != 0")
     if switch_expected:
         if result.get("optionCount") != 12:
