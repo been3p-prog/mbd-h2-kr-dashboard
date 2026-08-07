@@ -50,10 +50,11 @@ MANIFEST_SCHEMA = "mbd-public-guard-v1"
 MANIFEST_GENERATOR = "mbd-dash-v5/render_venus.py"
 MANIFEST_SCOPE = ["ad_gen", "ad_int", "live"]
 LIVE_AVG_GMV_TARGET = 100_000_000
+LIVE_GMV_BASIS = "1D"
 MANIFEST_ALLOWED_KEYS = frozenset({
     "schema", "built_at_kst", "source_snapshot_as_of", "source_status",
     "default_month", "public_scope", "raw_rows_included", "generator",
-    "source_payload_sha256", "live_avg_gmv_target_won"})
+    "source_payload_sha256", "live_avg_gmv_target_won", "live_gmv_basis"})
 MANIFEST_MAX_BYTES = 4096
 MANIFEST_SOURCE_KEYS = (
     "revenue_mirror", "live_quality", "yt_quality", "okr_targets", "owned_media")
@@ -133,6 +134,9 @@ def _check_manifest(html: str, now: dt.datetime, require_fresh: bool, errors: li
         errors.append(
             f"manifest live_avg_gmv_target_won {manifest.get('live_avg_gmv_target_won')!r} "
             f"!= {LIVE_AVG_GMV_TARGET}")
+    if manifest.get("live_gmv_basis") != LIVE_GMV_BASIS:
+        errors.append(
+            f"manifest live_gmv_basis {manifest.get('live_gmv_basis')!r} != {LIVE_GMV_BASIS!r}")
     if manifest.get("generator") != MANIFEST_GENERATOR:
         errors.append(f"manifest generator {manifest.get('generator')!r} != {MANIFEST_GENERATOR!r}")
     default_month = manifest.get("default_month")

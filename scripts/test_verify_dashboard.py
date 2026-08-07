@@ -54,6 +54,14 @@ class DashboardGuardTest(unittest.TestCase):
         _, manifest = vd.extract_manifest(self.html)
         self.assertEqual(manifest.get("live_avg_gmv_target_won"), 100_000_000)
 
+    def test_live_average_uses_1d_brand_daily_gmv(self):
+        _, manifest = vd.extract_manifest(self.html)
+        self.assertEqual(manifest.get("live_gmv_basis"), "1D")
+        self.assertIn("라이브 1D 평균거래액 · 품질", self.html)
+        self.assertIn("1D 평균 거래액", self.html)
+        self.assertIn("완료·양의 1D GMV", self.html)
+        self.assertNotIn("방송 평균 거래액", self.html)
+
     # [2026-08-07] 일반광고 hover는 보이는 KPI 반복이 아니라 3유형 금액+MoM이어야 한다.
     def test_all_months_have_three_way_adgen_mix_tooltips(self):
         attrs = re.findall(r'<div class="team" data-tip="([^"]+)"', self.html)
