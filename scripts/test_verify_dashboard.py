@@ -83,6 +83,29 @@ class DashboardGuardTest(unittest.TestCase):
         for raw_comment in ("정부지원사업 TOPS", "경기도 주식회사"):
             self.assertNotIn(raw_comment, "".join(tips))
 
+    def test_adint_tooltips_have_three_buckets_and_nested_items(self):
+        attrs = re.findall(r'<div class="team" data-tip="([^"]+)"', self.html)
+        tips = [html_mod.unescape(value) for value in attrs
+                if "통광마 ·" in html_mod.unescape(value)]
+        self.assertEqual(len(tips), 12)
+        for tip_html in tips:
+            self.assertEqual(tip_html.count('class="tr"'), 3)
+            self.assertEqual(tip_html.count("MoM "), 3)
+            for bucket in ("유상", "무상", "정부지원"):
+                self.assertIn(bucket, tip_html)
+            for duplicate in ("월 목표", "GAP", "달성률"):
+                self.assertNotIn(duplicate, tip_html)
+        july = next(tip for tip in tips if "통광마 · 7월" in tip)
+        august = next(tip for tip in tips if "통광마 · 8월" in tip)
+        september = next(tip for tip in tips if "통광마 · 9월" in tip)
+        self.assertIn("마틸라 · 컴팩트PKG", july)
+        self.assertIn("오늘의집 layer", july)
+        self.assertIn("경기도주식회사", july)
+        self.assertIn("샤크닌자 · 미디어PKG", august)
+        self.assertIn("익산원예농협", august)
+        self.assertIn("헬로우슬립 · 컴팩트PKG", september)
+        self.assertIn("마틸라 · 컴팩트PKG", september)
+
     def test_pages_workflow_uploads_index_only(self):
         workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /
                     "dashboard-guard.yml").read_text(encoding="utf-8")
