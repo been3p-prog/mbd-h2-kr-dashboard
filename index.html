@@ -173,7 +173,15 @@ tr.hi td .tag{background:#DBEAFE;color:var(--violet)}
   .g .glab{display:none}.g.sel .glab{display:block}
   .gm{font-size:9px}
   th:nth-child(3),td:nth-child(3){display:none}
-  .livetbl td.ins{max-width:120px}
+  /* [2026-08-07] 모바일 라이브 표는 인사이트 전문을 행 탭 팝업으로 제공한다.
+     반쯤 노출되던 5열은 숨기고 핵심 3열을 카드 폭 안에 고정해 내부 가로 스크롤을 없앤다. */
+  .livetbl{table-layout:fixed}
+  .livetbl th,.livetbl td{padding-left:6px;padding-right:6px}
+  .livetbl th:nth-child(5),.livetbl td:nth-child(5){display:none}
+  .livetbl th:nth-child(1),.livetbl td:nth-child(1){width:52%;white-space:normal;word-break:keep-all}
+  .livetbl th:nth-child(2),.livetbl td:nth-child(2){width:23%}
+  .livetbl th:nth-child(4),.livetbl td:nth-child(4){width:25%}
+  .livetbl .tag{font-size:10px;padding:3px 7px}
   .qv{font-size:32px}
 }
 </style></head><body>
