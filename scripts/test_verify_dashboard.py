@@ -1,185 +1,184 @@
+# [2026-08-07] DOM-first LIVE 아티팩트 릴리스 가드 회귀 테스트.
+#   기본은 repo index.html(배포 후 = 승인 골격). 로컬/CI 검증 시 MBD_DASHBOARD_HTML 로
+#   /tmp LIVE 후보를 주입해 결정론적으로 돌린다(CI 기본은 약화하지 않음).
+#   now 는 manifest built_at 에서 파생 → 배포일자에 관계없이 freshness 판정이 안정적.
 import datetime as dt
+import json
+import os
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from verify_dashboard import ALLOWED_REVENUE_TEAMS, extract_json_assignment, verify
+import verify_dashboard as vd  # noqa: E402
+import smoke_dashboard as sd  # noqa: E402
+
+
+def _load_dashboard_html():
+    override = os.environ.get("MBD_DASHBOARD_HTML")
+    path = Path(override) if override else Path(__file__).resolve().parents[1] / "index.html"
+    return path.read_text(encoding="utf-8"), str(path)
 
 
 class DashboardGuardTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.html = Path(__file__).resolve().parents[1].joinpath("index.html").read_text(encoding="utf-8")
-        cls.now = dt.datetime.fromisoformat("2026-08-05T00:06:59+09:00")
+        cls.html, cls.path = _load_dashboard_html()
+        # manifest built_at 기준으로 fresh/stale now 파생 (아티팩트 실제 날짜와 무관하게 안정)
+        _, manifest = vd.extract_manifest(cls.html)
+        built = dt.datetime.fromisoformat(manifest["built_at_kst"])
+        cls.now = built + dt.timedelta(hours=1)       # 모든 스탬프 48h 이내
+        cls.stale_now = built + dt.timedelta(hours=100)  # 48h SLA 초과
 
-    def test_stale_snapshot_can_ship_only_as_visible_ui_hotfix(self):
-        errors = verify(self.html, self.now, require_fresh=False)
-        self.assertFalse(errors)
+    # ── 승인 골격 GREEN ─────────────────────────────────────────────
+    def test_live_candidate_is_clean(self):
+        self.assertEqual(vd.verify(self.html, self.now), [],
+                         f"base artifact ({self.path}) must be a clean LIVE build")
 
-    def test_scheduled_freshness_probe_rejects_stale_snapshot(self):
-        errors = verify(self.html, self.now, require_fresh=True)
-        self.assertTrue(any("stale snapshot" in error for error in errors))
+    def test_live_candidate_passes_require_fresh(self):
+        self.assertEqual(vd.verify(self.html, self.now, require_fresh=True), [])
 
-    def test_missing_diagnosis_wiring_fails_closed(self):
-        mutated = self.html.replace("renderGapDiagnosis(period,p);", "/* diagnosis call removed */", 1)
-        errors = verify(mutated, self.now)
-        self.assertTrue(any("diagnosis renderer wiring" in error for error in errors))
+    def test_scope_excludes_ogam(self):
+        self.assertNotIn("ogam", vd.ALLOWED_REVENUE_TEAMS)
+        self.assertEqual(vd.MANIFEST_SCOPE, ["ad_gen", "ad_int", "live"])
 
-    def test_bypassing_raw_semantic_guard_fails_closed(self):
-        mutated = self.html.replace("const raw=rawActualPresentation(period,p);", "const raw={label:'현재 RAW 누적',value:p.current_actual,small:'',className:''};", 1)
-        errors = verify(mutated, self.now)
-        self.assertTrue(any("raw semantic guard wiring" in error for error in errors))
+    # ── 구 payload 재출현 (negative control) ────────────────────────
+    def test_legacy_top_summary_payload_reappearance_fails(self):
+        bad = self.html.replace(
+            "</body>", "<script>window.__TOP_SUMMARY_DATA__ = {}</script></body>", 1)
+        self.assertTrue(any("legacy embedded payload" in e for e in vd.verify(bad, self.now)))
 
-    def test_disabling_current_month_auto_selection_fails_closed(self):
-        mutated = self.html.replace("month:defaultMonthSelection()", "month:topSummary.month?.current_index||0", 1)
-        errors = verify(mutated, self.now)
-        self.assertTrue(any("current-month auto selection wiring" in error for error in errors))
+    def test_legacy_sot_payload_reappearance_fails(self):
+        bad = self.html.replace(
+            "</body>", "<script>window.__MBD_SOT_DATA__ = {}</script></body>", 1)
+        self.assertTrue(any("legacy embedded payload" in e for e in vd.verify(bad, self.now)))
 
-    def test_scoped_month_chart_must_be_wired(self):
-        self.assertIn("function renderScopedMonthChart(idx)", self.html)
-        self.assertIn("renderScopedMonthChart(idx);", self.html)
+    # ── LIVE 마커 missing / duplicate / tampered ────────────────────
+    def test_missing_live_marker_fails(self):
+        bad = self.html.replace("LIVE 빌드", "", 1)
+        self.assertTrue(any("LIVE marker" in e for e in vd.verify(bad, self.now)))
 
-    def test_scoped_week_chart_must_be_wired(self):
-        self.assertIn("function renderScopedWeekChart(idx)", self.html)
-        self.assertIn("renderScopedWeekChart(idx);", self.html)
+    def test_duplicate_live_marker_fails(self):
+        bad = self.html.replace("LIVE 빌드", "LIVE 빌드 LIVE 빌드", 1)
+        self.assertTrue(any("LIVE marker" in e and "2x" in e for e in vd.verify(bad, self.now)))
 
-    def test_scoped_week_chart_wiring_fails_closed(self):
-        mutated = self.html.replace("if(period==='week')renderScopedWeekChart(idx);", "/* week chart call removed */", 1)
-        errors = verify(mutated, self.now)
-        self.assertTrue(any("scoped week-chart renderer wiring" in error for error in errors))
+    def test_tampered_live_marker_reintroduces_pre_approval_fails(self):
+        bad = self.html.replace("고정 URL 운영본", "승인 전 비공개", 1)
+        errors = vd.verify(bad, self.now)
+        self.assertTrue(any("pre-approval marker" in e for e in errors))
+        self.assertTrue(any("LIVE marker" in e for e in errors))
 
-    def test_scoped_month_chart_wiring_fails_closed(self):
-        mutated = self.html.replace("if(period==='month')renderScopedMonthChart(idx);", "/* chart call removed */", 1)
-        errors = verify(mutated, self.now)
-        self.assertTrue(any("scoped month-chart renderer wiring" in error for error in errors))
+    def test_staging_marker_reappearance_fails(self):
+        bad = self.html.replace("LIVE 빌드", "STAGING 빌드", 1)
+        self.assertTrue(any("pre-approval marker" in e for e in vd.verify(bad, self.now)))
 
-    def test_runtime_scope_filter_must_be_wired_to_rendering(self):
-        mutated = self.html.replace(
-            "return (p?.segments||[]).filter(seg=>REVENUE_SCOPE_SET.has(seg.team));",
-            "return p?.segments||[];",
-            1,
-        )
-        errors = verify(mutated, self.now)
-        self.assertTrue(any("revenue-scope render filter" in error for error in errors))
+    # ── 안전하지 않은 링크 (negative control) ───────────────────────
+    def test_javascript_uri_fails(self):
+        bad = self.html.replace("</body>", '<a href="javascript:alert(1)">x</a></body>', 1)
+        self.assertTrue(any("javascript:" in e for e in vd.verify(bad, self.now)))
 
-    def test_runtime_scope_is_exactly_b22n_revenue_teams(self):
-        self.assertEqual(ALLOWED_REVENUE_TEAMS, {"ad_gen", "ad_int", "live"})
+    def test_blank_link_without_noopener_fails(self):
+        bad = self.html.replace(
+            "</body>", '<a href="https://x.example" target="_blank">x</a></body>', 1)
+        self.assertTrue(any("rel=noopener" in e for e in vd.verify(bad, self.now)))
 
-    def test_runtime_scope_cannot_add_ogam(self):
-        mutated = self.html.replace("'ad_gen','ad_int','live']", "'ad_gen','ad_int','live','ogam']", 1)
-        errors = verify(mutated, self.now)
-        self.assertTrue(any("runtime revenue scope mismatch" in error for error in errors))
+    # ── 월 셀렉터 (negative control) ────────────────────────────────
+    def test_missing_month_option_fails(self):
+        bad = self.html.replace('<option value="8"', '<option value="99"', 1)
+        self.assertTrue(any("1..12" in e for e in vd.verify(bad, self.now)))
 
-    def test_august_live_target_is_source_target_not_doubled(self):
-        top = extract_json_assignment(self.html, "__TOP_SUMMARY_DATA__")
-        august = next(p for p in top["month"]["periods"] if p["ym"] == "2026-08")
-        live = next(segment for segment in august["segments"] if segment["team"] == "live")
-        self.assertEqual(live["target"], 212_000_000.0)
-        self.assertEqual(august["target"], 1_277_682_548.0)
-        scoped_targets = sum(segment["target"] for segment in august["segments"] if segment["team"] in ALLOWED_REVENUE_TEAMS)
-        self.assertAlmostEqual(august["target"], scoped_targets)
-        self.assertEqual(live["target_label"], "2.1억")
+    # ── manifest 변조 / raw key (negative control) ──────────────────
+    def test_manifest_raw_key_injection_fails(self):
+        raw, manifest = vd.extract_manifest(self.html)
+        manifest["rows"] = [{"secret": "x"}]
+        bad = self.html.replace(raw, json.dumps(manifest, ensure_ascii=False), 1)
+        errors = vd.verify(bad, self.now)
+        self.assertTrue(errors)
+        self.assertTrue(any("unexpected keys" in e or "forbidden raw/credential" in e for e in errors))
 
-    def test_august_summary_cards_preserve_reference_comparisons(self):
-        top = extract_json_assignment(self.html, "__TOP_SUMMARY_DATA__")
-        august = next(p for p in top["month"]["periods"] if p["ym"] == "2026-08")
-        self.assertEqual(august["forecast_prev_delta_label"], "-2.6%")
-        self.assertEqual(august["forecast_trailing3_delta_label"], "-9.3%")
-        self.assertEqual(august["actual_same_day_prev_delta_label"], "-22.7%")
-        self.assertEqual(august["actual_same_day_trailing3_delta_label"], "-22.6%")
-        self.assertIn("전월대비 -2.6% | 최근 3개월 평균대비 -9.3%", self.html)
-        self.assertIn("전월 동일자 대비 -22.7% | 최근 3개월 동일자 평균대비 -22.6%", self.html)
+    def test_manifest_schema_tamper_fails(self):
+        raw, manifest = vd.extract_manifest(self.html)
+        manifest["schema"] = "evil-v9"
+        bad = self.html.replace(
+            raw, json.dumps(manifest, ensure_ascii=False, separators=(",", ":")), 1)
+        self.assertTrue(any("schema" in e for e in vd.verify(bad, self.now)))
 
-    def test_decision_panel_includes_all_three_teams_with_forecast_as_primary(self):
-        start = self.html.index("function renderGapDiagnosis")
-        end = self.html.index("function renderScopedMonthChart", start)
-        renderer = self.html[start:end]
-        self.assertIn("3팀 매출 요약", renderer)
-        self.assertIn("data-gap-team='${esc(row.team||'')}'", renderer)
-        self.assertIn("마감예측", renderer)
-        self.assertIn("미달팀 GAP의", renderer)
-        self.assertIn("GAP", renderer)
-        self.assertNotIn(".filter(seg=>seg.displayGap>0)", renderer)
+    def test_manifest_non_current_source_status_fails(self):
+        raw, manifest = vd.extract_manifest(self.html)
+        manifest["source_status"]["live_quality"] = "unavailable"
+        bad = self.html.replace(
+            raw, json.dumps(manifest, ensure_ascii=False, separators=(",", ":")), 1)
+        self.assertTrue(any("source_status" in e for e in vd.verify(bad, self.now)))
 
-    def test_lower_cards_use_selected_summary_segment_as_revenue_sot(self):
-        self.assertIn("const summarySeg=scopedSummarySegments(p).find(seg=>seg.team===team);", self.html)
-        self.assertIn("actual_label:baseItem.actual_label||summarySeg.value_eok_label||summarySeg.value_label", self.html)
-        self.assertIn("pct_label:summarySeg.achievement_label", self.html)
-        top = extract_json_assignment(self.html, "__TOP_SUMMARY_DATA__")
-        sot = extract_json_assignment(self.html, "__MBD_SOT_DATA__")
-        for month in top["month"]["periods"]:
-            for segment in (s for s in month["segments"] if s["team"] in ALLOWED_REVENUE_TEAMS):
-                lower = next(p for p in sot["lower_revenue_card_periods"][segment["team"]]["month"] if p["id"] == month["ym"])
-                if lower["actual"] is None:
-                    continue
-                self.assertEqual(lower["actual"], segment["value"], f'{month["ym"]} {segment["team"]} actual')
-                self.assertEqual(lower["target"], segment["target"], f'{month["ym"]} {segment["team"]} target')
-                if lower["pct"] is not None and segment["achievement"] is not None:
-                    self.assertAlmostEqual(lower["pct"], segment["achievement"], msg=f'{month["ym"]} {segment["team"]} achievement')
+    def test_manifest_missing_source_timestamp_key_fails(self):
+        raw, manifest = vd.extract_manifest(self.html)
+        del manifest["source_snapshot_as_of"]["owned_media"]
+        bad = self.html.replace(
+            raw, json.dumps(manifest, ensure_ascii=False, separators=(",", ":")), 1)
+        self.assertTrue(any("source_snapshot_as_of keys" in e for e in vd.verify(bad, self.now)))
 
-    def test_mobile_summary_grid_is_single_column_without_implicit_overflow(self):
-        self.assertIn(
-            'body[data-ux-contract="figma-editorial-v2"] .summary-period-view{width:100%;min-width:0;grid-template-columns:minmax(0,1fr);grid-template-areas:"kpis" "chart" "main"}',
-            self.html,
-        )
+    def test_manifest_default_month_out_of_range_fails(self):
+        raw, manifest = vd.extract_manifest(self.html)
+        manifest["default_month"] = 99
+        bad = self.html.replace(
+            raw, json.dumps(manifest, ensure_ascii=False, separators=(",", ":")), 1)
+        self.assertTrue(any("default_month" in e for e in vd.verify(bad, self.now)))
 
-    def test_freshness_warning_cannot_be_nested_in_month_view(self):
-        warning = '<div class="summary-freshness" data-dashboard-freshness hidden></div>'
-        mutated = self.html.replace(warning, "", 1).replace(
-            '<div class="summary-period-view active" data-period-view="month">',
-            '<div class="summary-period-view active" data-period-view="month">' + warning,
-            1,
-        )
-        errors = verify(mutated, self.now)
-        self.assertTrue(any("freshness warning must remain visible" in error for error in errors))
+    def test_manifest_payload_hash_format_fails(self):
+        raw, manifest = vd.extract_manifest(self.html)
+        manifest["source_payload_sha256"] = "not-a-sha"
+        bad = self.html.replace(
+            raw, json.dumps(manifest, ensure_ascii=False, separators=(",", ":")), 1)
+        self.assertTrue(any("source_payload_sha256" in e for e in vd.verify(bad, self.now)))
 
-    # [2026-08-06] 질적 KPI 세로형 레이아웃 계약 — 유튜브와 라이브를 각각 전체 폭으로 읽게 한다.
-    def test_quality_cards_use_vertical_full_width_editorial_layout(self):
-        self.assertIn('class="kpi-row quality-row quality-editorial-stack"', self.html)
-        self.assertEqual(self.html.count('class="kpi-card quality-card quality-wide-card'), 2)
-        self.assertIn('body[data-ux-contract="figma-editorial-v2"] .quality-editorial-stack{display:grid;grid-template-columns:minmax(0,1fr)', self.html)
+    def test_manifest_naive_timestamp_fails(self):
+        raw, manifest = vd.extract_manifest(self.html)
+        manifest["built_at_kst"] = "2026-08-07T02:27:29"  # tz 제거
+        bad = self.html.replace(
+            raw, json.dumps(manifest, ensure_ascii=False, separators=(",", ":")), 1)
+        self.assertTrue(any("timezone-aware" in e for e in vd.verify(bad, self.now)))
 
-    def test_youtube_quality_has_format_summary_content_rows_and_editable_insight(self):
-        for marker in (
-            'data-youtube-format-summary',
-            'data-youtube-content-list',
-            'data-youtube-content-row',
-            'data-quality-insight-editor="owned_youtube"',
-            '키 인사이트 · 이 브라우저 저장',
-        ):
-            self.assertIn(marker, self.html)
-        self.assertIn('renderYoutubeFormatSummary', self.html)
-        self.assertIn('renderYoutubeContentRows', self.html)
+    def test_manifest_future_timestamp_beyond_clock_skew_fails(self):
+        raw, manifest = vd.extract_manifest(self.html)
+        manifest["built_at_kst"] = (self.now + dt.timedelta(hours=1)).isoformat()
+        bad = self.html.replace(
+            raw, json.dumps(manifest, ensure_ascii=False, separators=(",", ":")), 1)
+        self.assertTrue(any("future" in e for e in vd.verify(bad, self.now, require_fresh=True)))
 
-    def test_live_quality_has_package_summary_and_broadcast_sheet_insights(self):
-        for marker in (
-            'data-live-package-summary',
-            'data-live-broadcast-list',
-            'data-live-broadcast-row',
-            'data-live-sheet-insight',
-            '시트 인사이트',
-        ):
-            self.assertIn(marker, self.html)
-        self.assertIn('renderLivePackageSummary', self.html)
-        self.assertIn('renderLiveBroadcastRows', self.html)
+    def test_missing_manifest_fails(self):
+        bad = vd.MANIFEST_RE.sub("", self.html, count=1)
+        self.assertTrue(any("manifest" in e and "missing" in e for e in vd.verify(bad, self.now)))
 
-    def test_quality_detail_payload_reconciles_to_certified_period_counts(self):
-        self.assertIn('window.__QUALITY_DETAIL_DATA__ =', self.html)
-        detail = extract_json_assignment(self.html, "__QUALITY_DETAIL_DATA__")
-        sot = extract_json_assignment(self.html, "__MBD_SOT_DATA__")
-        for period_type in ("month", "week"):
-            for item in sot["quality_card_periods"]["owned_youtube"][period_type]:
-                rows = detail["owned_youtube"][period_type][item["id"]]["content_rows"]
-                self.assertEqual(len(rows), item["posts"], f'youtube {period_type} {item["id"]}')
-                self.assertTrue(all(row["type_label"] in {"LF", "SF"} for row in rows))
-            for item in sot["quality_card_periods"]["live_gmv"][period_type]:
-                rows = detail["live_gmv"][period_type][item["id"]]["broadcast_rows"]
-                self.assertEqual(len(rows), item["broadcast_count"], f'live count {period_type} {item["id"]}')
-                self.assertEqual(sum(row["gmv"] for row in rows), round(item["total_gmv"] or 0), f'live total {period_type} {item["id"]}')
-                self.assertTrue(all(row["gmv"] > 0 for row in rows))
-                self.assertTrue(all(row["insight_source"] in {"공식 회고", "내부 회고", "미작성"} for row in rows))
+    # ── freshness SLA (negative control) ────────────────────────────
+    def test_stale_snapshot_only_fails_under_require_fresh(self):
+        # require_fresh=False → 노후여도 통과(다른 위반 없음), True → stale RED
+        self.assertEqual(vd.verify(self.html, self.stale_now, require_fresh=False), [])
+        stale_errors = vd.verify(self.html, self.stale_now, require_fresh=True)
+        self.assertTrue(any("stale snapshot" in e for e in stale_errors))
+
+
+class SmokeViewportPolicyTest(unittest.TestCase):
+    def _result(self, width):
+        return {
+            "doc": {"sw": width, "cw": width, "bsw": width, "iw": width},
+            "errors": [],
+        }
+
+    def test_mobile_chrome_min_width_within_responsive_breakpoint_is_accepted(self):
+        errors = sd._check_viewport(
+            self._result(500), 390, 844, "mobile", switch_expected=None)
+        self.assertEqual(errors, [])
+
+    def test_mobile_width_outside_responsive_breakpoint_fails(self):
+        errors = sd._check_viewport(
+            self._result(1000), 390, 844, "mobile", switch_expected=None)
+        self.assertTrue(any("responsive breakpoint" in e for e in errors))
+
+    def test_desktop_css_viewport_must_match_requested_width(self):
+        errors = sd._check_viewport(
+            self._result(1200), 1440, 900, "desktop", switch_expected=None)
+        self.assertTrue(any("requested width" in e for e in errors))
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(verbosity=2)

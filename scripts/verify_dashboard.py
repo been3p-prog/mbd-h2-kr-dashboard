@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Deterministic release guard for the static MBD dashboard artifact."""
+"""Deterministic release guard for the DOM-first MBD dashboard (LIVE artifact).
+
+승인 골격(2026-08-07): compact public manifest(<script id="mbd-public-guard">) +
+월 드롭다운(#msel 1..12) + 12개월 세로 기둥 차트. 구(舊) 임베드 payload
+(window.__TOP_SUMMARY_DATA__ / window.__MBD_SOT_DATA__) 는 재출현 금지.
+verify() 는 예외를 던지지 않고 정렬된 위반 리스트를 반환한다(fail-closed).
+--require-fresh 는 스케줄 프로브에서 manifest 타임스탬프 48h SLA 를 강제한다.
+"""
 from __future__ import annotations
 
 import argparse
@@ -10,92 +17,245 @@ import sys
 from pathlib import Path
 
 KST = dt.timezone(dt.timedelta(hours=9))
-ALLOWED_REVENUE_TEAMS = {"ad_gen", "ad_int", "live"}
+FRESHNESS_SLA_HOURS = 48
+MAX_FUTURE_SKEW_HOURS = 5 / 60  # tolerate at most five minutes of clock skew
+# B22N 매출 스코프 — ogam 은 영구 제외 (원전 §4)
+ALLOWED_REVENUE_TEAMS = ("ad_gen", "ad_int", "live")
+
+# ── 승인 골격 HTML 계약 상수 ──────────────────────────────────────────
+TITLE = "MBD H2 KR 대시보드 — 2026"
+REQUIRED_LABELS = ("마감예상", "목표", "달성률", "RAW", "평균",
+                   "일반광고", "통광마", "라이브", "유튜브")
+LIVE_MARKERS = ("LIVE · 실데이터", "LIVE 빌드", "고정 URL 운영본")
+PRE_APPROVAL_MARKERS = ("STAGING", "승인 전 비공개")
+# 구 payload-heavy 대시보드 흔적 — 절대 재출현 금지
+LEGACY_PAYLOAD_MARKERS = ("window.__TOP_SUMMARY_DATA__", "window.__MBD_SOT_DATA__",
+                          "__QUALITY_DETAIL_DATA__")
+# 세로 기둥 차트(존재 필수) — 승인 골격 (세로 기둥만)
+VERTICAL_MARKERS = ("gauge12", 'class="seg"', "align-items:end",
+                    "grid-template-columns:repeat(12,1fr)")
+# 가로 막대 semantics(존재 금지) — 가로 그래프/다이버징/불릿 전면 금지
+FORBIDDEN_HBAR = ("horizontal-bar", "bar-horizontal", "hbar",
+                  "diverging", 'aria-orientation="horizontal"')
+
+SHEET_LIVE = "https://docs.google.com/spreadsheets/d/1Kw-IMgnP_kj0qY3q8thqsrPQ_KQvypTAX3hT5J-Gp4Q/edit?gid=1837542220#gid=1837542220"
+SHEET_YT = "https://docs.google.com/spreadsheets/d/1mMkGwBuWr_L0YXvmDlGtPGzpm9kAgk8VQubjC_w52vg/edit?gid=34722178#gid=34722178"
+SHEET_OKR = "https://docs.google.com/spreadsheets/d/1DgciUq9HLVs5Q-vt0GmuDrX8-Yd6T8SxEoRPudPWpPA/edit?gid=43885048#gid=43885048"
+REQUIRED_SOURCE_LINKS = (SHEET_LIVE, SHEET_YT, SHEET_OKR)
+
+# ── compact manifest 계약 (mbd-public-guard-v1) ───────────────────────
+MANIFEST_RE = re.compile(
+    r'<script type="application/json" id="mbd-public-guard">(.*?)</script>', re.S)
+MANIFEST_SCHEMA = "mbd-public-guard-v1"
+MANIFEST_GENERATOR = "mbd-dash-v5/render_venus.py"
+MANIFEST_SCOPE = ["ad_gen", "ad_int", "live"]
+MANIFEST_ALLOWED_KEYS = frozenset({
+    "schema", "built_at_kst", "source_snapshot_as_of", "source_status",
+    "default_month", "public_scope", "raw_rows_included", "generator",
+    "source_payload_sha256"})
+MANIFEST_MAX_BYTES = 4096
+MANIFEST_SOURCE_KEYS = (
+    "revenue_mirror", "live_quality", "yt_quality", "okr_targets", "owned_media")
+MANIFEST_STATUS_KEYS = ("live_quality", "yt_quality", "okr_targets", "owned_media")
+MANIFEST_FORBIDDEN_TOKENS = (
+    '"packages"', '"forms"', '"rows"', '"review_full"', '"brand"', '"teams"',
+    '"series_12m"', '"months"', '"by_month"', '"token"',
+    "service_account", "private_key", "client_email",
+    "iam.gserviceaccount", "-----begin", "authorization")
+
+MONTH_OPTION_RE = re.compile(r'<option value="(\d+)"')
+ANCHOR_RE = re.compile(r'<a\b[^>]*>', re.I)
+# 자격증명 흔적 (공개본 어디에도 노출 금지)
+CRED_TOKENS = ("service_account", "private_key", "client_email",
+               "iam.gserviceaccount", "-----begin")
+# 내부 절대경로 누출 (generator 의 상대경로 'mbd-dash-v5/...' 는 provenance 이므로 제외)
+INTERNAL_PATH_TOKENS = ("/Users/automation", "/Users/sb.lee", "/home/", ".hermes/")
 
 
-def extract_json_assignment(html: str, variable: str) -> dict:
-    marker = f"window.{variable} ="
-    start = html.find(marker)
-    if start < 0:
-        raise AssertionError(f"missing {marker}")
-    start += len(marker)
-    payload, _ = json.JSONDecoder().raw_decode(html[start:].lstrip())
-    return payload
+def extract_manifest(html: str):
+    """LIVE 아티팩트의 compact manifest (raw, parsed) 반환.
+       정확히 1개가 아니면 AssertionError (테스트/도구용 헬퍼)."""
+    blocks = MANIFEST_RE.findall(html)
+    if len(blocks) != 1:
+        raise AssertionError(f"expected exactly one public manifest, found {len(blocks)}")
+    raw = blocks[0]
+    return raw, json.loads(raw)
 
 
-def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list[str]:
-    errors: list[str] = []
-    top = extract_json_assignment(html, "__TOP_SUMMARY_DATA__")
-    sot = extract_json_assignment(html, "__MBD_SOT_DATA__")
-    periods = top.get("month", {}).get("periods", [])
+def _parse_iso(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return dt.datetime.fromisoformat(value.strip())
+    except ValueError:
+        return None
 
-    runtime_checks = {
-        "selected-period diagnosis renderer": r"function\s+renderGapDiagnosis\(period,p\)\s*\{",
-        "diagnosis renderer wiring": r"function\s+renderSummaryPeriod\(period,idx\)[\s\S]*?renderGapDiagnosis\(period,p\);",
-        "raw semantic guard definition": r"function\s+rawActualPresentation\(period,p\)\s*\{",
-        "raw semantic guard wiring": r"const\s+raw=rawActualPresentation\(period,p\);[\s\S]*?raw\.label[\s\S]*?raw\.value[\s\S]*?raw\.small",
-        "current-month auto selection wiring": r"const\s+summarySelection=\{month:defaultMonthSelection\(\),week:topSummary\.week\?\.current_index\|\|0\};",
-        "revenue-scope render filter": r"function\s+scopedSummarySegments\(p\)\s*\{\s*return\s+\(p\?\.segments\|\|\[\]\)\.filter\(seg=>REVENUE_SCOPE_SET\.has\(seg\.team\)\);\s*\}",
-        "scoped month-chart renderer": r"function\s+renderScopedMonthChart\(idx\)\s*\{[\s\S]*?const\s+segments=scopedSummarySegments\(p\);",
-        "scoped month-chart renderer wiring": r"function\s+renderSummaryPeriod\(period,idx\)[\s\S]*?if\(period==='month'\)renderScopedMonthChart\(idx\);",
-        "scoped week-chart renderer": r"function\s+renderScopedWeekChart\(idx\)\s*\{[\s\S]*?const\s+segments=scopedSummarySegments\(p\);",
-        "scoped week-chart renderer wiring": r"function\s+renderSummaryPeriod\(period,idx\)[\s\S]*?if\(period==='week'\)renderScopedWeekChart\(idx\);",
-        "snapshot freshness warning": r"function\s+renderFreshnessWarning\(\)\s*\{",
-    }
-    for label, pattern in runtime_checks.items():
-        if not re.search(pattern, html):
-            errors.append(f"missing or unwired {label}")
 
-    scope_match = re.search(r"const\s+REVENUE_SCOPE=Object\.freeze\(\[([^\]]*)\]\);", html)
-    if not scope_match:
-        errors.append("missing explicit revenue scope")
+def _check_manifest(html: str, now: dt.datetime, require_fresh: bool, errors: list) -> None:
+    """정확히 1개 · allowlist · 상수 계약 · raw/자격증명 부재 · 타임스탬프 tz-aware(+SLA)."""
+    blocks = MANIFEST_RE.findall(html)
+    if not blocks:
+        errors.append('compact public manifest <script id="mbd-public-guard"> is missing')
+        return
+    if len(blocks) > 1:
+        errors.append(f"expected exactly one public manifest, found {len(blocks)}")
+    raw = blocks[0]
+    if len(raw.encode("utf-8")) >= MANIFEST_MAX_BYTES:
+        errors.append(f"manifest raw exceeds {MANIFEST_MAX_BYTES}B budget (raw rows may have leaked)")
+    try:
+        manifest = json.loads(raw)
+    except (ValueError, TypeError):
+        errors.append("manifest is not valid JSON")
+        return
+    if not isinstance(manifest, dict):
+        errors.append("manifest is not a JSON object")
+        return
+
+    keys = set(manifest)
+    if keys - MANIFEST_ALLOWED_KEYS:
+        errors.append(f"manifest has unexpected keys {sorted(keys - MANIFEST_ALLOWED_KEYS)}")
+    if MANIFEST_ALLOWED_KEYS - keys:
+        errors.append(f"manifest missing keys {sorted(MANIFEST_ALLOWED_KEYS - keys)}")
+
+    low = raw.lower()
+    for tok in MANIFEST_FORBIDDEN_TOKENS:
+        if tok in low:
+            errors.append(f"manifest contains forbidden raw/credential token {tok!r}")
+
+    if manifest.get("schema") != MANIFEST_SCHEMA:
+        errors.append(f"manifest schema {manifest.get('schema')!r} != {MANIFEST_SCHEMA!r}")
+    if manifest.get("raw_rows_included") is not False:
+        errors.append("manifest raw_rows_included must be false")
+    if manifest.get("public_scope") != MANIFEST_SCOPE:
+        errors.append(f"manifest public_scope {manifest.get('public_scope')!r} != {MANIFEST_SCOPE}")
+    if manifest.get("generator") != MANIFEST_GENERATOR:
+        errors.append(f"manifest generator {manifest.get('generator')!r} != {MANIFEST_GENERATOR!r}")
+    default_month = manifest.get("default_month")
+    if not (isinstance(default_month, int) and 1 <= default_month <= 12):
+        errors.append(f"manifest default_month {default_month!r} is not an integer in 1..12")
+    payload_sha = manifest.get("source_payload_sha256")
+    if not (isinstance(payload_sha, str) and re.fullmatch(r"[0-9a-f]{64}", payload_sha)):
+        errors.append("manifest source_payload_sha256 is not a lowercase 64-hex SHA-256")
+
+    statuses = manifest.get("source_status")
+    if not isinstance(statuses, dict):
+        errors.append("manifest source_status missing or not an object")
     else:
-        runtime_scope = re.findall(r"['\"]([^'\"]+)['\"]", scope_match.group(1))
-        if set(runtime_scope) != ALLOWED_REVENUE_TEAMS or len(runtime_scope) != len(ALLOWED_REVENUE_TEAMS):
-            errors.append(f"runtime revenue scope mismatch: {runtime_scope}")
+        if set(statuses) != set(MANIFEST_STATUS_KEYS):
+            errors.append(
+                f"manifest source_status keys {sorted(statuses)} != {sorted(MANIFEST_STATUS_KEYS)}")
+        for key in MANIFEST_STATUS_KEYS:
+            if statuses.get(key) != "current":
+                errors.append(f"manifest source_status.{key} {statuses.get(key)!r} != 'current'")
 
-    freshness_pos = html.find('data-dashboard-freshness')
-    first_period_view_pos = html.find('class="summary-period-view')
-    if freshness_pos < 0 or first_period_view_pos < 0 or freshness_pos > first_period_view_pos:
-        errors.append("freshness warning must remain visible outside month/week period views")
-
-    if re.search(r">\s*\d{1,2}월 미달 원인\s*<", html):
-        errors.append("month diagnosis is hard-coded in the initial HTML instead of selected-period state")
-
-    current_ym = now.astimezone(KST).strftime("%Y-%m")
-    selected_period = next((p for p in periods if p.get("ym") == current_ym), None)
-    if selected_period:
-        basis = str(selected_period.get("current_actual_basis") or "")
-        if basis == "월전체 집계" and "월전체 집계값은 RAW 누적으로 표시하지 않음" not in html:
-            errors.append(f"{current_ym}: full-month aggregate can still be mislabeled as current RAW")
-
-    built_raw = sot.get("meta", {}).get("built_at_kst") or sot.get("meta", {}).get("today")
-    if not built_raw:
-        errors.append("missing dashboard build timestamp")
+    # 타임스탬프: 항상 tz-aware · require_fresh 시 48h 이내
+    stamps = {"built_at_kst": manifest.get("built_at_kst")}
+    snap = manifest.get("source_snapshot_as_of")
+    if isinstance(snap, dict):
+        if set(snap) != set(MANIFEST_SOURCE_KEYS):
+            errors.append(
+                f"manifest source_snapshot_as_of keys {sorted(snap)} != "
+                f"{sorted(MANIFEST_SOURCE_KEYS)}")
+        for key in MANIFEST_SOURCE_KEYS:
+            stamps[f"source_snapshot_as_of.{key}"] = snap.get(key)
     else:
-        try:
-            built_at = dt.datetime.fromisoformat(str(built_raw))
-            if built_at.tzinfo is None:
-                built_at = built_at.replace(tzinfo=KST)
-            age_hours = (now.astimezone(KST) - built_at.astimezone(KST)).total_seconds() / 3600
-            if age_hours > 48:
-                if require_fresh:
-                    errors.append(f"stale snapshot ({age_hours:.1f}h) exceeds the 48h freshness SLA")
-                elif "data-dashboard-freshness" not in html:
-                    errors.append(f"stale snapshot ({age_hours:.1f}h) has no visible freshness warning")
-        except ValueError:
-            errors.append(f"invalid dashboard build timestamp: {built_raw}")
+        errors.append("manifest source_snapshot_as_of missing or not an object")
+    for label, value in stamps.items():
+        parsed = _parse_iso(value)
+        if parsed is None:
+            errors.append(f"manifest {label} missing or unparseable timestamp")
+        elif parsed.tzinfo is None:
+            errors.append(f"manifest {label} is not timezone-aware")
+        else:
+            age_hours = (now - parsed).total_seconds() / 3600
+            if age_hours < -MAX_FUTURE_SKEW_HOURS:
+                errors.append(f"future snapshot: {label} is {-age_hours:.1f}h ahead of verifier time")
+            elif require_fresh and age_hours > FRESHNESS_SLA_HOURS:
+                errors.append(f"stale snapshot: {label} {age_hours:.1f}h exceeds "
+                              f"the {FRESHNESS_SLA_HOURS}h freshness SLA")
 
-    if "ogam" in ALLOWED_REVENUE_TEAMS:
+
+def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
+    """DOM-first LIVE 아티팩트 계약 검증. 정렬된 위반 리스트 반환([] = 통과)."""
+    if not isinstance(html, str) or not html.strip():
+        return ["html: empty or not a string"]
+    errors: list = []
+
+    # 1) 구 임베드 payload 재출현 금지
+    for marker in LEGACY_PAYLOAD_MARKERS:
+        if marker in html:
+            errors.append(f"legacy embedded payload reappeared: {marker}")
+
+    # 2) compact manifest (정확히 1개 · allowlist · 상수 · raw 부재 · freshness)
+    _check_manifest(html, now, require_fresh, errors)
+
+    # 3) LIVE 마커 정확히 1회 · STAGING/승인 전 비공개 부재
+    for marker in LIVE_MARKERS:
+        count = html.count(marker)
+        if count != 1:
+            errors.append(f"LIVE marker {marker!r} appears {count}x (expected exactly 1)")
+    for marker in PRE_APPROVAL_MARKERS:
+        if marker in html:
+            errors.append(f"pre-approval marker {marker!r} must be absent from the LIVE artifact")
+
+    # 4) title + 필수 가시 라벨
+    if TITLE not in html:
+        errors.append(f"missing title {TITLE!r}")
+    for label in REQUIRED_LABELS:
+        if label not in html:
+            errors.append(f"missing required visible label {label!r}")
+
+    # 5) 월 셀렉터 #msel 옵션 1..12
+    if '<select id="msel">' not in html:
+        errors.append('missing month selector <select id="msel">')
+    opts = sorted(int(v) for v in MONTH_OPTION_RE.findall(html))
+    if opts != list(range(1, 13)):
+        errors.append(f"month <option> values {opts} != 1..12")
+
+    # 6) 필수 HTTPS 소스 시트 링크
+    for url in REQUIRED_SOURCE_LINKS:
+        if url not in html:
+            errors.append(f"missing source link {url}")
+        elif not url.startswith("https://"):
+            errors.append(f"non-https source link {url}")
+
+    # 7) 외부 링크 안전: target=_blank => rel=noopener · javascript: URI 금지
+    for tag in ANCHOR_RE.findall(html):
+        if 'target="_blank"' in tag and 'rel="noopener"' not in tag:
+            errors.append(f"target=_blank link without rel=noopener: {tag[:90]}")
+    if "javascript:" in html.lower():
+        errors.append("unsafe javascript: URI present")
+
+    # 8) 자격증명 · 내부 절대경로 누출 금지
+    low = html.lower()
+    for tok in CRED_TOKENS:
+        if tok in low:
+            errors.append(f"credential token leaked: {tok!r}")
+    for tok in INTERNAL_PATH_TOKENS:
+        if tok in html:
+            errors.append(f"internal filesystem path leaked: {tok!r}")
+
+    # 9) 세로 기둥 마커 필수 · 가로 막대 semantics 금지
+    for tok in VERTICAL_MARKERS:
+        if tok not in html:
+            errors.append(f"missing vertical-column chart marker {tok!r}")
+    for tok in FORBIDDEN_HBAR:
+        if tok.lower() in low:
+            errors.append(f"forbidden horizontal-bar semantics {tok!r}")
+
+    # 10) 스코프 불변식 — ogam 영구 제외
+    if "ogam" in ALLOWED_REVENUE_TEAMS or "ogam" in MANIFEST_SCOPE:
         errors.append("ogam must never be part of the B22N revenue scope")
-    return errors
+
+    return sorted(set(errors))
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="MBD DOM-first dashboard release guard")
     parser.add_argument("html", nargs="?", default="index.html")
-    parser.add_argument("--now", help="ISO timestamp for deterministic tests")
-    parser.add_argument("--require-fresh", action="store_true", help="Fail when the snapshot is older than 48 hours")
+    parser.add_argument("--now", help="ISO timestamp for deterministic checks")
+    parser.add_argument("--require-fresh", action="store_true",
+                        help="Fail when any manifest timestamp is older than 48 hours")
     args = parser.parse_args()
     now = dt.datetime.fromisoformat(args.now) if args.now else dt.datetime.now(KST)
     if now.tzinfo is None:
@@ -108,7 +268,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
     print("DASHBOARD_GUARD=GREEN")
-    print("scope=ad_gen,ad_int,live; ogam=excluded")
+    print("scope=ad_gen,ad_int,live; ogam=excluded; manifest=mbd-public-guard-v1")
     return 0
 
 

@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""Headless-browser smoke test for the rendered static dashboard."""
+"""Headless-Chrome smoke test for the DOM-first MBD dashboard (LIVE artifact).
+
+임의 HTML 경로에서 동작(기본 index.html). 월 드롭다운(#msel)으로 현재월→대체월 전환 후
+location.hash 갱신·선택월 가시성 변화·소스 링크 존재·콘솔/페이지 에러 부재를 검증하고,
+데스크톱 1440x900·모바일 390x844 두 뷰포트에서 가로 오버플로가 0인지 확인한다.
+설치/다운로드 없이 시스템 Chrome 만 사용.
+"""
 from __future__ import annotations
 
-import datetime as dt
 import html as html_lib
 import json
 import re
@@ -12,18 +17,20 @@ import sys
 import tempfile
 from pathlib import Path
 
-KST = dt.timezone(dt.timedelta(hours=9))
+VIEWPORTS = ((1440, 900, "desktop"), (390, 844, "mobile"))
+SELECTED_OPTION_RE = re.compile(r'<option value="(\d+)" selected>')
+MANIFEST_RE = re.compile(
+    r'<script type="application/json" id="mbd-public-guard">(.*?)</script>', re.S)
+RESULT_RE = re.compile(r'<div id="smoke-result">(.*?)</div>', re.S)
 
-
-def extract_json_assignment(source: str, variable: str) -> dict:
-    marker = f"window.{variable} ="
-    start = source.index(marker) + len(marker)
-    payload, _ = json.JSONDecoder().raw_decode(source[start:].lstrip())
-    return payload
-
-
-def plain(fragment: str) -> str:
-    return " ".join(html_lib.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+# 로드 시점부터 window.onerror / console.error 를 수집 (head 에 주입 → 페이지 스크립트보다 먼저)
+_CAPTURER = (
+    "window.__smoke_errors=[];"
+    "addEventListener('error',function(e){window.__smoke_errors.push('error: '+(e.message||String(e.error||e)));});"
+    "addEventListener('unhandledrejection',function(e){window.__smoke_errors.push('rejection: '+String(e.reason));});"
+    "(function(){var _e=console.error;console.error=function(){"
+    "window.__smoke_errors.push('console.error: '+Array.prototype.join.call(arguments,' '));"
+    "return _e.apply(console,arguments);};})();")
 
 
 def find_chrome() -> str:
@@ -33,6 +40,7 @@ def find_chrome() -> str:
         shutil.which("chromium"),
         shutil.which("chromium-browser"),
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
     ]
     for candidate in candidates:
         if candidate and Path(candidate).exists():
@@ -40,9 +48,37 @@ def find_chrome() -> str:
     raise RuntimeError("Chrome/Chromium is required for dashboard smoke verification")
 
 
-def render_dom(source: str, probe: str) -> subprocess.CompletedProcess[str]:
+def _probe_script(target_month: int) -> str:
+    return (
+        "(function(){var out={};"
+        "function vis(){return Array.prototype.filter.call(document.querySelectorAll('.mvk'),"
+        "function(x){return x.style.display!=='none';}).map(function(x){return x.dataset.m;});}"
+        "try{var sel=document.getElementById('msel');"
+        "out.hasSelect=!!sel;out.optionCount=sel?sel.options.length:0;"
+        "out.initialHash=location.hash;out.visibleBefore=vis();"
+        "sel.value='%d';sel.dispatchEvent(new Event('change'));"
+        "out.afterHash=location.hash;out.selectedAfter=sel.value;out.visibleAfter=vis();"
+        "out.doc={sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth,"
+        "bsw:document.body.scrollWidth,iw:window.innerWidth};"
+        "out.links={live:!!document.querySelector('a[href*=\"1Kw-IMgnP\"]'),"
+        "yt:!!document.querySelector('a[href*=\"1mMkGwBuWr\"]'),"
+        "okr:!!document.querySelector('a[href*=\"1DgciUq9HLVs\"]')};"
+        "out.errors=(window.__smoke_errors||[]).slice(0,20);"
+        "}catch(e){out.fatal=String(e)+' | '+((e&&e.stack)||'');}"
+        "var d=document.createElement('div');d.id='smoke-result';d.textContent=JSON.stringify(out);"
+        "document.body.appendChild(d);})();") % target_month
+
+
+def instrument(source: str, target_month: int) -> str:
+    src = source.replace('<meta charset="utf-8">',
+                         '<meta charset="utf-8"><script>' + _CAPTURER + "</script>", 1)
+    src = src.replace("</body>", "<script>" + _probe_script(target_month) + "</script></body>", 1)
+    return src
+
+
+def render_dom(instrumented: str, width: int, height: int):
     with tempfile.NamedTemporaryFile("w", suffix=".html", encoding="utf-8", delete=False) as handle:
-        handle.write(source.replace("</body>", probe + "</body>", 1))
+        handle.write(instrumented)
         render_path = Path(handle.name)
     try:
         return subprocess.run(
@@ -51,7 +87,10 @@ def render_dom(source: str, probe: str) -> subprocess.CompletedProcess[str]:
                 "--headless=new",
                 "--disable-gpu",
                 "--no-sandbox",
+                "--hide-scrollbars",
                 "--allow-file-access-from-files",
+                f"--window-size={width},{height}",
+                "--force-device-scale-factor=1",
                 "--virtual-time-budget=3000",
                 "--dump-dom",
                 render_path.as_uri(),
@@ -65,122 +104,92 @@ def render_dom(source: str, probe: str) -> subprocess.CompletedProcess[str]:
         render_path.unlink(missing_ok=True)
 
 
+def parse_result(dumped: str):
+    match = RESULT_RE.search(dumped)
+    if not match:
+        return None
+    try:
+        return json.loads(html_lib.unescape(match.group(1)))
+    except json.JSONDecodeError:
+        return None
+
+
+def _current_month(source: str) -> int:
+    selected = SELECTED_OPTION_RE.search(source)
+    if selected:
+        return int(selected.group(1))
+    manifest = MANIFEST_RE.findall(source)
+    if manifest:
+        try:
+            value = json.loads(manifest[0]).get("default_month")
+            if isinstance(value, int) and 1 <= value <= 12:
+                return value
+        except json.JSONDecodeError:
+            pass
+    return 8
+
+
+def _check_viewport(result, width, height, tag, *, switch_expected):
+    """뷰포트별 위반 리스트 반환. switch_expected 시 월 전환 계약도 검증."""
+    errors = []
+    if result is None:
+        return [f"{tag}: smoke-result probe not found in dumped DOM"]
+    if result.get("fatal"):
+        errors.append(f"{tag}: probe fatal: {result['fatal'][:160]}")
+    if result.get("errors"):
+        errors.append(f"{tag}: console/page errors: {result['errors']}")
+    doc = result.get("doc") or {}
+    sw, cw = doc.get("sw"), doc.get("cw")
+    bsw, iw = doc.get("bsw"), doc.get("iw")
+    if not (isinstance(sw, int) and isinstance(cw, int) and sw <= cw):
+        errors.append(f"{tag}: horizontal overflow docElement scrollWidth={sw} > clientWidth={cw}")
+    if not (isinstance(bsw, int) and isinstance(iw, int) and bsw <= iw):
+        errors.append(f"{tag}: horizontal overflow body scrollWidth={bsw} > innerWidth={iw}")
+    if tag == "desktop" and iw != width:
+        errors.append(f"{tag}: CSS viewport {iw}px != requested width {width}px")
+    if tag == "mobile" and not (isinstance(iw, int) and 0 < iw <= 920):
+        errors.append(
+            f"{tag}: CSS viewport {iw}px is outside the <=920px responsive breakpoint")
+    if switch_expected:
+        if result.get("optionCount") != 12:
+            errors.append(f"{tag}: month selector has {result.get('optionCount')} options (expected 12)")
+        target = switch_expected["target"]
+        current = switch_expected["current"]
+        if result.get("afterHash") != f"#m{target}":
+            errors.append(f"{tag}: location.hash={result.get('afterHash')!r} did not update to #m{target}")
+        if str(result.get("selectedAfter")) != str(target):
+            errors.append(f"{tag}: selected month {result.get('selectedAfter')!r} != {target}")
+        if result.get("visibleBefore") != [str(current)]:
+            errors.append(f"{tag}: initial visible month {result.get('visibleBefore')} != [{current}]")
+        if result.get("visibleAfter") != [str(target)]:
+            errors.append(f"{tag}: post-switch visible month {result.get('visibleAfter')} != [{target}]")
+        if result.get("visibleBefore") == result.get("visibleAfter"):
+            errors.append(f"{tag}: month visibility did not change on selection")
+        links = result.get("links") or {}
+        if not all(links.get(k) for k in ("live", "yt", "okr")):
+            errors.append(f"{tag}: required source sheet links missing: {links}")
+    return errors
+
+
 def main() -> int:
     source_path = Path(sys.argv[1] if len(sys.argv) > 1 else "index.html").resolve()
     source = source_path.read_text(encoding="utf-8")
-    top = extract_json_assignment(source, "__TOP_SUMMARY_DATA__")
-    sot = extract_json_assignment(source, "__MBD_SOT_DATA__")
-    periods = top["month"]["periods"]
-    current_ym = dt.datetime.now(KST).strftime("%Y-%m")
-    selected = next((p for p in periods if p.get("ym") == current_ym), None)
-    if selected is None:
-        selected = periods[top["month"].get("current_index", 0)]
+    current = _current_month(source)
+    target = 3 if current != 3 else 5  # 현재월→대체월 (8→3 등)
 
-    selected_idx = periods.index(selected)
-    alternate_idx = 0 if selected_idx else min(1, len(periods) - 1)
-    switch_probe = f'''<script>
-(() => {{
-  const click = index => document.querySelector(`.summary-period-view[data-period-view="month"] .stack-month[data-period-index="${{index}}"]`)?.click();
-  click({alternate_idx});
-  click({selected_idx});
-}})();
-</script>'''
-    proc = render_dom(source, switch_probe)
-    if proc.returncode != 0:
-        print(proc.stderr[-2000:])
-        return 1
-
-    rendered = proc.stdout
-    active = re.search(
-        r'<div class="summary-period-view active" data-period-view="month">(.*?)<div class="summary-period-view" data-period-view="week">',
-        rendered,
-        re.S,
-    )
-    if not active:
-        print("DASHBOARD_SMOKE=RED\n- active month view not found")
-        return 1
-    month_html = active.group(1)
-    visible_text = plain(month_html)
-    full_text = plain(rendered)
-    errors: list[str] = []
-
-    ym = str(selected["ym"])
-    year, month = ym.split("-", 1)
-    expected_label = f"{int(year)}년 {int(month)}월"
-    expected_month = str(int(month))
-    if f"선택 기준 · {expected_label}" not in visible_text:
-        errors.append(f"selected-period label mismatch: expected {expected_label}")
-    # [2026-08-06] 판정 카드 계약 변경 — 미달 팀만이 아니라 3팀의 마감예측·목표·GAP을 모두 렌더링해야 한다.
-    if f"{expected_month}월 3팀 매출 요약" not in visible_text:
-        errors.append(f"selected-period three-team summary mismatch: expected {expected_month}월")
-    decision_teams = set(re.findall(r'data-gap-team="([^"]+)"', month_html))
-    if decision_teams != {"ad_gen", "ad_int", "live"}:
-        errors.append(f"decision summary team mismatch: {sorted(decision_teams)}")
-
-    if "온드·YT 광고" in visible_text:
-        errors.append("owned YouTube advertising leaked into the rendered B22N revenue chart")
-    if "owned-youtube" in month_html:
-        errors.append("owned YouTube segment leaked into the rendered B22N revenue chart")
-
-    basis = str(selected.get("current_actual_basis") or "")
-    if "RAW 누적" not in basis:
-        if "현재 RAW 누적 미연결" not in visible_text:
-            errors.append("unverified current_actual is not rendered as RAW disconnected")
-        if "월전체 집계값은 RAW 누적으로 표시하지 않음" not in visible_text:
-            errors.append("RAW-disconnection explanation is missing")
-
-    topmeta = re.search(r'<div class="topmeta">(.*?)</div>', rendered, re.S)
-    if not topmeta or selected["ym"] not in plain(topmeta.group(1)):
-        errors.append(f"top metadata does not follow selected month {selected['ym']}")
-
-    rendered_teams = set(re.findall(r'data-summary-segment="([^"]+)"', month_html))
-    if "ogam" in rendered_teams:
-        errors.append("ogam leaked into the rendered B22N revenue scope")
-
-    week_periods = top["week"]["periods"]
-    week_selected = week_periods[top["week"].get("current_index", 0)]
-    week_selected_idx = week_periods.index(week_selected)
-    week_alternate_idx = 0 if week_selected_idx else min(1, len(week_periods) - 1)
-    week_probe = f'''<script>
-(() => {{
-  document.querySelector('[data-summary-period="week"]')?.click();
-  const click = index => document.querySelector(`.summary-period-view[data-period-view="week"] .stack-month[data-period-index="${{index}}"]`)?.click();
-  click({week_alternate_idx});
-  click({week_selected_idx});
-}})();
-</script>'''
-    week_proc = render_dom(source, week_probe)
-    if week_proc.returncode != 0:
-        errors.append("week-toggle smoke render failed")
-    else:
-        week_active = re.search(
-            r'<div class="summary-period-view active" data-period-view="week">(.*?)</section>\s*<div class="trend-bridge-banner"',
-            week_proc.stdout,
-            re.S,
-        )
-        if not week_active:
-            errors.append("active week view not found after period toggle")
-        else:
-            week_html = week_active.group(1)
-            week_text = plain(week_html)
-            week_label = str(week_selected.get("month_label") or week_selected.get("short_label") or week_selected.get("ym"))
-            if f"선택 기준 · {week_label}" not in week_text:
-                errors.append(f"selected-week label mismatch: expected {week_label}")
-            if "온드·YT 광고" in week_text or "owned-youtube" in week_html:
-                errors.append("owned YouTube advertising leaked into the rendered B22N weekly chart")
-            week_teams = set(re.findall(r'data-summary-segment="([^"]+)"', week_html))
-            if not week_teams.issubset({"ad_gen", "ad_int", "live"}):
-                errors.append("non-B22N team leaked into the rendered weekly revenue scope")
-            if "B22N 매출 범위 · 일반광고 / 통광마 / 라이브" not in week_text:
-                errors.append("weekly B22N revenue scope disclosure is missing")
-
-    built_raw = sot.get("meta", {}).get("built_at_kst") or sot.get("meta", {}).get("today")
-    built_at = dt.datetime.fromisoformat(str(built_raw))
-    if built_at.tzinfo is None:
-        built_at = built_at.replace(tzinfo=KST)
-    stale = (dt.datetime.now(KST) - built_at.astimezone(KST)).total_seconds() > 48 * 3600
-    if stale and "선택월 변경은 데이터 새로고침이 아닙니다" not in full_text:
-        errors.append("stale-snapshot warning is not visible in rendered DOM")
+    instrumented = instrument(source, target)
+    errors: list = []
+    observed_widths = {}
+    for width, height, tag in VIEWPORTS:
+        proc = render_dom(instrumented, width, height)
+        if proc.returncode != 0:
+            errors.append(f"{tag}: chrome exited {proc.returncode}: {proc.stderr[-400:]}")
+            continue
+        result = parse_result(proc.stdout)
+        observed_widths[tag] = ((result or {}).get("doc") or {}).get("iw")
+        # 월 전환·소스 링크·오버플로·에러를 데스크톱과 모바일 반응형 뷰 모두 검증
+        switch = {"current": current, "target": target}
+        errors.extend(_check_viewport(result, width, height, tag, switch_expected=switch))
 
     if errors:
         print("DASHBOARD_SMOKE=RED")
@@ -188,7 +197,12 @@ def main() -> int:
             print(f"- {error}")
         return 1
     print("DASHBOARD_SMOKE=GREEN")
-    print(f"selected={selected['ym']}; raw_basis={basis}; ogam=excluded; stale_warning={'on' if stale else 'off'}")
+    print(
+        f"month_switch={current}->{target}; overflow=0; "
+        f"css_widths=desktop:{observed_widths.get('desktop')},"
+        f"mobile:{observed_widths.get('mobile')} (requested mobile 390; Chrome min may be 500); "
+        "source_links=present"
+    )
     return 0
 
 
