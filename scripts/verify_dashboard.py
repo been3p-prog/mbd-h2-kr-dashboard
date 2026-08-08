@@ -43,18 +43,24 @@ SHEET_YT = "https://docs.google.com/spreadsheets/d/1mMkGwBuWr_L0YXvmDlGtPGzpm9kA
 SHEET_OKR = "https://docs.google.com/spreadsheets/d/1DgciUq9HLVs5Q-vt0GmuDrX8-Yd6T8SxEoRPudPWpPA/edit?gid=43885048#gid=43885048"
 REQUIRED_SOURCE_LINKS = (SHEET_LIVE, SHEET_YT, SHEET_OKR)
 
-# ── compact manifest 계약 (mbd-public-guard-v2) ───────────────────────
+# ── compact manifest 계약 (mbd-public-guard-v3) ───────────────────────
 MANIFEST_RE = re.compile(
     r'<script type="application/json" id="mbd-public-guard">(.*?)</script>', re.S)
-MANIFEST_SCHEMA = "mbd-public-guard-v2"
+MANIFEST_SCHEMA = "mbd-public-guard-v3"
 MANIFEST_GENERATOR = "mbd-dash-v5/render_venus.py"
 MANIFEST_SCOPE = ["ad_gen", "ad_int", "live"]
 LIVE_AVG_GMV_TARGET = 100_000_000
 LIVE_GMV_BASIS = "1D"
 PUBLIC_DETAIL_FIELDS = {
-    "live": ["date", "status", "brand", "program", "package", "gmv_1d"],
-    "youtube": ["date", "status", "form", "title", "views_total", "views_d7"],
+    "live": ["date", "status", "brand", "program", "package", "replay_url",
+             "viewer_count", "gmv_1d", "gmv_3h"],
+    "youtube": ["date", "status", "form", "title", "url", "views_total", "views_d7", "pis"],
 }
+CONTENT_LINK_RE = re.compile(
+    r'<a class="content-link" data-content-link="(live|youtube)" href="([^"]+)" target="_blank" rel="noopener">')
+YT_CONTENT_URL_RE = re.compile(r"^https://www\.youtube\.com/watch\?v=[A-Za-z0-9_-]{11}$")
+LIVE_CONTENT_URL_RE = re.compile(
+    r"^https://www\.shoplive\.show/v1/player\.html\?ak=[A-Za-z0-9_-]+&amp;ck=[0-9a-f]{12}&amp;replay=true$")
 MANIFEST_ALLOWED_KEYS = frozenset({
     "schema", "built_at_kst", "source_snapshot_as_of", "source_status",
     "default_month", "public_scope", "raw_rows_included", "generator",
@@ -77,8 +83,8 @@ CRED_TOKENS = ("service_account", "private_key", "client_email",
                "iam.gserviceaccount", "-----begin")
 # 내부 절대경로 누출 (generator 의 상대경로 'mbd-dash-v5/...' 는 provenance 이므로 제외)
 INTERNAL_PATH_TOKENS = ("/Users/automation", "/Users/sb.lee", "/home/", ".hermes/")
-# [2026-08-08] 상세 공개는 allowlist 필드만 허용하고 내부 회고·ID·직접 영상 링크는 금지한다.
-PRIVATE_DETAIL_MARKERS = ('"review_full"', '"live_id"', "youtube.com/watch?v=", "data-owner=")
+# [2026-08-08] 상세 공개는 allowlist 필드와 검증된 public player 링크만 허용한다.
+PRIVATE_DETAIL_MARKERS = ('"review_full"', '"live_id"', "data-owner=")
 
 
 def extract_manifest(html: str):
@@ -232,12 +238,22 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         count = html.count(f'data-content-ledger="{domain}"')
         if count != 12:
             errors.append(f"content ledger {domain!r} appears {count}x (expected 12)")
-    for marker in ('data-week-toggle=', 'data-content-status="예정"', "1D GMV", "총 조회수 · D+7"):
+    for marker in ('data-week-toggle=', 'data-content-status="예정"', "시청자수", "1D 거래액",
+                   "3H 거래액", "누적조회수", "D7 조회수", "PIS",
+                   'activity-main-inline', 'activity-inline-meta', 'min-height:52px'):
         if marker not in html:
             errors.append(f"missing weekly content marker {marker!r}")
     for marker in PRIVATE_DETAIL_MARKERS:
         if marker.lower() in html.lower():
             errors.append(f"private detail marker must not be public: {marker!r}")
+    content_links = CONTENT_LINK_RE.findall(html)
+    for kind in ("live", "youtube"):
+        if not any(link_kind == kind for link_kind, _ in content_links):
+            errors.append(f"missing {kind} content links")
+    for kind, url in content_links:
+        pattern = LIVE_CONTENT_URL_RE if kind == "live" else YT_CONTENT_URL_RE
+        if not pattern.fullmatch(url):
+            errors.append(f"invalid {kind} content URL: {url!r}")
 
     # 5) 월 셀렉터 #msel 옵션 1..12
     if '<select id="msel">' not in html:
@@ -270,7 +286,7 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
             errors.append(f"internal filesystem path leaked: {tok!r}")
 
     # 공개본은 aggregate-only. manifest 선언만 믿지 않고 실제 HTML도 negative-control.
-    for marker in ('class="livetbl"', "시트 인사이트 전문", "youtube.com/watch?v=", "콘텐츠별 성과"):
+    for marker in ('class="livetbl"', "시트 인사이트 전문", "콘텐츠별 성과"):
         if marker in html:
             errors.append(f"public raw-row marker present: {marker!r}")
 
@@ -307,7 +323,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
     print("DASHBOARD_GUARD=GREEN")
-    print("scope=ad_gen,ad_int,live; ogam=excluded; manifest=mbd-public-guard-v2; detail=sanitized")
+    print("scope=ad_gen,ad_int,live; ogam=excluded; manifest=mbd-public-guard-v3; detail=sanitized+allowlisted-links")
     return 0
 
 

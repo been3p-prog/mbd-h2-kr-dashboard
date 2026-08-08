@@ -45,10 +45,9 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertEqual(vd.MANIFEST_SCOPE, ["ad_gen", "ad_int", "live"])
 
     def test_public_html_contains_approved_sanitized_weekly_content(self):
-        # [2026-08-08] 주차별 제목/브랜드·지표는 공개하되 내부 회고/ID/직접 링크는 금지한다.
+        # [2026-08-08] 승인 지표와 allowlisted player 링크만 공개하고 내부 회고/raw ID는 차단한다.
         self.assertNotIn('class="livetbl"', self.html)
         self.assertNotIn("시트 인사이트 전문", self.html)
-        self.assertNotIn("youtube.com/watch?v=", self.html)
         self.assertNotIn("콘텐츠별 성과", self.html)
         self.assertNotIn('"review_full"', self.html)
         self.assertNotIn('"live_id"', self.html)
@@ -56,10 +55,22 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertEqual(self.html.count('data-content-ledger="youtube"'), 12)
         self.assertIn("월간 보고 흐름", self.html)
         self.assertIn("data-week-toggle=", self.html)
-        self.assertIn("총 조회수 · D+7", self.html)
+        self.assertIn('data-content-link="live"', self.html)
+        self.assertIn('data-content-link="youtube"', self.html)
+        for label in ("시청자수", "1D 거래액", "3H 거래액", "누적조회수", "D7 조회수", "PIS"):
+            self.assertIn(label, self.html)
+        self.assertIn('class="activity-main activity-main-inline"', self.html)
+        self.assertIn('class="activity-inline-meta"', self.html)
+        self.assertIn('min-height:52px', self.html)
         _, manifest = vd.extract_manifest(self.html)
+        self.assertEqual(manifest.get("schema"), "mbd-public-guard-v3")
         self.assertTrue(manifest.get("sanitized_rows_included"))
         self.assertEqual(manifest.get("public_detail_fields"), vd.PUBLIC_DETAIL_FIELDS)
+
+    def test_public_guard_rejects_non_allowlisted_content_link(self):
+        bad = self.html.replace("https://www.youtube.com/watch?v=", "https://evil.example/watch?v=", 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("invalid youtube content URL" in error for error in errors), errors)
 
     def test_manifest_live_average_target_is_fixed_to_one_eok(self):
         _, manifest = vd.extract_manifest(self.html)
