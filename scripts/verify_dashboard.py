@@ -43,24 +43,29 @@ SHEET_YT = "https://docs.google.com/spreadsheets/d/1mMkGwBuWr_L0YXvmDlGtPGzpm9kA
 SHEET_OKR = "https://docs.google.com/spreadsheets/d/1DgciUq9HLVs5Q-vt0GmuDrX8-Yd6T8SxEoRPudPWpPA/edit?gid=43885048#gid=43885048"
 REQUIRED_SOURCE_LINKS = (SHEET_LIVE, SHEET_YT, SHEET_OKR)
 
-# ── compact manifest 계약 (mbd-public-guard-v1) ───────────────────────
+# ── compact manifest 계약 (mbd-public-guard-v2) ───────────────────────
 MANIFEST_RE = re.compile(
     r'<script type="application/json" id="mbd-public-guard">(.*?)</script>', re.S)
-MANIFEST_SCHEMA = "mbd-public-guard-v1"
+MANIFEST_SCHEMA = "mbd-public-guard-v2"
 MANIFEST_GENERATOR = "mbd-dash-v5/render_venus.py"
 MANIFEST_SCOPE = ["ad_gen", "ad_int", "live"]
 LIVE_AVG_GMV_TARGET = 100_000_000
 LIVE_GMV_BASIS = "1D"
+PUBLIC_DETAIL_FIELDS = {
+    "live": ["date", "status", "brand", "program", "package", "gmv_1d"],
+    "youtube": ["date", "status", "form", "title", "views_total", "views_d7"],
+}
 MANIFEST_ALLOWED_KEYS = frozenset({
     "schema", "built_at_kst", "source_snapshot_as_of", "source_status",
     "default_month", "public_scope", "raw_rows_included", "generator",
+    "sanitized_rows_included", "public_detail_fields",
     "source_payload_sha256", "live_avg_gmv_target_won", "live_gmv_basis"})
 MANIFEST_MAX_BYTES = 4096
 MANIFEST_SOURCE_KEYS = (
     "revenue_mirror", "live_quality", "yt_quality", "okr_targets", "owned_media")
 MANIFEST_STATUS_KEYS = ("live_quality", "yt_quality", "okr_targets", "owned_media")
 MANIFEST_FORBIDDEN_TOKENS = (
-    '"packages"', '"forms"', '"rows"', '"review_full"', '"brand"', '"teams"',
+    '"packages"', '"forms"', '"rows"', '"review_full"', '"teams"',
     '"series_12m"', '"months"', '"by_month"', '"token"',
     "service_account", "private_key", "client_email",
     "iam.gserviceaccount", "-----begin", "authorization")
@@ -72,6 +77,8 @@ CRED_TOKENS = ("service_account", "private_key", "client_email",
                "iam.gserviceaccount", "-----begin")
 # 내부 절대경로 누출 (generator 의 상대경로 'mbd-dash-v5/...' 는 provenance 이므로 제외)
 INTERNAL_PATH_TOKENS = ("/Users/automation", "/Users/sb.lee", "/home/", ".hermes/")
+# [2026-08-08] 상세 공개는 allowlist 필드만 허용하고 내부 회고·ID·직접 영상 링크는 금지한다.
+PRIVATE_DETAIL_MARKERS = ('"review_full"', '"live_id"', "youtube.com/watch?v=", "data-owner=")
 
 
 def extract_manifest(html: str):
@@ -128,6 +135,10 @@ def _check_manifest(html: str, now: dt.datetime, require_fresh: bool, errors: li
         errors.append(f"manifest schema {manifest.get('schema')!r} != {MANIFEST_SCHEMA!r}")
     if manifest.get("raw_rows_included") is not False:
         errors.append("manifest raw_rows_included must be false")
+    if manifest.get("sanitized_rows_included") is not True:
+        errors.append("manifest sanitized_rows_included must be true")
+    if manifest.get("public_detail_fields") != PUBLIC_DETAIL_FIELDS:
+        errors.append("manifest public_detail_fields does not match approved allowlist")
     if manifest.get("public_scope") != MANIFEST_SCOPE:
         errors.append(f"manifest public_scope {manifest.get('public_scope')!r} != {MANIFEST_SCOPE}")
     if manifest.get("live_avg_gmv_target_won") != LIVE_AVG_GMV_TARGET:
@@ -214,6 +225,20 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         if label not in html:
             errors.append(f"missing required visible label {label!r}")
 
+    # [2026-08-08] 월간 보고 흐름과 12개월 주차별 상세가 생성기 회귀로 사라지지 않게 고정.
+    if 'data-report-flow' not in html or "월간 보고 흐름" not in html:
+        errors.append("missing monthly report flow")
+    for domain in ("live", "youtube"):
+        count = html.count(f'data-content-ledger="{domain}"')
+        if count != 12:
+            errors.append(f"content ledger {domain!r} appears {count}x (expected 12)")
+    for marker in ('data-week-toggle=', 'data-content-status="예정"', "1D GMV", "총 조회수 · D+7"):
+        if marker not in html:
+            errors.append(f"missing weekly content marker {marker!r}")
+    for marker in PRIVATE_DETAIL_MARKERS:
+        if marker.lower() in html.lower():
+            errors.append(f"private detail marker must not be public: {marker!r}")
+
     # 5) 월 셀렉터 #msel 옵션 1..12
     if '<select id="msel">' not in html:
         errors.append('missing month selector <select id="msel">')
@@ -282,7 +307,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
     print("DASHBOARD_GUARD=GREEN")
-    print("scope=ad_gen,ad_int,live; ogam=excluded; manifest=mbd-public-guard-v1")
+    print("scope=ad_gen,ad_int,live; ogam=excluded; manifest=mbd-public-guard-v2; detail=sanitized")
     return 0
 
 
