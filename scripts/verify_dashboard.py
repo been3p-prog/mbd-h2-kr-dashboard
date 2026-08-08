@@ -238,11 +238,17 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         count = html.count(f'data-content-ledger="{domain}"')
         if count != 12:
             errors.append(f"content ledger {domain!r} appears {count}x (expected 12)")
-    for marker in ('data-week-toggle=', 'data-content-status="예정"', "시청자수", "1D 거래액",
-                   "3H 거래액", "누적조회수", "D7 조회수", "PIS",
-                   'activity-main-inline', 'activity-inline-meta', 'min-height:52px'):
+    for marker in ('data-week-toggle=', "시청자수", "1D 거래액", "3H 거래액",
+                   "누적조회수", "D7 조회수", "PIS", 'activity-column-head',
+                   'activity-metric-head metric-trio', 'activity-date',
+                   'activity-main-inline', 'activity-inline-meta', 'min-height:42px'):
         if marker not in html:
             errors.append(f"missing weekly content marker {marker!r}")
+    for marker in ('class="week-counts"', 'class="activity-state', 'data-content-status=',
+                   '<small>시청자수</small>', '<small>1D 거래액</small>',
+                   '<small>3H 거래액</small>', '<small>누적조회수</small>'):
+        if marker in html:
+            errors.append(f"repeated or obsolete weekly marker present: {marker!r}")
     for marker in PRIVATE_DETAIL_MARKERS:
         if marker.lower() in html.lower():
             errors.append(f"private detail marker must not be public: {marker!r}")

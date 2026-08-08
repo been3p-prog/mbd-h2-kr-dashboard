@@ -59,9 +59,18 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('data-content-link="youtube"', self.html)
         for label in ("시청자수", "1D 거래액", "3H 거래액", "누적조회수", "D7 조회수", "PIS"):
             self.assertIn(label, self.html)
+        self.assertIn('class="activity-column-head"', self.html)
+        self.assertIn('class="activity-metric-head metric-trio"', self.html)
+        self.assertIn('class="activity-date"', self.html)
         self.assertIn('class="activity-main activity-main-inline"', self.html)
         self.assertIn('class="activity-inline-meta"', self.html)
-        self.assertIn('min-height:52px', self.html)
+        self.assertIn('min-height:42px', self.html)
+        self.assertNotIn('class="week-counts"', self.html)
+        self.assertNotIn('class="activity-state', self.html)
+        self.assertNotIn('data-content-status=', self.html)
+        self.assertNotIn('<small>시청자수</small>', self.html)
+        self.assertNotIn('<small>1D 거래액</small>', self.html)
+        self.assertNotIn('<small>3H 거래액</small>', self.html)
         _, manifest = vd.extract_manifest(self.html)
         self.assertEqual(manifest.get("schema"), "mbd-public-guard-v3")
         self.assertTrue(manifest.get("sanitized_rows_included"))
@@ -71,6 +80,11 @@ class DashboardGuardTest(unittest.TestCase):
         bad = self.html.replace("https://www.youtube.com/watch?v=", "https://evil.example/watch?v=", 1)
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("invalid youtube content URL" in error for error in errors), errors)
+
+    def test_public_guard_rejects_obsolete_per_row_status(self):
+        bad = self.html.replace('class="activity-row"', 'class="activity-row" data-content-status="완료"', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("obsolete weekly marker" in error for error in errors), errors)
 
     def test_manifest_live_average_target_is_fixed_to_one_eok(self):
         _, manifest = vd.extract_manifest(self.html)
