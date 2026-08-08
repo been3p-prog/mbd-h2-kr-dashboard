@@ -106,6 +106,38 @@ a{color:var(--violet);text-decoration:none;font-weight:600}a:hover{text-decorati
 /* [2026-08-07] 모바일 숫자 단위 줄바꿈 방지 — `3,000만`이 `3,000 / 만`으로 분리된 QC 실패 수정. */
 .cause{margin-top:14px;background:var(--bg);border-radius:12px;padding:11px 14px;font-size:12px;line-height:1.65;color:var(--sub);word-break:keep-all;overflow-wrap:break-word}
 .cause b{color:var(--navy)}
+/* [2026-08-08] 월간 보고 브리핑 — 전체 트렌드→상품별 원인→평균거래액을 한 흐름으로 읽고 월별 메모를 남긴다. */
+.report-flow{margin:18px 0;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:20px}
+.report-flow-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:14px}
+.report-flow-head .eyebrow{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--violet)}
+.report-flow-head h2{font-size:20px;line-height:1.2;margin:4px 0 0;letter-spacing:-.025em}
+.report-flow-head .basis{font-size:11px;color:var(--label);text-align:right;line-height:1.5}
+.report-route{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:2px 0 14px;scrollbar-width:none}
+.report-route::-webkit-scrollbar{display:none}
+.report-route span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--sub);font-size:11px;font-weight:750}
+.report-route span:not(:last-child)::after{content:'→';color:#CBD5E1;margin-left:4px}
+.report-route b{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:7px;background:var(--violet-soft);color:var(--violet);font-size:10px}
+.report-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.report-block{min-width:0;border:1px solid #E9EDF4;border-radius:14px;background:#FBFCFE;padding:15px;display:flex;flex-direction:column;gap:8px}
+.report-block.overall{grid-column:1/-1;background:linear-gradient(135deg,#F5F3FF,#FFFFFF);border-color:#E2DBFF}
+.report-block-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.report-block-head span{font-size:11px;color:var(--label);font-weight:800;letter-spacing:.04em}
+.report-block-head b{font-size:13px;color:var(--navy)}
+.report-primary{font-size:24px;line-height:1.15;font-weight:850;letter-spacing:-.035em;color:var(--navy);font-variant-numeric:tabular-nums}
+.report-block.overall .report-primary{font-size:29px;color:var(--violet)}
+.report-line{font-size:11.5px;line-height:1.55;color:var(--sub);word-break:keep-all;overflow-wrap:break-word}
+.report-line strong{color:var(--navy);font-weight:800}
+.report-note{margin-top:auto;padding-top:9px;border-top:1px solid #EDF0F5}
+.report-note-bar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.report-note-label{font-size:10.5px;color:var(--label);font-weight:750}
+.report-note button{border:0;background:transparent;color:var(--violet);font:inherit;font-size:10.5px;font-weight:800;padding:3px 0;cursor:pointer}
+.report-note-preview{font-size:11px;line-height:1.5;color:var(--sub);margin-top:4px;white-space:pre-wrap;word-break:keep-all;min-height:17px}
+.report-note-preview.empty{color:#B0B8C4}
+.report-note-editor{margin-top:7px}
+.report-note-editor textarea{box-sizing:border-box;width:100%;min-height:82px;resize:vertical;border:1px solid #D9E0EA;border-radius:10px;background:#fff;padding:9px 10px;font:inherit;font-size:12px;line-height:1.5;color:var(--navy);outline:none}
+.report-note-editor textarea:focus{border-color:var(--violet-mid);box-shadow:0 0 0 3px rgba(92,62,196,.10)}
+.report-note-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:5px}
+.report-note-actions .cancel{color:var(--label)}
 /* 품질 */
 .qsplit{display:grid;grid-template-columns:280px minmax(0,1fr);gap:34px;align-items:start;margin-top:18px}
 .qk2{font-size:12.5px;color:var(--label);font-weight:600}
@@ -178,6 +210,12 @@ tr.hi td .tag{background:#DBEAFE;color:var(--violet)}
   .kpis{grid-template-columns:minmax(0,1fr);gap:12px}
   .grid2{grid-template-columns:minmax(0,1fr)}
   .teams{grid-template-columns:minmax(0,1fr)}
+  .report-flow{padding:16px}
+  .report-flow-head{align-items:flex-start;flex-direction:column;gap:6px}
+  .report-flow-head .basis{text-align:left}
+  .report-grid{grid-template-columns:minmax(0,1fr)}
+  .report-block.overall{grid-column:auto}
+  .report-block.overall .report-primary{font-size:25px}
   .qsplit{grid-template-columns:minmax(0,1fr);gap:18px}
   .gauge12{gap:4px;height:170px}.gmonths{gap:4px}
   .g .trk{width:16px}.g .lab{display:none}.g.sel .lab{display:block;font-size:9.5px}
@@ -385,6 +423,17 @@ tr.hi td .tag{background:#DBEAFE;color:var(--violet)}
           <div class="k">11월 부킹</div><div class="v num">2.33억</div>
           <div class="s num">목표 대비 16.9%</div></div></div></div>
     </div>
+    <section class="report-flow" data-report-flow aria-labelledby="report-flow-title">
+      <div class="report-flow-head"><div><div class="eyebrow">MONTHLY BRIEFING</div><h2 id="report-flow-title">월간 보고 흐름</h2></div><div class="basis"><span data-report-period>2026년 8월 · 진행 중</span><br>숫자 = 공개 원천 · 메모 = 이 브라우저 저장</div></div>
+      <div class="report-route" aria-label="보고 순서"><span><b>01</b>전체 트렌드</span><span><b>02</b>일반광고</span><span><b>03</b>통광마</span><span><b>04</b>라이브</span><span><b>05</b>평균거래액</span></div>
+      <div class="report-grid">
+        <article class="report-block overall" data-report-section="overall"><div class="report-block-head"><span>01 · TOTAL TREND</span><b>전체 트렌드</b></div><div class="report-primary">11.2억 마감예상</div><div class="report-line"><strong>MoM +6.9%</strong> · 달성 87.3% · GAP -1.62억</div><div class="report-line">증감 기여 · 일반광고 +6,300만 · 라이브 +3,300만 · 통광마 -2,491만</div><div class="report-line">9월 6.29억은 <strong>부킹 총액</strong> · 마감예측은 미연결</div><div class="report-note"><div class="report-note-bar"><span class="report-note-label">월별 메모 · 이 브라우저 저장</span><button type="button" data-note-edit>수정</button></div><div class="report-note-preview empty" data-note-preview>메모 없음</div><div class="report-note-editor" data-note-editor hidden><textarea maxlength="500" placeholder="전월 대비 변동 원인, 차월 특이사항 등을 적어두세요."></textarea><div class="report-note-actions"><button type="button" class="cancel" data-note-cancel>취소</button><button type="button" data-note-save>저장</button></div></div></div></article>
+        <article class="report-block" data-report-section="ad_gen"><div class="report-block-head"><span>02 · SALES</span><b>일반광고</b></div><div class="report-primary">8.68억 · 100.3%</div><div class="report-line">유상 7.41억 · 무상 6,400만 · 정부지원 6,300만</div><div class="report-line">정부지원 상세 · 기타 정부지원 6,300만</div><div class="report-note"><div class="report-note-bar"><span class="report-note-label">원인·예정 메모</span><button type="button" data-note-edit>수정</button></div><div class="report-note-preview empty" data-note-preview>메모 없음</div><div class="report-note-editor" data-note-editor hidden><textarea maxlength="500" placeholder="부킹률, 정부지원 프로젝트, 추후 집행 예정 등을 적어두세요."></textarea><div class="report-note-actions"><button type="button" class="cancel" data-note-cancel>취소</button><button type="button" data-note-save>저장</button></div></div></div></article>
+        <article class="report-block" data-report-section="ad_int"><div class="report-block-head"><span>03 · PIPELINE</span><b>통광마</b></div><div class="report-primary">2,909만 · 14.5%</div><div class="report-line">미디어PKG 1건 2,000만 · 정부지원 2건 909만</div><div class="report-line">계약 일정 · 8/1–9/30 · 8/1–10/31 · 8/10–10/9</div><div class="report-note"><div class="report-note-bar"><span class="report-note-label">계약·영업 메모</span><button type="button" data-note-edit>수정</button></div><div class="report-note-preview empty" data-note-preview>메모 없음</div><div class="report-note-editor" data-note-editor hidden><textarea maxlength="500" placeholder="브랜드별 계약 기간, 영업 파이프라인, 병렬 진행 건을 적어두세요."></textarea><div class="report-note-actions"><button type="button" class="cancel" data-note-cancel>취소</button><button type="button" data-note-save>저장</button></div></div></div></article>
+        <article class="report-block" data-report-section="live"><div class="report-block-head"><span>04 · LIVE</span><b>라이브</b></div><div class="report-primary">2.18억 · 36편성</div><div class="report-line">시그니처 7건·8,400만 + 미디어 시그니처 1건·1,000만</div><div class="report-line">스마트 13건·5,400만 · 에센셜 15건·6,000만</div><div class="report-line">12주년 27건 · 퍼시스그룹 1건 포함 · 패키지비 기준 2.08억</div><div class="report-note"><div class="report-note-bar"><span class="report-note-label">편성·특이방송 메모</span><button type="button" data-note-edit>수정</button></div><div class="report-note-preview empty" data-note-preview>메모 없음</div><div class="report-note-editor" data-note-editor hidden><textarea maxlength="500" placeholder="행사·브랜드별 회차, 패키지 믹스 원인을 적어두세요."></textarea><div class="report-note-actions"><button type="button" class="cancel" data-note-cancel>취소</button><button type="button" data-note-save>저장</button></div></div></div></article>
+        <article class="report-block" data-report-section="live_avg"><div class="report-block-head"><span>05 · GMV QUALITY</span><b>평균거래액</b></div><div class="report-primary">6,246만 · 목표 62.5%</div><div class="report-line">완료 7방송 · 총 4.37억</div><div class="report-line">시그니처 6,283만 · 스마트 6,659만 · 에센셜 6,072만</div><div class="report-note"><div class="report-note-bar"><span class="report-note-label">거래액 원인 메모</span><button type="button" data-note-edit>수정</button></div><div class="report-note-preview empty" data-note-preview>메모 없음</div><div class="report-note-editor" data-note-editor hidden><textarea maxlength="500" placeholder="평균 거래액 변동 원인과 특이 방송을 적어두세요."></textarea><div class="report-note-actions"><button type="button" class="cancel" data-note-cancel>취소</button><button type="button" data-note-save>저장</button></div></div></div></article>
+      </div>
+    </section>
     <div class="mvr mv" data-m="1" data-phase="closed" style="display:none"><div class="teams"><div class="team" data-tip="&lt;div class=&quot;th&quot;&gt;일반광고 · 1월&lt;/div&gt;&lt;div class=&quot;tr&quot;&gt;&lt;span&gt;유상&lt;/span&gt;&lt;b&gt;&lt;span class=&quot;tv&quot;&gt;&lt;span&gt;6.65억&lt;/span&gt;&lt;small&gt;MoM -0.8%&lt;/small&gt;&lt;/span&gt;&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;tr&quot;&gt;&lt;span&gt;무상&lt;/span&gt;&lt;b&gt;&lt;span class=&quot;tv&quot;&gt;&lt;span&gt;1.78억&lt;/span&gt;&lt;small&gt;MoM +6.9%&lt;/small&gt;&lt;/span&gt;&lt;/b&gt;&lt;/div&gt;&lt;div class=&quot;tr&quot;&gt;&lt;span&gt;정부지원&lt;/span&gt;&lt;b&gt;&lt;span class=&quot;tv&quot;&gt;&lt;span&gt;0원&lt;/span&gt;&lt;small&gt;MoM —&lt;/small&gt;&lt;/span&gt;&lt;/b&gt;&lt;/div&gt;">
           <div class="hd2"><span class="nm">일반광고</span><span class="pill up num">달성 112.1%</span></div>
           <div class="bigv num">8.43억<small>확정 총액 · 월전체</small></div>
@@ -641,6 +690,77 @@ document.addEventListener('click', function(e) {
 addEventListener('scroll', function() { tipEl.classList.remove('show'); }, {passive: true});
 
 var CUR = 8;
+var REPORT_NOTE_PREFIX = 'mbd-h2-kr:monthly-brief-note:v1:';
+var REPORT_DATA = {
+  8: {
+    overall:['11.2억 마감예상','MoM +6.9% · 달성 87.3% · GAP -1.62억','증감 기여 · 일반광고 +6,300만 · 라이브 +3,300만 · 통광마 -2,491만','9월 6.29억은 부킹 총액 · 마감예측은 미연결'],
+    ad_gen:['8.68억 · 100.3%','유상 7.41억 · 무상 6,400만 · 정부지원 6,300만','정부지원 상세 · 기타 정부지원 6,300만'],
+    ad_int:['2,909만 · 14.5%','미디어PKG 1건 2,000만 · 정부지원 2건 909만','계약 일정 · 8/1–9/30 · 8/1–10/31 · 8/10–10/9'],
+    live:['2.18억 · 36편성','시그니처 7건·8,400만 + 미디어 시그니처 1건·1,000만','스마트 13건·5,400만 · 에센셜 15건·6,000만','12주년 27건 · 퍼시스그룹 1건 포함 · 패키지비 기준 2.08억'],
+    live_avg:['6,246만 · 목표 62.5%','완료 7방송 · 총 4.37억','시그니처 6,283만 · 스마트 6,659만 · 에센셜 6,072만']
+  }
+};
+function ownNumber(el) {
+  if (!el) return '—';
+  var node = Array.prototype.find.call(el.childNodes, function(n) { return n.nodeType === 3 && n.textContent.trim(); });
+  return node ? node.textContent.trim() : el.textContent.trim();
+}
+function genericReportData(m) {
+  var top = document.querySelector('.mvk[data-m="' + m + '"]');
+  var rest = document.querySelector('.mvr[data-m="' + m + '"]');
+  var teams = rest ? rest.querySelectorAll('.team') : [];
+  var quality = rest ? rest.querySelector('.live-quality') : null;
+  var cards = top ? top.querySelectorAll('.kpi') : [];
+  function teamData(index) {
+    var team = teams[index];
+    if (!team) return ['미편성 또는 source 없음','세부 설명은 아래 카드와 월별 메모에서 보강','hover 구성 정보가 있으면 함께 확인'];
+    var pill = team.querySelector('.hd2 .pill');
+    var rows = Array.prototype.slice.call(team.querySelectorAll('.rows .r'),0,3).map(function(x){return x.textContent.replace(/\s+/g,' ').trim();});
+    return [ownNumber(team.querySelector('.bigv')) + (pill ? ' · ' + pill.textContent.trim() : ''), rows.join(' · ') || '세부 지표 없음','구성·원인·계약 일정은 월별 메모로 보강'];
+  }
+  var overallPrimary = cards[0] ? ownNumber(cards[0].querySelector('.v')) + ' · ' + cards[0].querySelector('.k').textContent.replace(/진행 중|확정|부킹 진행/g,'').trim() : '선택월 집계 없음';
+  var overallLines = cards.length ? Array.prototype.slice.call(cards,0,4).map(function(x){return x.textContent.replace(/\s+/g,' ').trim();}) : ['선택월 KPI 없음'];
+  var avgValue = quality ? quality.querySelector('.qv') : null;
+  var avg = avgValue ? [ownNumber(avgValue) + ' · ' + ((quality.querySelector('.qs')||{}).textContent||'').trim(),((quality.querySelector('.qcell.hero .qm2')||{}).textContent||'').trim(),'패키지별 상세는 아래 품질 카드에서 확인'] : ['완료 데이터 없음',((quality && quality.querySelector('.cause')||{}).textContent||'선택월 평균 거래액 산출 전').trim(),'특이 방송은 월별 메모로 보강'];
+  return {overall:[overallPrimary].concat(overallLines.slice(0,3)),ad_gen:teamData(0),ad_int:teamData(1),live:teamData(2),live_avg:avg};
+}
+function noteKey(m, section) { return REPORT_NOTE_PREFIX + m + ':' + section; }
+function readReportNote(m, section) { try { return localStorage.getItem(noteKey(m, section)) || ''; } catch (e) { return ''; } }
+function writeReportNote(m, section, value) { try { localStorage.setItem(noteKey(m, section), value); return true; } catch (e) { return false; } }
+function loadReportNotes(m) {
+  document.querySelectorAll('[data-report-section]').forEach(function(block) {
+    var value = readReportNote(m, block.dataset.reportSection);
+    var preview = block.querySelector('[data-note-preview]');
+    var textarea = block.querySelector('textarea');
+    var editor = block.querySelector('[data-note-editor]');
+    preview.textContent = value || '메모 없음'; preview.classList.toggle('empty', !value);
+    textarea.value = value; editor.hidden = true;
+  });
+}
+function updateReportFlow(m) {
+  var data = REPORT_DATA[m] || genericReportData(m);
+  var sel = document.getElementById('msel');
+  document.querySelector('[data-report-period]').textContent = sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '2026년 ' + m + '월';
+  Object.keys(data).forEach(function(section) {
+    var block = document.querySelector('[data-report-section="' + section + '"]');
+    if (!block) return;
+    var values = data[section];
+    block.querySelector('.report-primary').textContent = values[0] || '—';
+    var lines = block.querySelectorAll('.report-line');
+    lines.forEach(function(line,index) { line.textContent = values[index + 1] || ''; line.hidden = !values[index + 1]; });
+  });
+  loadReportNotes(m);
+}
+document.querySelector('[data-report-flow]').addEventListener('click', function(e) {
+  var block = e.target.closest('[data-report-section]'); if (!block) return;
+  var editor = block.querySelector('[data-note-editor]');
+  if (e.target.matches('[data-note-edit]')) { editor.hidden = false; block.querySelector('textarea').focus(); }
+  if (e.target.matches('[data-note-cancel]')) { editor.hidden = true; block.querySelector('textarea').value = readReportNote(+document.getElementById('msel').value, block.dataset.reportSection); }
+  if (e.target.matches('[data-note-save]')) {
+    var m = +document.getElementById('msel').value, value = block.querySelector('textarea').value.trim();
+    writeReportNote(m, block.dataset.reportSection, value); loadReportNotes(m);
+  }
+});
 function showMonth(m) {
   document.querySelectorAll('.mvk,.mvs,.mvr').forEach(function(x) { x.style.display = (+x.dataset.m === m ? 'block' : 'none'); });
   document.querySelectorAll('.g').forEach(function(x) { x.classList.toggle('sel', +x.dataset.m === m); });
@@ -649,6 +769,7 @@ function showMonth(m) {
   if (sel && +sel.value !== m) sel.value = m;
   tipEl.classList.remove('show');
   if (location.hash !== '#m' + m) history.replaceState(null, '', '#m' + m);
+  updateReportFlow(m);
 }
 document.getElementById('msel').addEventListener('change', function() { showMonth(+this.value); });
 document.querySelectorAll('.g').forEach(function(x) {
