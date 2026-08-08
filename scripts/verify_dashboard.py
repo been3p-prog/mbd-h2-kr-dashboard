@@ -231,9 +231,12 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         if label not in html:
             errors.append(f"missing required visible label {label!r}")
 
-    # [2026-08-08] 월간 보고 흐름과 12개월 주차별 상세가 생성기 회귀로 사라지지 않게 고정.
-    if 'data-report-flow' not in html or "월간 보고 흐름" not in html:
-        errors.append("missing monthly report flow")
+    # [2026-08-08] 위 KPI·차트·아래 팀/품질 카드와 중복되는 브리핑 UI·로컬 메모 회귀를 차단.
+    for marker in ("data-report-flow", "월간 보고 흐름", "MONTHLY BRIEFING",
+                   'class="report-block', "data-note-edit", "monthly-brief-note",
+                   "REPORT_DATA", "localStorage"):
+        if marker in html:
+            errors.append(f"redundant monthly report flow present: {marker!r}")
     for domain in ("live", "youtube"):
         count = html.count(f'data-content-ledger="{domain}"')
         if count != 12:

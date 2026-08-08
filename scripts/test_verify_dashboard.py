@@ -53,7 +53,10 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertNotIn('"live_id"', self.html)
         self.assertEqual(self.html.count('data-content-ledger="live"'), 12)
         self.assertEqual(self.html.count('data-content-ledger="youtube"'), 12)
-        self.assertIn("월간 보고 흐름", self.html)
+        for marker in ("월간 보고 흐름", "MONTHLY BRIEFING", "data-report-flow",
+                       'class="report-block', "data-note-edit", "monthly-brief-note",
+                       "REPORT_DATA", "localStorage"):
+            self.assertNotIn(marker, self.html)
         self.assertIn("data-week-toggle=", self.html)
         self.assertIn('data-content-link="live"', self.html)
         self.assertIn('data-content-link="youtube"', self.html)
@@ -85,6 +88,11 @@ class DashboardGuardTest(unittest.TestCase):
         bad = self.html.replace('class="activity-row"', 'class="activity-row" data-content-status="완료"', 1)
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("obsolete weekly marker" in error for error in errors), errors)
+
+    def test_redundant_monthly_report_flow_reappearance_fails(self):
+        bad = self.html.replace('<main class="main">', '<main class="main"><section data-report-flow>월간 보고 흐름</section>', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("redundant monthly report flow" in error for error in errors), errors)
 
     def test_manifest_live_average_target_is_fixed_to_one_eok(self):
         _, manifest = vd.extract_manifest(self.html)
