@@ -255,8 +255,8 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
 
     # [2026-08-09] 일반광고 부킹률과 라이브 package→PGM/프로모션 매출 구조의 공개 DOM 회귀 방지.
     for marker in ('data-adgen-booking-rate=', '부킹률', '비취소 부킹건수 ÷ 부킹건수 목표',
-                   'data-live-revenue-breakdown=', '패키지별 매출',
-                   '호버하면 PGM/프로모션 하위 금액', '패키지 총액 = AF 패키지비',
+                   'data-live-revenue-breakdown=', 'data-live-package-mom=', '패키지별 매출',
+                   'MoM ', '호버하면 PGM/프로모션 하위 금액', '패키지 총액 = AF 패키지비',
                    '하위 구분 = PGM/프로모션'):
         if marker not in html:
             errors.append(f"missing sales-structure marker {marker!r}")

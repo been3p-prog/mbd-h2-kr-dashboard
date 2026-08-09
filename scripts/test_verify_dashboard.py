@@ -61,6 +61,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('data-adgen-booking-rate=', self.html)
         self.assertIn('비취소 부킹건수 ÷ 부킹건수 목표', self.html)
         self.assertIn('data-live-revenue-breakdown=', self.html)
+        self.assertIn('data-live-package-mom=', self.html)
+        self.assertIn('MoM +33.3%', self.html)
         self.assertIn('패키지 총액 = AF 패키지비', self.html)
         self.assertIn("data-week-toggle=", self.html)
         self.assertIn('data-content-link="live"', self.html)
@@ -96,6 +98,11 @@ class DashboardGuardTest(unittest.TestCase):
 
     def test_sales_structure_marker_removal_fails(self):
         bad = self.html.replace('data-adgen-booking-rate=', 'data-booking-rate-removed=')
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("missing sales-structure marker" in error for error in errors), errors)
+
+    def test_live_package_mom_marker_removal_fails(self):
+        bad = self.html.replace('data-live-package-mom=', 'data-live-package-mom-removed=')
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("missing sales-structure marker" in error for error in errors), errors)
 
