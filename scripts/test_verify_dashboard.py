@@ -57,6 +57,11 @@ class DashboardGuardTest(unittest.TestCase):
                        'class="report-block', "data-note-edit", "monthly-brief-note",
                        "REPORT_DATA", "localStorage"):
             self.assertNotIn(marker, self.html)
+        # [2026-08-09] 영업 구조 KPI가 공개 DOM에도 유지되는지 검증한다.
+        self.assertIn('data-adgen-booking-rate=', self.html)
+        self.assertIn('비취소 부킹건수 ÷ 부킹건수 목표', self.html)
+        self.assertIn('data-live-revenue-breakdown=', self.html)
+        self.assertIn('패키지 총액 = AF 패키지비', self.html)
         self.assertIn("data-week-toggle=", self.html)
         self.assertIn('data-content-link="live"', self.html)
         self.assertIn('data-content-link="youtube"', self.html)
@@ -88,6 +93,11 @@ class DashboardGuardTest(unittest.TestCase):
         bad = self.html.replace('class="activity-row"', 'class="activity-row" data-content-status="완료"', 1)
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("obsolete weekly marker" in error for error in errors), errors)
+
+    def test_sales_structure_marker_removal_fails(self):
+        bad = self.html.replace('data-adgen-booking-rate=', 'data-booking-rate-removed=')
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("missing sales-structure marker" in error for error in errors), errors)
 
     def test_redundant_monthly_report_flow_reappearance_fails(self):
         bad = self.html.replace('<main class="main">', '<main class="main"><section data-report-flow>월간 보고 흐름</section>', 1)
