@@ -237,6 +237,16 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    "REPORT_DATA", "localStorage"):
         if marker in html:
             errors.append(f"redundant monthly report flow present: {marker!r}")
+    # [2026-08-09] 팝업/표가 이미 제공하는 구성과 provenance 장문은 카드 본문에 재노출하지 않는다.
+    for marker in ('<div class="cause"><b>유입 구성</b>',
+                   '<div class="cause" data-live-revenue-breakdown=',
+                   "direct Sheet CURRENT",
+                   "목표 SoT: H2 고정 1억원 · OKR row는 참고",
+                   "콘텐츠 링크 · 시청자수 / 1D 거래액 / 3H 거래액",
+                   "콘텐츠 링크 · 누적조회수 / D7 조회수 / PIS",
+                   "단위 억원 · DuckDB 미러"):
+        if marker in html:
+            errors.append(f"redundant dashboard copy present: {marker!r}")
     for domain in ("live", "youtube"):
         count = html.count(f'data-content-ledger="{domain}"')
         if count != 12:
@@ -261,13 +271,18 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     if 'data-yt-channel-overview=' in html:
         errors.append("obsolete youtube left-subscriber overview present")
 
-    # [2026-08-09] 일반광고 부킹률과 라이브 package→PGM/프로모션 매출 구조의 공개 DOM 회귀 방지.
+    # [2026-08-09] 일반광고 부킹률과 라이브 package→PGM/프로모션 팝업 구조의 공개 DOM 회귀 방지.
     for marker in ('data-adgen-booking-rate=', '부킹률', '비취소 부킹건수 ÷ 부킹건수 목표',
                    'data-live-revenue-breakdown=', 'data-live-package-mom=', '패키지별 매출',
-                   'MoM ', '호버하면 PGM/프로모션 하위 금액', '패키지 총액 = AF 패키지비',
+                   'MoM ', '패키지 총액 = AF 패키지비',
                    '하위 구분 = PGM/프로모션'):
         if marker not in html:
             errors.append(f"missing sales-structure marker {marker!r}")
+    # [2026-08-09] 9월 신청 시트 30건의 패키지비 합계가 미래월 부킹 화면까지 연결됐는지 고정한다.
+    for marker in ('라이브 · 9월 패키지별 부킹', '1.74억', '8.03억',
+                   '목표 12.8억 대비 채움 62.9%', '채움 82.1%'):
+        if marker not in html:
+            errors.append(f"missing September live booking source-parity marker {marker!r}")
     for marker in PRIVATE_DETAIL_MARKERS:
         if marker.lower() in html.lower():
             errors.append(f"private detail marker must not be public: {marker!r}")

@@ -57,6 +57,15 @@ class DashboardGuardTest(unittest.TestCase):
                        'class="report-block', "data-note-edit", "monthly-brief-note",
                        "REPORT_DATA", "localStorage"):
             self.assertNotIn(marker, self.html)
+        # [2026-08-09] 팝업/표와 중복되는 설명·provenance 장문은 공개 본문에 두지 않는다.
+        for marker in ('<div class="cause"><b>유입 구성</b>',
+                       '<div class="cause" data-live-revenue-breakdown=',
+                       "direct Sheet CURRENT",
+                       "목표 SoT: H2 고정 1억원 · OKR row는 참고",
+                       "콘텐츠 링크 · 시청자수 / 1D 거래액 / 3H 거래액",
+                       "콘텐츠 링크 · 누적조회수 / D7 조회수 / PIS",
+                       "단위 억원 · DuckDB 미러"):
+            self.assertNotIn(marker, self.html)
         # [2026-08-09] 영업 구조 KPI가 공개 DOM에도 유지되는지 검증한다.
         self.assertIn('data-yt-main-average="8"', self.html)
         self.assertIn('전체 평균 조회수', self.html)
@@ -75,6 +84,11 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('data-live-package-mom=', self.html)
         self.assertIn('MoM +33.3%', self.html)
         self.assertIn('패키지 총액 = AF 패키지비', self.html)
+        # [2026-08-09] 9월 신청 시트 30건, 패키지비 1.74억의 미래월 부킹 반영.
+        self.assertIn('라이브 · 9월 패키지별 부킹', self.html)
+        self.assertIn('8.03억', self.html)
+        self.assertIn('목표 12.8억 대비 채움 62.9%', self.html)
+        self.assertIn('채움 82.1%', self.html)
         self.assertIn("data-week-toggle=", self.html)
         self.assertIn('data-content-link="live"', self.html)
         self.assertIn('data-content-link="youtube"', self.html)
@@ -127,6 +141,11 @@ class DashboardGuardTest(unittest.TestCase):
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("redundant monthly report flow" in error for error in errors), errors)
 
+    def test_redundant_dashboard_copy_reappearance_fails(self):
+        bad = self.html.replace('<main class="main">', '<main class="main"><div class="cause"><b>유입 구성</b> · 중복</div>', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("redundant dashboard copy" in error for error in errors), errors)
+
     def test_manifest_live_average_target_is_fixed_to_one_eok(self):
         _, manifest = vd.extract_manifest(self.html)
         self.assertEqual(manifest.get("live_avg_gmv_target_won"), 100_000_000)
@@ -136,7 +155,7 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertEqual(manifest.get("live_gmv_basis"), "1D")
         self.assertIn("라이브 1D 평균거래액 · 품질", self.html)
         self.assertIn("1D 평균 거래액", self.html)
-        self.assertIn("완료·양의 1D GMV", self.html)
+        self.assertIn("8월 목표 1.00억 대비 62.5%", self.html)
         self.assertNotIn("방송 평균 거래액", self.html)
 
     # [2026-08-07] 일반광고 hover는 보이는 KPI 반복이 아니라 3유형 금액+MoM이어야 한다.
