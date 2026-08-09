@@ -58,11 +58,15 @@ class DashboardGuardTest(unittest.TestCase):
                        "REPORT_DATA", "localStorage"):
             self.assertNotIn(marker, self.html)
         # [2026-08-09] 영업 구조 KPI가 공개 DOM에도 유지되는지 검증한다.
-        self.assertIn('data-yt-channel-overview=', self.html)
-        self.assertIn('구독자수', self.html)
-        self.assertIn('8월 발행 6건', self.html)
-        self.assertIn('<b>SF</b> 4건', self.html)
-        self.assertIn('<b>LF</b> 2건', self.html)
+        self.assertIn('data-yt-main-average="8"', self.html)
+        self.assertIn('전체 평균 조회수', self.html)
+        self.assertIn('data-yt-subscriber-card="8"', self.html)
+        self.assertIn('data-yt-publish-card="8"', self.html)
+        self.assertIn('data-yt-watch-duration-card="8"', self.html)
+        self.assertIn('SF 4건 · LF 2건', self.html)
+        self.assertIn('평균 시청지속시간', self.html)
+        self.assertIn('YouTube Analytics 원천 미적재', self.html)
+        self.assertNotIn('data-yt-channel-overview=', self.html)
         self.assertIn('data-adgen-booking-rate=', self.html)
         self.assertIn('비취소 부킹건수 ÷ 부킹건수 목표', self.html)
         self.assertIn('data-live-revenue-breakdown=', self.html)
@@ -101,10 +105,10 @@ class DashboardGuardTest(unittest.TestCase):
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("obsolete weekly marker" in error for error in errors), errors)
 
-    def test_youtube_channel_overview_marker_removal_fails(self):
-        bad = self.html.replace('data-yt-channel-overview=', 'data-yt-overview-removed=')
+    def test_youtube_main_average_marker_removal_fails(self):
+        bad = self.html.replace('data-yt-main-average=', 'data-yt-main-removed=')
         errors = vd.verify(bad, self.now, require_fresh=False)
-        self.assertTrue(any("missing youtube channel-overview marker" in error for error in errors), errors)
+        self.assertTrue(any("missing youtube quality-card marker" in error for error in errors), errors)
 
     def test_sales_structure_marker_removal_fails(self):
         bad = self.html.replace('data-adgen-booking-rate=', 'data-booking-rate-removed=')
