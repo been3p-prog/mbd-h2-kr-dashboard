@@ -253,6 +253,12 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         if marker in html:
             errors.append(f"repeated or obsolete weekly marker present: {marker!r}")
 
+    # [2026-08-09] 유튜브 좌상단은 최신 구독자수와 선택월 실제 발행 SF/LF를 유지한다.
+    for marker in ('data-yt-channel-overview=', '구독자수', 'yt-pub-total', 'yt-pub-forms',
+                   '<b>SF</b>', '<b>LF</b>', '구독자 스냅샷'):
+        if marker not in html:
+            errors.append(f"missing youtube channel-overview marker {marker!r}")
+
     # [2026-08-09] 일반광고 부킹률과 라이브 package→PGM/프로모션 매출 구조의 공개 DOM 회귀 방지.
     for marker in ('data-adgen-booking-rate=', '부킹률', '비취소 부킹건수 ÷ 부킹건수 목표',
                    'data-live-revenue-breakdown=', 'data-live-package-mom=', '패키지별 매출',
