@@ -244,7 +244,9 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    "목표 SoT: H2 고정 1억원 · OKR row는 참고",
                    "콘텐츠 링크 · 시청자수 / 1D 거래액 / 3H 거래액",
                    "콘텐츠 링크 · 누적조회수 / D7 조회수 / PIS",
-                   "단위 억원 · DuckDB 미러"):
+                   "단위 억원 · DuckDB 미러",
+                   "호버하면 PGM/프로모션 하위 금액",
+                   "(첨부)"):
         if marker in html:
             errors.append(f"redundant dashboard copy present: {marker!r}")
     for domain in ("live", "youtube"):

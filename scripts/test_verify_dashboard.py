@@ -64,7 +64,9 @@ class DashboardGuardTest(unittest.TestCase):
                        "목표 SoT: H2 고정 1억원 · OKR row는 참고",
                        "콘텐츠 링크 · 시청자수 / 1D 거래액 / 3H 거래액",
                        "콘텐츠 링크 · 누적조회수 / D7 조회수 / PIS",
-                       "단위 억원 · DuckDB 미러"):
+                       "단위 억원 · DuckDB 미러",
+                       "호버하면 PGM/프로모션 하위 금액",
+                       "(첨부)"):
             self.assertNotIn(marker, self.html)
         # [2026-08-09] 영업 구조 KPI가 공개 DOM에도 유지되는지 검증한다.
         self.assertIn('data-yt-main-average="8"', self.html)
