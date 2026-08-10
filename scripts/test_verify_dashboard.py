@@ -91,6 +91,17 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('data-live-package-mom=', self.html)
         self.assertIn('MoM +33.3%', self.html)
         self.assertIn('패키지 총액 = AF 패키지비', self.html)
+        self.assertIn('진행건수 = 확정 편성건', self.html)
+        self.assertEqual(self.html.count('data-live-progress-count='), 9)
+        self.assertEqual(self.html.count('data-live-package-count='), 27)
+        self.assertIn('진행 36건', self.html)
+        self.assertIn('전월 +6건', self.html)
+        self.assertIn('시그니처&lt;small class=&quot;up&quot;&gt;8건 · +2건', self.html)
+        self.assertIn('스마트&lt;small class=&quot;up&quot;&gt;13건 · +4건', self.html)
+        self.assertNotIn('시그니처 하위', self.html)
+        self.assertNotIn('에센셜 하위', self.html)
+        self.assertNotIn('스마트 하위', self.html)
+        self.assertNotIn('하위 구분 = PGM/프로모션', self.html)
         # [2026-08-09] 9월 신청 시트 30건, 패키지비 1.74억의 미래월 부킹 반영.
         self.assertIn('라이브 · 9월 패키지별 부킹', self.html)
         self.assertIn('8.03억', self.html)
@@ -189,6 +200,16 @@ class DashboardGuardTest(unittest.TestCase):
         bad = self.html.replace('data-live-package-mom=', 'data-live-package-mom-removed=')
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("missing sales-structure marker" in error for error in errors), errors)
+
+    def test_live_package_count_marker_removal_fails(self):
+        bad = self.html.replace('data-live-progress-count=', 'data-live-progress-count-removed=')
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("missing sales-structure marker" in error for error in errors), errors)
+
+    def test_live_sub_promotion_reappearance_fails(self):
+        bad = self.html.replace('진행건수 = 확정 편성건', '진행건수 = 확정 편성건 · 하위 구분 = PGM/프로모션', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("obsolete live sub-promotion" in error for error in errors), errors)
 
     def test_redundant_monthly_report_flow_reappearance_fails(self):
         bad = self.html.replace('<main class="main">', '<main class="main"><section data-report-flow>월간 보고 흐름</section>', 1)
