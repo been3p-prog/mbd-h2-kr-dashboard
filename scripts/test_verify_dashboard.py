@@ -64,6 +64,9 @@ class DashboardGuardTest(unittest.TestCase):
                        "목표 SoT: H2 고정 1억원 · OKR row는 참고",
                        "집계 6/6건 · 총 421,752",
                        "목표 SoT: OKR 14행 (H2)",
+                       "마감예상액 · 월전체",
+                       "확정 총액 · 월전체",
+                       "부킹 총액 · 월전체",
                        "콘텐츠 링크 · 시청자수 / 1D 거래액 / 3H 거래액",
                        "콘텐츠 링크 · 누적조회수 / D7 조회수 / PIS",
                        "단위 억원 · DuckDB 미러",
@@ -104,6 +107,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('class="activity-main activity-main-inline"', self.html)
         self.assertIn('class="activity-inline-meta"', self.html)
         self.assertIn('min-height:42px', self.html)
+        self.assertIn('.team .hd2 .pill{font-size:13px', self.html)
+        self.assertIn('.team .rows .r:last-child{order:-1', self.html)
         self.assertNotIn('class="week-counts"', self.html)
         self.assertNotIn('class="activity-state', self.html)
         self.assertNotIn('data-content-status=', self.html)

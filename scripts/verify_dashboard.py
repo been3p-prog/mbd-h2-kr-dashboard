@@ -244,6 +244,9 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    "목표 SoT: H2 고정 1억원 · OKR row는 참고",
                    "집계 6/6건 · 총 421,752",
                    "목표 SoT: OKR 14행 (H2)",
+                   "마감예상액 · 월전체",
+                   "확정 총액 · 월전체",
+                   "부킹 총액 · 월전체",
                    "콘텐츠 링크 · 시청자수 / 1D 거래액 / 3H 거래액",
                    "콘텐츠 링크 · 누적조회수 / D7 조회수 / PIS",
                    "단위 억원 · DuckDB 미러",
@@ -261,6 +264,10 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'activity-main-inline', 'activity-inline-meta', 'min-height:42px'):
         if marker not in html:
             errors.append(f"missing weekly content marker {marker!r}")
+    for marker in ('.team .hd2 .pill{font-size:13px',
+                   '.team .rows .r:last-child{order:-1'):
+        if marker not in html:
+            errors.append(f"missing team-card emphasis marker {marker!r}")
     for marker in ('class="week-counts"', 'class="activity-state', 'data-content-status=',
                    '<small>시청자수</small>', '<small>1D 거래액</small>',
                    '<small>3H 거래액</small>', '<small>누적조회수</small>'):
