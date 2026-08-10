@@ -267,10 +267,21 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'activity-main-inline', 'activity-inline-meta', 'min-height:42px'):
         if marker not in html:
             errors.append(f"missing weekly content marker {marker!r}")
-    for marker in ('.team .hd2 .pill{font-size:13px',
+    for marker in ('.team .hd2 .pill{position:absolute;top:20px;right:22px',
+                   '.team .achv{--p:0;--achv-ring:#F59E0B',
+                   'data-achievement-ring="달성"',
+                   'data-achievement-ring="채움"',
                    '.team .rows .r:last-child{order:-1'):
         if marker not in html:
             errors.append(f"missing team-card emphasis marker {marker!r}")
+    if html.count('data-achievement-ring=') != 34:
+        errors.append(f"team achievement rings {html.count('data-achievement-ring=')} != 34")
+    for marker in ('<span class="pill up num">달성 ',
+                   '<span class="pill dn num">달성 ',
+                   '<span class="pill flat num">달성 ',
+                   '<span class="pill flat num">채움 '):
+        if marker in html:
+            errors.append(f"obsolete achievement pill present: {marker!r}")
     for marker in ('.pill.up{background:var(--red-soft);color:var(--red)',
                    '.pill.dn{background:var(--blue-soft);color:var(--blue)',
                    '.g .glab.neg{color:var(--blue)} .g .glab.pos{color:var(--red)',
@@ -313,7 +324,8 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
             errors.append(f"missing sales-structure marker {marker!r}")
     # [2026-08-09] 9월 신청 시트 30건의 패키지비 합계가 미래월 부킹 화면까지 연결됐는지 고정한다.
     for marker in ('라이브 · 9월 패키지별 부킹', '1.74억', '8.03억',
-                   '목표 12.8억 대비 채움 62.9%', '채움 82.1%'):
+                   '목표 12.8억 대비 채움 62.9%',
+                   'data-achievement-ring="채움" style="--p:82.1"'):
         if marker not in html:
             errors.append(f"missing September live booking source-parity marker {marker!r}")
     for marker in PRIVATE_DETAIL_MARKERS:
