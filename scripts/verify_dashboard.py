@@ -269,6 +269,7 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
             errors.append(f"missing weekly content marker {marker!r}")
     for marker in ('.team{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px}',
                    '.team .hd2{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:14px;align-items:center;min-height:108px}',
+                   '.team .team-main{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:14px}',
                    '.team .achv{--p:0;--achv-ring:var(--violet);--achv-track:#E8EDF3;position:relative;justify-self:end;width:108px;height:108px',
                    'data-achievement-ring="달성"',
                    'data-achievement-ring="채움"',
@@ -284,6 +285,7 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'padding:20px 110px 20px 22px',
                    '.team .hd2{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;min-height:58px}',
                    '.team .hd2{position:relative;display:block;min-height:84px;padding-right:98px}',
+                   '</div>\n          <div class="bigv num">',
                    'position:relative;flex:0 0 58px;width:58px;height:58px',
                    'width:84px;height:84px', 'width:76px;height:76px',
                    '.team .achv{--p:0;--achv-ring:#F59E0B',
