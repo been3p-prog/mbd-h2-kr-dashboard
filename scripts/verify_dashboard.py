@@ -268,8 +268,8 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         if marker not in html:
             errors.append(f"missing weekly content marker {marker!r}")
     for marker in ('.team{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px}',
-                   '.team .hd2{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;min-height:58px}',
-                   '.team .achv{--p:0;--achv-ring:var(--violet)',
+                   '.team .hd2{position:relative;display:block;min-height:84px;padding-right:98px}',
+                   '.team .achv{--p:0;--achv-ring:var(--violet);--achv-track:#E8EDF3;position:absolute;top:0;right:0;width:84px;height:84px',
                    'data-achievement-ring="달성"',
                    'data-achievement-ring="채움"',
                    '.team .rows .r:last-child{order:-1'):
@@ -282,6 +282,8 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    '<span class="pill flat num">달성 ',
                    '<span class="pill flat num">채움 ',
                    'padding:20px 110px 20px 22px',
+                   '.team .hd2{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;min-height:58px}',
+                   'position:relative;flex:0 0 58px;width:58px;height:58px',
                    '.team .achv{--p:0;--achv-ring:#F59E0B',
                    '<small>월간 기준</small>'):
         if marker in html:

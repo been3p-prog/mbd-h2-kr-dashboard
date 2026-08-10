@@ -96,15 +96,15 @@ a{color:var(--violet);text-decoration:none;font-weight:600}a:hover{text-decorati
 /* 팀 카드 */
 .teams{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px}
 .team{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px}
-.team .hd2{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;min-height:58px}
-.team .hd2 .pill{font-size:13px;font-weight:850;padding:6px 12px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
+.team .hd2{position:relative;display:block;min-height:84px;padding-right:98px}
+.team .hd2 .pill{position:absolute;top:0;right:0;font-size:13px;font-weight:850;padding:6px 12px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
 .team .nm{font-size:15px;font-weight:800;padding-top:2px}
-.team .bigv{font-size:30px;font-weight:850;letter-spacing:-0.035em;margin-top:8px}
-.team .achv{--p:0;--achv-ring:var(--violet);--achv-track:#E8EDF3;position:relative;flex:0 0 58px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--achv-ring) calc(var(--p)*1%), var(--achv-track) 0);box-shadow:inset 0 0 0 1px rgba(15,23,42,.04)}
-.team .achv::before{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--card);box-shadow:inset 0 0 0 1px rgba(15,23,42,.04)}
+.team .bigv{font-size:30px;font-weight:850;letter-spacing:-0.035em;margin-top:0}
+.team .achv{--p:0;--achv-ring:var(--violet);--achv-track:#E8EDF3;position:absolute;top:0;right:0;width:84px;height:84px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--achv-ring) calc(var(--p)*1%), var(--achv-track) 0);box-shadow:inset 0 0 0 1px rgba(15,23,42,.04)}
+.team .achv::before{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--card);box-shadow:inset 0 0 0 1px rgba(15,23,42,.04)}
 .team .achv .achv-in{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;text-align:center;white-space:nowrap}
-.team .achv b{font-size:15px;font-weight:900;letter-spacing:-0.06em;color:var(--navy);font-variant-numeric:tabular-nums}
-.team .achv small{margin-top:4px;font-size:9px;font-weight:850;color:var(--sub);letter-spacing:-0.035em}
+.team .achv b{font-size:20px;font-weight:900;letter-spacing:-0.065em;color:var(--navy);font-variant-numeric:tabular-nums}
+.team .achv small{margin-top:5px;font-size:10.5px;font-weight:850;color:var(--sub);letter-spacing:-0.04em}
 .mutpct{font-size:11px;color:var(--label);font-weight:600}
 .team .rows{font-size:12.5px;color:var(--sub);display:flex;flex-direction:column;gap:7px;margin-top:10px}
 .team .rows .r{display:flex;justify-content:space-between;align-items:center}
@@ -218,7 +218,7 @@ tr.hi td .tag{background:#DBEAFE;color:var(--violet)}
   .kpis{grid-template-columns:minmax(0,1fr);gap:12px}
   .grid2{grid-template-columns:minmax(0,1fr)}
   .teams{grid-template-columns:minmax(0,1fr)}
-  .team{padding:18px 20px}.team .hd2{min-height:54px}.team .achv{flex-basis:54px;width:54px;height:54px}.team .achv::before{inset:6px}.team .achv b{font-size:14px}.team .achv small{font-size:8.5px}
+  .team{padding:18px 20px}.team .hd2{min-height:76px;padding-right:88px}.team .achv{width:76px;height:76px}.team .achv::before{inset:7px}.team .achv b{font-size:18px}.team .achv small{font-size:9.5px}
   .qsplit{grid-template-columns:minmax(0,1fr);gap:18px}
   .gauge12{gap:4px;height:170px}.gmonths{gap:4px}
   .g .trk{width:16px}.g .lab{display:none}.g.sel .lab{display:block;font-size:9.5px}
