@@ -281,7 +281,8 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    '.pill.dn{background:var(--red-soft)',
                    '.g .glab.neg{color:var(--red)} .g .glab.pos{color:var(--green)}',
                    '&lt;small&gt;MoM +', '&lt;small&gt;MoM -',
-                   '<small>MoM +', '<small>MoM -'):
+                   '<small>MoM +', '<small>MoM -',
+                   '아래 빨강/초록 = 목표 대비 억원'):
         if marker in html:
             errors.append(f"obsolete green-up/red-down marker present: {marker!r}")
     for marker in ('<span>일반광고</span><b><span class="tv"><span>8.68억</span><small class="up">MoM +7.9%</small>',

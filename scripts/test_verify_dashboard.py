@@ -116,6 +116,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertNotIn('.pill.dn{background:var(--red-soft)', self.html)
         self.assertNotIn('&lt;small&gt;MoM +', self.html)
         self.assertNotIn('&lt;small&gt;MoM -', self.html)
+        self.assertNotIn('아래 빨강/초록 = 목표 대비 억원', self.html)
+        self.assertIn('아래 빨강/파랑 = 목표 대비 억원', self.html)
         self.assertNotIn('class="week-counts"', self.html)
         self.assertNotIn('class="activity-state', self.html)
         self.assertNotIn('data-content-status=', self.html)
