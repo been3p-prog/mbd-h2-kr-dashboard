@@ -62,6 +62,8 @@ class DashboardGuardTest(unittest.TestCase):
                        '<div class="cause" data-live-revenue-breakdown=',
                        "direct Sheet CURRENT",
                        "목표 SoT: H2 고정 1억원 · OKR row는 참고",
+                       "집계 6/6건 · 총 421,752",
+                       "목표 SoT: OKR 14행 (H2)",
                        "콘텐츠 링크 · 시청자수 / 1D 거래액 / 3H 거래액",
                        "콘텐츠 링크 · 누적조회수 / D7 조회수 / PIS",
                        "단위 억원 · DuckDB 미러",
