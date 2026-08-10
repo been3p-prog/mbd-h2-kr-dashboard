@@ -267,8 +267,9 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'activity-main-inline', 'activity-inline-meta', 'min-height:42px'):
         if marker not in html:
             errors.append(f"missing weekly content marker {marker!r}")
-    for marker in ('.team .hd2 .pill{position:absolute;top:20px;right:22px',
-                   '.team .achv{--p:0;--achv-ring:#F59E0B',
+    for marker in ('.team{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px}',
+                   '.team .hd2{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;min-height:58px}',
+                   '.team .achv{--p:0;--achv-ring:var(--violet)',
                    'data-achievement-ring="달성"',
                    'data-achievement-ring="채움"',
                    '.team .rows .r:last-child{order:-1'):
@@ -279,7 +280,10 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     for marker in ('<span class="pill up num">달성 ',
                    '<span class="pill dn num">달성 ',
                    '<span class="pill flat num">달성 ',
-                   '<span class="pill flat num">채움 '):
+                   '<span class="pill flat num">채움 ',
+                   'padding:20px 110px 20px 22px',
+                   '.team .achv{--p:0;--achv-ring:#F59E0B',
+                   '<small>월간 기준</small>'):
         if marker in html:
             errors.append(f"obsolete achievement pill present: {marker!r}")
     for marker in ('.pill.up{background:var(--red-soft);color:var(--red)',
