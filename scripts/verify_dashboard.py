@@ -39,9 +39,10 @@ FORBIDDEN_HBAR = ("horizontal-bar", "bar-horizontal", "hbar",
                   "diverging", 'aria-orientation="horizontal"')
 
 SHEET_LIVE = "https://docs.google.com/spreadsheets/d/1Kw-IMgnP_kj0qY3q8thqsrPQ_KQvypTAX3hT5J-Gp4Q/edit?gid=1837542220#gid=1837542220"
-SHEET_YT = "https://docs.google.com/spreadsheets/d/1mMkGwBuWr_L0YXvmDlGtPGzpm9kAgk8VQubjC_w52vg/edit?gid=34722178#gid=34722178"
+SHEET_YT_CONTENT = "https://docs.google.com/spreadsheets/d/1mMkGwBuWr_L0YXvmDlGtPGzpm9kAgk8VQubjC_w52vg/edit?gid=34722178#gid=34722178"
+SHEET_YT_SSOT = "https://docs.google.com/spreadsheets/d/1lXIjLja-DEdBmDWDTM9LqNOG9UhVPCLS2B09InHQD90/edit?gid=673164445#gid=673164445"
 SHEET_OKR = "https://docs.google.com/spreadsheets/d/1DgciUq9HLVs5Q-vt0GmuDrX8-Yd6T8SxEoRPudPWpPA/edit?gid=43885048#gid=43885048"
-REQUIRED_SOURCE_LINKS = (SHEET_LIVE, SHEET_YT, SHEET_OKR)
+REQUIRED_SOURCE_LINKS = (SHEET_LIVE, SHEET_YT_CONTENT, SHEET_YT_SSOT, SHEET_OKR)
 
 # ── compact manifest 계약 (mbd-public-guard-v3) ───────────────────────
 MANIFEST_RE = re.compile(
