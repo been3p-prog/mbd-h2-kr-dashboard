@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import html as html_lib
 import json
 import re
 import sys
@@ -207,6 +208,7 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     if not isinstance(html, str) or not html.strip():
         return ["html: empty or not a string"]
     errors: list = []
+    decoded_html = html_lib.unescape(html)
 
     # 1) 구 임베드 payload 재출현 금지
     for marker in LEGACY_PAYLOAD_MARKERS:
@@ -269,6 +271,24 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    '.team .rows .r:last-child{order:-1'):
         if marker not in html:
             errors.append(f"missing team-card emphasis marker {marker!r}")
+    for marker in ('.pill.up{background:var(--red-soft);color:var(--red)',
+                   '.pill.dn{background:var(--blue-soft);color:var(--blue)',
+                   '.g .glab.neg{color:var(--blue)} .g .glab.pos{color:var(--red)',
+                   '.tip .tv small.up{color:#FCA5A5}.tip .tv small.dn{color:#93C5FD'):
+        if marker not in html:
+            errors.append(f"missing red-up-blue-down marker {marker!r}")
+    for marker in ('.pill.up{background:var(--green-soft)',
+                   '.pill.dn{background:var(--red-soft)',
+                   '.g .glab.neg{color:var(--red)} .g .glab.pos{color:var(--green)}',
+                   '&lt;small&gt;MoM +', '&lt;small&gt;MoM -',
+                   '<small>MoM +', '<small>MoM -'):
+        if marker in html:
+            errors.append(f"obsolete green-up/red-down marker present: {marker!r}")
+    for marker in ('<span>일반광고</span><b><span class="tv"><span>8.68억</span><small class="up">MoM +7.9%</small>',
+                   '<span>통광마</span><b><span class="tv"><span>2,909만</span><small class="dn">MoM -46.1%</small>',
+                   '<span>라이브</span><b><span class="tv"><span>2.18억</span><small class="up">MoM +17.8%</small>'):
+        if marker not in decoded_html:
+            errors.append(f"missing monthly-flow tooltip MoM marker {marker!r}")
     for marker in ('class="week-counts"', 'class="activity-state', 'data-content-status=',
                    '<small>시청자수</small>', '<small>1D 거래액</small>',
                    '<small>3H 거래액</small>', '<small>누적조회수</small>'):

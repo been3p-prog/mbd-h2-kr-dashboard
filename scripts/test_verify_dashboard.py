@@ -109,6 +109,13 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('min-height:42px', self.html)
         self.assertIn('.team .hd2 .pill{font-size:13px', self.html)
         self.assertIn('.team .rows .r:last-child{order:-1', self.html)
+        self.assertIn('.pill.up{background:var(--red-soft);color:var(--red)', self.html)
+        self.assertIn('.pill.dn{background:var(--blue-soft);color:var(--blue)', self.html)
+        self.assertIn('.g .glab.neg{color:var(--blue)} .g .glab.pos{color:var(--red)', self.html)
+        self.assertNotIn('.pill.up{background:var(--green-soft)', self.html)
+        self.assertNotIn('.pill.dn{background:var(--red-soft)', self.html)
+        self.assertNotIn('&lt;small&gt;MoM +', self.html)
+        self.assertNotIn('&lt;small&gt;MoM -', self.html)
         self.assertNotIn('class="week-counts"', self.html)
         self.assertNotIn('class="activity-state', self.html)
         self.assertNotIn('data-content-status=', self.html)
@@ -119,6 +126,21 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertEqual(manifest.get("schema"), "mbd-public-guard-v3")
         self.assertTrue(manifest.get("sanitized_rows_included"))
         self.assertEqual(manifest.get("public_detail_fields"), vd.PUBLIC_DETAIL_FIELDS)
+
+    def test_monthly_flow_tooltips_include_team_mom_with_red_up_blue_down(self):
+        gauge_tips = {
+            int(month): html_mod.unescape(tip)
+            for month, tip in re.findall(r'<div class="g [^"]*" data-m="(\d+)" data-tip="([^"]+)"', self.html)
+        }
+        self.assertEqual(len(gauge_tips), 12)
+        august = gauge_tips[8]
+        self.assertIn('<span>일반광고</span><b><span class="tv"><span>8.68억</span><small class="up">MoM +7.9%</small>', august)
+        self.assertIn('<span>통광마</span><b><span class="tv"><span>2,909만</span><small class="dn">MoM -46.1%</small>', august)
+        self.assertIn('<span>라이브</span><b><span class="tv"><span>2.18억</span><small class="up">MoM +17.8%</small>', august)
+        september = gauge_tips[9]
+        self.assertIn('<small class="dn">MoM -32.5%</small>', september)
+        self.assertIn('<small class="up">MoM +49.0%</small>', september)
+        self.assertIn('<small class="dn">MoM -20.2%</small>', september)
 
     def test_public_guard_rejects_non_allowlisted_content_link(self):
         bad = self.html.replace("https://www.youtube.com/watch?v=", "https://evil.example/watch?v=", 1)
