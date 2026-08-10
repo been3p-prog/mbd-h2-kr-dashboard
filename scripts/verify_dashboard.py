@@ -330,16 +330,17 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'data-live-revenue-breakdown=', 'data-live-package-mom=', '패키지별 매출',
                    'MoM ', '패키지 총액 = AF 패키지비', '진행건수 = 확정 편성건',
                    'data-live-progress-count=', 'data-live-package-count=',
-                   '진행 36건', '전월 +6건', '8건 · +2건', '13건 · +4건'):
+                   '진행 36건', '전월 +6건', '8건 · +2건', '13건 · +4건',
+                   '시그니처 하위', '에센셜 하위', '스마트 하위'):
         if marker not in html:
             errors.append(f"missing sales-structure marker {marker!r}")
     if html.count('data-live-progress-count=') != 9:
         errors.append(f"live progress count markers {html.count('data-live-progress-count=')} != 9")
     if html.count('data-live-package-count=') != 27:
         errors.append(f"live package count markers {html.count('data-live-package-count=')} != 27")
-    for marker in ('시그니처 하위', '에센셜 하위', '스마트 하위', '하위 구분 = PGM/프로모션'):
-        if marker in html:
-            errors.append(f"obsolete live sub-promotion marker present: {marker!r}")
+    for marker in ('시그니처 하위', '에센셜 하위', '스마트 하위'):
+        if html.count(marker) != 8:
+            errors.append(f"live sub-promotion marker {marker!r} appears {html.count(marker)}x (expected 8)")
     # [2026-08-09] 9월 신청 시트 30건의 패키지비 합계가 미래월 부킹 화면까지 연결됐는지 고정한다.
     for marker in ('라이브 · 9월 패키지별 부킹', '1.74억', '8.03억',
                    '목표 12.8억 대비 채움 62.9%',
