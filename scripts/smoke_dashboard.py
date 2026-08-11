@@ -72,7 +72,7 @@ def _probe_script(target_month: int) -> str:
         "out.liveWindow.ariaOpen=liveWindow.getAttribute('aria-hidden');"
         "out.liveWindow.expanded=liveLaunch.getAttribute('aria-expanded');"
         "out.liveWindow.title=!!liveWindow.querySelector('#liveWindowTitle');"
-        "out.liveWindow.basis=/데이터 사용 룰/.test(liveWindow.textContent||'')&&/방송간 비교=방송별 데이터 GMV/.test(liveWindow.textContent||'');"
+        "out.liveWindow.basis=/데이터 사용 룰/.test(liveWindow.textContent||'')&&/카드 거래액=1D 브랜드 일거래액/.test(liveWindow.textContent||'');"
         "var lr=liveWindow.getBoundingClientRect();out.liveWindow.rect={left:Math.round(lr.left),"
         "rightGap:Math.round(window.innerWidth-lr.right),width:Math.round(lr.width),viewport:window.innerWidth};"
         "var close=liveWindow.querySelector('[data-live-close]');if(close){close.click();}"

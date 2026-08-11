@@ -271,9 +271,9 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     for marker in ('data-live-launch', 'aria-controls="liveWindow"',
                    'id="liveWindow"', 'data-live-window="weekly-performance"',
                    '라이브 주간 성과 창', '좌측 라이브 탭 전용 UI',
-                   'GMV 기준 분리', '데이터 사용 룰',
-                   '방송간 비교=방송별 데이터 GMV', '1D=브랜드 일거래액',
-                   '방송별 카드/방당 효율=`방송별 데이터 GMV`', '총액은 회복됐지만',
+                   '거래액 기준 분리', '데이터 사용 룰',
+                   '카드 거래액=1D 브랜드 일거래액', '방송간 효율=방송별 데이터 GMV',
+                   '방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`', '총액은 회복됐지만',
                    '방당 GMV는 -23.6%', 'BAS playbook', 'data-live-close',
                    'function setLiveWindow(open)', '방송별 성과 &amp; PD 회고',
                    'data-live-broadcast-card="frosch"', 'data-live-broadcast-card="cuchen"',
@@ -281,8 +281,8 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'data-live-broadcast-card="downing"', 'data-live-broadcast-card="bas"',
                    'data-live-broadcast-card="hweehwee"', '쿠쿠 셀럽 라이브',
                    '한정 인기 상품은 15~20분 조기 품절', '에어차차 80%',
-                   '방송GMV 6,045만 · 1D 1.41억',
-                   '<small>방송GMV</small><b>6,045만</b>',
+                   '저도달 3,722명이어도 1D 거래액 1.41억',
+                   '<small>거래액</small><b>1D 1.41억</b>',
                    '컬러 모델 구매 시 화이트 날개 증정 조건', '가로 풀폭',
                    '.live-window{position:fixed;inset:16px;',
                    '@media (max-width:1180px){.live-window{inset:14px}'):
@@ -291,8 +291,8 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     if html.count('data-live-broadcast-card=') != 7:
         errors.append(f"live broadcast cards {html.count('data-live-broadcast-card=')} != 7")
     for marker in ('data-live-weekly-analysis=', '원본 rows 302–308', '공식 회고 전문',
-                   '<small>거래액</small><b>1D 1.41억</b>',
-                   '저도달 3,722명이어도 1D 거래액 1.41억',
+                   '방송GMV 6,045만', '<small>방송GMV</small><b>6,045만</b>',
+                   '방송별 카드/방당 효율=`방송별 데이터 GMV`',
                    'inset:22px 28px 22px 278px', 'inset:16px 18px 16px 238px'):
         if marker in html:
             errors.append(f"obsolete inline/raw live analysis marker present: {marker!r}")
