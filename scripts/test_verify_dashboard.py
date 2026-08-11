@@ -167,7 +167,8 @@ class DashboardGuardTest(unittest.TestCase):
         for marker in ('data-live-launch', 'aria-controls="liveWindow"',
                        'id="liveWindow"', 'data-live-window="weekly-performance"',
                        '라이브 주간 성과 창', '좌측 라이브 탭 전용 UI',
-                       '방송별 데이터 GMV 기준', '총액은 회복됐지만',
+                       '방송 카드 거래액 1D 기준', '카드 거래액은 1D 거래액 기준',
+                       '방송별 데이터 GMV는 회고 보조', '총액은 회복됐지만',
                        '방당 GMV는 -23.6%', 'BAS playbook', 'data-live-close',
                        'function setLiveWindow(open)', '방송별 성과 &amp; PD 회고',
                        'data-live-broadcast-card="frosch"', 'data-live-broadcast-card="cuchen"',
@@ -175,6 +176,8 @@ class DashboardGuardTest(unittest.TestCase):
                        'data-live-broadcast-card="downing"', 'data-live-broadcast-card="bas"',
                        'data-live-broadcast-card="hweehwee"', '쿠쿠 셀럽 라이브',
                        '한정 인기 상품은 15~20분 조기 품절', '에어차차 80%',
+                       '저도달 3,722명이어도 1D 거래액 1.41억',
+                       '<small>거래액</small><b>1D 1.41억</b>',
                        '컬러 모델 구매 시 화이트 날개 증정 조건', '가로 풀폭',
                        '.live-window{position:fixed;inset:16px;',
                        '@media (max-width:1180px){.live-window{inset:14px'):
