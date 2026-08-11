@@ -354,6 +354,15 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     if 'data-yt-channel-overview=' in html:
         errors.append("obsolete youtube left-subscriber overview present")
 
+    # [2026-08-11] 라이브/유튜브 품질 카드에도 전월 대비가 첫눈에 보이도록 고정한다.
+    for marker in ('.qcell .qmom{font-size:11px;font-weight:850',
+                   'data-live-quality-mom-main="8"', 'data-live-quality-mom="8-overall"',
+                   'data-live-quality-mom="8-signature"', 'MoM ▼ 25.1%', 'MoM ▼ 52.0%',
+                   'data-yt-quality-mom-main="8"', 'MoM ▼ 36.8%', 'MoM ▲ 0.3%',
+                   'MoM ▲ 33.9%', 'MoM ▼ 79.2%'):
+        if marker not in html:
+            errors.append(f"missing quality-card MoM marker {marker!r}")
+
     # [2026-08-09/10] 일반광고 부킹률과 라이브 package 매출/진행건수 팝업 구조의 공개 DOM 회귀 방지.
     for marker in ('data-adgen-booking-rate=', '부킹률', '비취소 부킹건수 ÷ 부킹건수 목표',
                    'data-live-revenue-breakdown=', 'data-live-package-mom=', '패키지별 매출',

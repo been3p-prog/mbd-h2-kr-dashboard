@@ -83,6 +83,15 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('평균 시청지속시간', self.html)
         self.assertIn('2:50', self.html)
         self.assertIn('08-09 기준 · 조회수 1,126,735', self.html)
+        self.assertIn('data-live-quality-mom-main="8"', self.html)
+        self.assertIn('data-live-quality-mom="8-overall"', self.html)
+        self.assertIn('MoM ▼ 25.1%', self.html)
+        self.assertIn('MoM ▼ 52.0%', self.html)
+        self.assertIn('data-yt-quality-mom-main="8"', self.html)
+        self.assertIn('MoM ▼ 36.8%', self.html)
+        self.assertIn('MoM ▲ 0.3%', self.html)
+        self.assertIn('MoM ▲ 33.9%', self.html)
+        self.assertIn('MoM ▼ 79.2%', self.html)
         self.assertNotIn('YouTube Analytics 원천 미적재', self.html)
         self.assertNotIn('data-yt-channel-overview=', self.html)
         self.assertIn('data-adgen-booking-rate=', self.html)
@@ -230,6 +239,11 @@ class DashboardGuardTest(unittest.TestCase):
         bad = self.html.replace('data-yt-main-average=', 'data-yt-main-removed=')
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("missing youtube quality-card marker" in error for error in errors), errors)
+
+    def test_quality_card_mom_marker_removal_fails(self):
+        bad = self.html.replace('data-live-quality-mom-main="8"', 'data-live-quality-mom-main-removed="8"', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("missing quality-card MoM marker" in error for error in errors), errors)
 
     def test_sales_structure_marker_removal_fails(self):
         bad = self.html.replace('data-adgen-booking-rate=', 'data-booking-rate-removed=')

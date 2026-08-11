@@ -125,7 +125,7 @@ a{color:var(--violet);text-decoration:none;font-weight:600}a:hover{text-decorati
 .qsplit{display:grid;grid-template-columns:280px minmax(0,1fr);gap:34px;align-items:start;margin-top:18px}
 .qk2{font-size:12.5px;color:var(--label);font-weight:600}
 .qv{font-size:42px;font-weight:800;letter-spacing:-0.035em;margin-top:6px}
-.qs{margin-top:10px}
+.qs{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}
 .qmeta{font-size:11.5px;color:var(--sub);margin-top:14px;line-height:2}
 /* [2026-08-09 correction] 유튜브 우측 운영 KPI는 3열 카드, LF/SF는 두 번째 행에 둔다. */
 .qcells.yt-qcells{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -138,6 +138,8 @@ a{color:var(--violet);text-decoration:none;font-weight:600}a:hover{text-decorati
 .qcell.hero .qk{color:var(--violet)}
 .qcell .qn{font-size:21px;font-weight:800;letter-spacing:-0.025em;margin-top:4px}
 .qcell .qm2{font-size:11px;color:var(--label);margin-top:3px}
+.qcell .qmom{font-size:11px;font-weight:850;margin-top:5px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.qcell .qmom.up{color:var(--red)}.qcell .qmom.dn{color:var(--blue)}.qcell .qmom.flat{color:var(--label)}
 /* 테이블 */
 .tblwrap{overflow-x:auto}
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;margin-top:16px}
@@ -1847,9 +1849,9 @@ body.live-window-open{overflow:hidden}
       <div class="qsplit">
         <div><div class="qk2">1D 평균 거래액</div>
           <div class="qv num">6,246만</div>
-          <div class="qs"><span class="pill dn num big">8월 목표 1.00억 대비 62.5%</span></div>
+          <div class="qs"><span class="pill dn num big">8월 목표 1.00억 대비 62.5%</span><span class="pill dn num big" data-live-quality-mom-main="8">MoM ▼ 25.1%</span></div>
           </div>
-        <div><div class="qcells"><div class="qcell hero"><div class="qk">전체 평균</div><div class="qn num">6,246만</div><div class="qm2 num">7방송 · 총 4.37억</div></div><div class="qcell"><div class="qk">시그니처</div><div class="qn num">6,283만</div><div class="qm2 num">3방송 · 총 1.88억</div></div><div class="qcell"><div class="qk">스마트</div><div class="qn num">6,659만</div><div class="qm2 num">1방송 · 총 6,659만</div></div><div class="qcell"><div class="qk">에센셜</div><div class="qn num">6,072만</div><div class="qm2 num">3방송 · 총 1.82억</div></div></div></div>
+        <div><div class="qcells"><div class="qcell hero" data-live-quality-mom="8-overall"><div class="qk">전체 평균</div><div class="qn num">6,246만</div><div class="qm2 num">7방송 · 총 4.37억</div><div class="qmom dn num">MoM ▼ 25.1%</div></div><div class="qcell" data-live-quality-mom="8-signature"><div class="qk">시그니처</div><div class="qn num">6,283만</div><div class="qm2 num">3방송 · 총 1.88억</div><div class="qmom dn num">MoM ▼ 52.0%</div></div><div class="qcell" data-live-quality-mom="8-smart"><div class="qk">스마트</div><div class="qn num">6,659만</div><div class="qm2 num">1방송 · 총 6,659만</div><div class="qmom dn num">MoM ▼ 23.3%</div></div><div class="qcell" data-live-quality-mom="8-essential"><div class="qk">에센셜</div><div class="qn num">6,072만</div><div class="qm2 num">3방송 · 총 1.82억</div><div class="qmom dn num">MoM ▼ 2.5%</div></div></div></div>
       </div>
       <div class="subh">주차별 방송
         <a class="sheet" href="https://docs.google.com/spreadsheets/d/1Kw-IMgnP_kj0qY3q8thqsrPQ_KQvypTAX3hT5J-Gp4Q/edit?gid=1837542220#gid=1837542220" target="_blank" rel="noopener">원본 시트 ↗</a></div><div class="content-ledger" data-content-ledger="live"><details class="week-group" data-week-group="8-1" open>
@@ -1977,8 +1979,8 @@ body.live-window-open{overflow:hidden}
               <div class="activity-main activity-main-inline"><span class="activity-title-line"><a class="content-link" data-content-link="live" href="https://www.shoplive.show/v1/player.html?ak=P4vWDJspWy5u9lgOdvAB&amp;ck=4b8e7c98a22c&amp;replay=true" target="_blank" rel="noopener">테팔<span aria-hidden="true">↗</span></a><small class="activity-inline-meta">에센셜 · 12주년</small></span></div>
               <div class="activity-metric metric-trio num"><span class="metric-cell"><b>—</b></span><span class="metric-cell"><b>—</b></span><span class="metric-cell"><b>—</b></span></div></div></div></details></div></div><div class="card quality-card yt-quality"><div class="hd"><span class="t">유튜브 평균조회수 · 품질</span>
       </div><div class="qsplit"><div data-yt-main-average="8"><div class="qk2">전체 평균 조회수</div>
-      <div class="qv num">56,232</div><div class="qs"><span class="pill up num big">8월 목표 50,000 대비 112%</span></div>
-      <div class="qmeta"><a href="https://docs.google.com/spreadsheets/d/1lXIjLja-DEdBmDWDTM9LqNOG9UhVPCLS2B09InHQD90/edit?gid=673164445#gid=673164445" target="_blank" rel="noopener">MBD YT SSOT ↗</a></div></div><div><div class="qcells yt-qcells"><div class="qcell hero" data-yt-subscriber-card="8"><div class="qk">구독자</div><div class="qn num">801,000</div><div class="qm2 num">월간 순증 +2,134</div></div><div class="qcell" data-yt-publish-card="8"><div class="qk">8월 발행</div><div class="qn num">7건</div><div class="qm2 num">SF 5건 · LF 2건</div></div><div class="qcell" data-yt-watch-duration-card="8"><div class="qk">평균 시청지속시간</div><div class="qn num">2:50</div><div class="qm2 num">08-09 기준 · 조회수 1,126,735</div></div><div class="qcell" data-yt-lf-average-card="8"><div class="qk">LF 평균</div><div class="qn num">165,284</div><div class="qm2 num">2건 · 총 330,568</div></div><div class="qcell" data-yt-sf-average-card="8"><div class="qk">SF 평균</div><div class="qn num">12,611</div><div class="qm2 num">5건 · 총 63,054</div></div></div></div></div>
+      <div class="qv num">56,232</div><div class="qs"><span class="pill up num big">8월 목표 50,000 대비 112%</span><span class="pill dn num big" data-yt-quality-mom-main="8">MoM ▼ 36.8%</span></div>
+      <div class="qmeta"><a href="https://docs.google.com/spreadsheets/d/1lXIjLja-DEdBmDWDTM9LqNOG9UhVPCLS2B09InHQD90/edit?gid=673164445#gid=673164445" target="_blank" rel="noopener">MBD YT SSOT ↗</a></div></div><div><div class="qcells yt-qcells"><div class="qcell hero" data-yt-subscriber-card="8"><div class="qk">구독자</div><div class="qn num">801,000</div><div class="qm2 num">월간 순증 +2,134</div><div class="qmom up num">MoM ▲ 0.3%</div></div><div class="qcell" data-yt-publish-card="8"><div class="qk">8월 발행</div><div class="qn num">7건</div><div class="qm2 num">SF 5건 · LF 2건</div><div class="qmom dn num">MoM ▼ 70.8%</div></div><div class="qcell" data-yt-watch-duration-card="8"><div class="qk">평균 시청지속시간</div><div class="qn num">2:50</div><div class="qm2 num">08-09 기준 · 조회수 1,126,735</div><div class="qmom up num">MoM ▲ 33.9%</div></div><div class="qcell" data-yt-lf-average-card="8"><div class="qk">LF 평균</div><div class="qn num">165,284</div><div class="qm2 num">2건 · 총 330,568</div><div class="qmom dn num">MoM ▼ 28.5%</div></div><div class="qcell" data-yt-sf-average-card="8"><div class="qk">SF 평균</div><div class="qn num">12,611</div><div class="qm2 num">5건 · 총 63,054</div><div class="qmom dn num">MoM ▼ 79.2%</div></div></div></div></div>
       <div class="subh">주차별 콘텐츠
         <a class="sheet" href="https://docs.google.com/spreadsheets/d/1mMkGwBuWr_L0YXvmDlGtPGzpm9kAgk8VQubjC_w52vg/edit?gid=34722178#gid=34722178" target="_blank" rel="noopener">원본 시트 ↗</a></div><div class="content-ledger" data-content-ledger="youtube"><div class="plan-note"><b>월 계획 8건</b> · 상세 일정 미입력 포함 잔여 2건</div><details class="week-group" data-week-group="8-1" open>
           <summary data-week-toggle="8-1"><span class="week-label">8월 1주차 <small>8/1–8/7</small></span>
