@@ -235,6 +235,39 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("8월 목표 1.00억 대비 62.5%", self.html)
         self.assertNotIn("방송 평균 거래액", self.html)
 
+    def test_august_first_live_weekly_analysis_is_basis_scoped_and_sanitized(self):
+        match = re.search(
+            r'<div class="mvr mv" data-m="8" data-phase="cur"[^>]*>.*?'
+            r'<div class="content-ledger" data-content-ledger="live"><details class="week-group" data-week-group="8-1" open>(.*?)</details>',
+            self.html,
+            re.S,
+        )
+        self.assertIsNotNone(match)
+        assert match is not None
+        block = match.group(1)
+        for marker in ('data-live-weekly-analysis="8-1"', '8월 1주차 성과 분석',
+                       '방송별 데이터 GMV 기준', '원본 rows 302–308', '7건', '1.87억',
+                       '2,666만', '49.2만', '4.6%', '1,619', '5,685만', '4,310만',
+                       '총액은 회복됐지만', '방당 -23.6%', '직전 4주 방당 -26.9%',
+                       'BAS playbook', '쿠첸 risk'):
+            self.assertIn(marker, block)
+        # 기존 표의 1D/3H 기준은 보존하고, 분석 블록만 별도 방송별 데이터 GMV basis를 붙인다.
+        self.assertIn('<span>1D 거래액</span><span>3H 거래액</span>', block)
+        self.assertIn('class="live-weekly-analysis"', block)
+        for forbidden in ('service_account', 'private_key', '/Users/', '라이브 ID',
+                          '내부회고', '공식 회고', '시트 인사이트 전문', '"review_full"'):
+            self.assertNotIn(forbidden, block)
+
+    def test_live_weekly_analysis_marker_removal_fails(self):
+        bad = self.html.replace('data-live-weekly-analysis="8-1"', 'data-live-weekly-analysis="removed"', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("weekly live analysis" in error for error in errors), errors)
+
+    def test_live_weekly_analysis_basis_removal_fails(self):
+        bad = self.html.replace('class="lwa-basis">방송별 데이터 GMV 기준', 'class="lwa-basis">방송별 기준 제거', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("weekly live analysis" in error for error in errors), errors)
+
     # [2026-08-07] 일반광고 hover는 보이는 KPI 반복이 아니라 3유형 금액+MoM이어야 한다.
     def test_all_months_have_three_way_adgen_mix_tooltips(self):
         attrs = re.findall(r'<div class="team" data-tip="([^"]+)"', self.html)

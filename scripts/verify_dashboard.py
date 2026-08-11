@@ -267,6 +267,26 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'activity-main-inline', 'activity-inline-meta', 'min-height:42px'):
         if marker not in html:
             errors.append(f"missing weekly content marker {marker!r}")
+    # [2026-08-11] 8월 1주차 라이브 성과 분석은 기존 1D/3H 표와 분리해 방송별 데이터 GMV 기준임을 명시한다.
+    live_week_match = re.search(
+        r'<div class="mvr mv" data-m="8" data-phase="cur"[^>]*>.*?'
+        r'<div class="content-ledger" data-content-ledger="live"><details class="week-group" data-week-group="8-1" open>(.*?)</details>',
+        html,
+        re.S,
+    )
+    live_week_html = live_week_match.group(1) if live_week_match else ""
+    if not live_week_match:
+        errors.append("missing August 1st live week group for weekly analysis")
+    for marker in ('data-live-weekly-analysis="8-1"', '8월 1주차 성과 분석',
+                   '방송별 데이터 GMV 기준', '원본 rows 302–308', '총액은 회복됐지만',
+                   '방당 -23.6%', '직전 4주 방당 -26.9%', 'BAS playbook'):
+        if marker not in live_week_html:
+            errors.append(f"missing weekly live analysis marker {marker!r}")
+    for marker in ('service_account', 'private_key', '/Users/', '라이브 ID',
+                   '내부회고', '공식 회고', '시트 인사이트 전문'):
+        if marker.lower() in live_week_html.lower():
+            errors.append(f"weekly live analysis leaked private/raw marker {marker!r}")
+
     for marker in ('.team{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px}',
                    '.team .hd2{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:14px;align-items:center;min-height:108px}',
                    '.team .team-main{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:14px}',
