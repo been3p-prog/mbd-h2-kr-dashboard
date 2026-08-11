@@ -169,10 +169,18 @@ class DashboardGuardTest(unittest.TestCase):
                        '라이브 주간 성과 창', '좌측 라이브 탭 전용 UI',
                        '방송별 데이터 GMV 기준', '총액은 회복됐지만',
                        '방당 GMV는 -23.6%', 'BAS playbook', 'data-live-close',
-                       'function setLiveWindow(open)'):
+                       'function setLiveWindow(open)', '방송별 성과 &amp; PD 회고',
+                       'data-live-broadcast-card="frosch"', 'data-live-broadcast-card="cuchen"',
+                       'data-live-broadcast-card="pampers"', 'data-live-broadcast-card="truecook"',
+                       'data-live-broadcast-card="downing"', 'data-live-broadcast-card="bas"',
+                       'data-live-broadcast-card="hweehwee"', '쿠쿠 셀럽 라이브',
+                       '한정 인기 상품은 15~20분 조기 품절', '에어차차 80%',
+                       '컬러 모델 구매 시 화이트 날개 증정 조건'):
             self.assertIn(marker, self.html)
+        self.assertEqual(self.html.count('data-live-broadcast-card='), 7)
         self.assertNotIn('data-live-weekly-analysis=', self.html)
         self.assertNotIn('원본 rows 302–308', self.html)
+        self.assertNotIn('공식 회고 전문', self.html)
 
     def test_live_window_marker_removal_fails(self):
         bad = self.html.replace('data-live-window="weekly-performance"', 'data-live-window="removed"', 1)
@@ -183,7 +191,7 @@ class DashboardGuardTest(unittest.TestCase):
         bad = self.html.replace('<div class="content-ledger" data-content-ledger="live">',
                                 '<div class="content-ledger" data-content-ledger="live"><div data-live-weekly-analysis="8-1">원본 rows 302–308</div>', 1)
         errors = vd.verify(bad, self.now, require_fresh=False)
-        self.assertTrue(any("obsolete inline live analysis marker" in error for error in errors), errors)
+        self.assertTrue(any("obsolete inline/raw live analysis marker" in error for error in errors), errors)
 
     def test_monthly_flow_tooltips_include_team_mom_with_red_up_blue_down(self):
         gauge_tips = {
