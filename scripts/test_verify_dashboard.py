@@ -163,6 +163,28 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertTrue(manifest.get("sanitized_rows_included"))
         self.assertEqual(manifest.get("public_detail_fields"), vd.PUBLIC_DETAIL_FIELDS)
 
+    def test_left_live_nav_opens_dedicated_live_window_contract(self):
+        for marker in ('data-live-launch', 'aria-controls="liveWindow"',
+                       'id="liveWindow"', 'data-live-window="weekly-performance"',
+                       '라이브 주간 성과 창', '좌측 라이브 탭 전용 UI',
+                       '방송별 데이터 GMV 기준', '총액은 회복됐지만',
+                       '방당 GMV는 -23.6%', 'BAS playbook', 'data-live-close',
+                       'function setLiveWindow(open)'):
+            self.assertIn(marker, self.html)
+        self.assertNotIn('data-live-weekly-analysis=', self.html)
+        self.assertNotIn('원본 rows 302–308', self.html)
+
+    def test_live_window_marker_removal_fails(self):
+        bad = self.html.replace('data-live-window="weekly-performance"', 'data-live-window="removed"', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("missing live window marker" in error for error in errors), errors)
+
+    def test_inline_live_weekly_analysis_reappearance_fails(self):
+        bad = self.html.replace('<div class="content-ledger" data-content-ledger="live">',
+                                '<div class="content-ledger" data-content-ledger="live"><div data-live-weekly-analysis="8-1">원본 rows 302–308</div>', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("obsolete inline live analysis marker" in error for error in errors), errors)
+
     def test_monthly_flow_tooltips_include_team_mom_with_red_up_blue_down(self):
         gauge_tips = {
             int(month): html_mod.unescape(tip)
@@ -421,6 +443,18 @@ class SmokeViewportPolicyTest(unittest.TestCase):
                 "rawRowTables": 0,
                 "futureRootCount": 9,
                 "futureForbiddenCount": 0,
+            },
+            "liveWindow": {
+                "hasLaunch": True,
+                "hasWindow": True,
+                "beforeHidden": "true",
+                "afterOpen": True,
+                "ariaOpen": "false",
+                "expanded": "true",
+                "title": True,
+                "basis": True,
+                "afterClose": False,
+                "ariaClose": "true",
             },
         }
 

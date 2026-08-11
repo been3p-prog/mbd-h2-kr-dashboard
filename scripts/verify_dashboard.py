@@ -267,6 +267,18 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'activity-main-inline', 'activity-inline-meta', 'min-height:42px'):
         if marker not in html:
             errors.append(f"missing weekly content marker {marker!r}")
+    # [2026-08-11 correction] 좌측 라이브 탭은 기존 week ledger 인라인 블록이 아니라 별도 창 UI를 연다.
+    for marker in ('data-live-launch', 'aria-controls="liveWindow"',
+                   'id="liveWindow"', 'data-live-window="weekly-performance"',
+                   '라이브 주간 성과 창', '좌측 라이브 탭 전용 UI',
+                   '방송별 데이터 GMV 기준', '총액은 회복됐지만',
+                   '방당 GMV는 -23.6%', 'BAS playbook', 'data-live-close',
+                   'function setLiveWindow(open)'):
+        if marker not in html:
+            errors.append(f"missing live window marker {marker!r}")
+    for marker in ('data-live-weekly-analysis=', '원본 rows 302–308'):
+        if marker in html:
+            errors.append(f"obsolete inline live analysis marker present: {marker!r}")
     for marker in ('.team{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px}',
                    '.team .hd2{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:14px;align-items:center;min-height:108px}',
                    '.team .team-main{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:14px}',

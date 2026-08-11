@@ -248,12 +248,36 @@ tr.hi td .tag{background:#DBEAFE;color:var(--violet)}
   .qv{font-size:32px}
 }
 @media (prefers-reduced-motion:reduce){.week-group summary,.week-chevron{transition:none}}
+
+/* [2026-08-11] 좌측 라이브 탭 클릭 시 열리는 별도 라이브 성과 창 — 기존 주차 ledger와 분리 */
+body.live-window-open{overflow:hidden}
+.live-window{position:fixed;inset:22px 28px 22px 278px;z-index:80;display:none;grid-template-rows:auto minmax(0,1fr);background:rgba(255,255,255,.96);border:1px solid rgba(15,23,42,.10);border-radius:24px;box-shadow:0 24px 70px rgba(15,23,42,.22);overflow:hidden;backdrop-filter:blur(18px);word-break:keep-all;overflow-wrap:break-word}
+.live-window.open{display:grid}
+.live-window::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,#00A1FF,#2563EB,#93C5FD)}
+.live-window-bar{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.88)}
+.live-window-title{display:flex;flex-direction:column;gap:3px}.live-window-title b{font-size:18px;letter-spacing:-.03em}.live-window-title small{font-size:12px;color:var(--sub);font-weight:650}
+.live-window-close{border:1px solid var(--line);background:#fff;color:var(--sub);border-radius:999px;padding:8px 12px;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer}.live-window-close:hover{color:var(--navy);background:#F8FAFC}
+.live-window-body{position:relative;z-index:1;overflow:auto;padding:22px;background:linear-gradient(180deg,#F5F7FA 0%,#FFFFFF 46%,#F5F7FA 100%)}
+.live-hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:18px;align-items:stretch}
+.live-hero-main,.live-hero-side,.live-panel{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}
+.live-hero-main{padding:24px}.live-eyebrow{display:inline-flex;align-items:center;gap:7px;border-radius:999px;background:#F0F8FC;color:#0087D8;padding:7px 11px;font-size:12px;font-weight:850}.live-eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:#00A1FF}
+.live-hero-main h2{margin-top:15px;font-size:30px;line-height:1.18;letter-spacing:-.045em;color:var(--navy)}
+.live-hero-main p{margin-top:10px;color:var(--sub);font-size:14px;line-height:1.75;max-width:720px}.live-hero-main p b{color:var(--navy)}
+.live-kpi-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}.live-kpi{border:1px solid #E8EDF3;border-radius:14px;padding:13px 14px;background:#FAFCFF}.live-kpi small{display:block;color:var(--label);font-size:11px;font-weight:800}.live-kpi b{display:block;margin-top:4px;color:var(--navy);font-size:22px;font-weight:900;letter-spacing:-.045em}.live-kpi em{display:block;margin-top:3px;font-style:normal;color:var(--sub);font-size:11px;font-weight:650}
+.live-hero-side{padding:18px;display:flex;flex-direction:column;gap:12px}.live-window-section-title{font-size:13px;font-weight:900;color:var(--navy);letter-spacing:-.02em}.live-pulse{display:grid;gap:9px}.live-pulse-row{display:grid;grid-template-columns:90px minmax(0,1fr) auto;align-items:center;gap:10px;font-size:12px;color:var(--sub)}.live-pulse-row b{color:var(--navy);font-size:12.5px}.live-pulse-track{height:8px;border-radius:999px;background:#EEF2F7;overflow:hidden}.live-pulse-fill{display:block;height:100%;border-radius:999px;background:#00A1FF}.live-pulse-fill.weak{background:#93C5FD}.live-pulse-fill.risk{background:#EF4444}
+.live-board{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;margin-top:18px}.live-panel{padding:18px}.live-panel h3{font-size:16px;letter-spacing:-.03em;margin-bottom:12px}.live-insights{display:grid;gap:10px}.live-insight{display:grid;grid-template-columns:9px minmax(0,1fr);gap:10px;align-items:start;padding:12px;border-radius:14px;background:#F8FAFC;color:var(--sub);font-size:13px;line-height:1.65}.live-insight::before{content:"";width:9px;height:9px;border-radius:50%;background:#00A1FF;margin-top:6px}.live-insight b{color:var(--navy)}
+.live-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.live-case{border:1px solid #E8EDF3;border-radius:15px;padding:13px;background:#fff}.live-case .tag{display:inline-flex;border-radius:999px;padding:4px 8px;background:#F0F8FC;color:#0087D8;font-size:10.5px;font-weight:900}.live-case .brand{display:block;margin-top:8px;font-size:15px;font-weight:900;color:var(--navy)}.live-case p{margin-top:5px;color:var(--sub);font-size:12px;line-height:1.6}.live-case.risk .tag{background:var(--red-soft);color:var(--red)}
+.live-next{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}.live-next .step{border-radius:14px;background:#F8FAFC;border:1px solid #E8EDF3;padding:12px}.live-next .step b{display:block;font-size:13px}.live-next .step small{display:block;margin-top:5px;color:var(--sub);font-size:11.5px;line-height:1.6}
+.live-source{margin-top:14px;color:var(--label);font-size:11px;font-weight:650}.live-source b{color:var(--sub)}
+@media (max-width:1180px){.live-window{inset:16px 18px 16px 238px}.live-hero,.live-board{grid-template-columns:1fr}.live-kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){.live-window{inset:10px;border-radius:18px}.live-window-bar{padding:15px}.live-window-body{padding:14px}.live-hero-main{padding:18px}.live-hero-main h2{font-size:24px}.live-kpi-strip,.live-card-grid,.live-next{grid-template-columns:1fr}.live-pulse-row{grid-template-columns:74px minmax(0,1fr) auto}}
+
 @media (max-width:700px){.qcells.yt-qcells{grid-template-columns:repeat(2,minmax(0,1fr))}.yt-qcells .qcell{min-height:104px}}
 </style></head><body>
 <div class="app">
   <aside class="side">
     <div class="logo">MBD <b>대시보드</b><span>H2 KR · B22N</span></div><hr>
-    <nav><a class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>대시보드</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>일반광고</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M10 3h4v4a2 2 0 1 0 4 0V3h3v7h-4a2 2 0 1 0 0 4h4v7h-7v-4a2 2 0 1 0-4 0v4H3v-7h4a2 2 0 1 0 0-4H3V3h7z" transform="scale(.9) translate(1.3 1.3)"/></svg>통광마</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h3l2.5 12h11L22 7H7"/><circle cx="10" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>라이브</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10.5 9.5l5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg>유튜브</a></nav>
+    <nav><a class="on" href="#m8" data-nav-home><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>대시보드</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>일반광고</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M10 3h4v4a2 2 0 1 0 4 0V3h3v7h-4a2 2 0 1 0 0 4h4v7h-7v-4a2 2 0 1 0-4 0v4H3v-7h4a2 2 0 1 0 0-4H3V3h7z" transform="scale(.9) translate(1.3 1.3)"/></svg>통광마</a><a href="#live-window" data-live-launch aria-controls="liveWindow" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h3l2.5 12h11L22 7H7"/><circle cx="10" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>라이브</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10.5 9.5l5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg>유튜브</a></nav>
     <div class="side-foot"><div class="t">LIVE · 실데이터</div>
       <div class="s">빌드 08-09 15:56<br>고정 URL 운영본</div></div>
   </aside>
@@ -2128,7 +2152,67 @@ tr.hi td .tag{background:#DBEAFE;color:var(--violet)}
         <a class="sheet" href="https://docs.google.com/spreadsheets/d/1mMkGwBuWr_L0YXvmDlGtPGzpm9kAgk8VQubjC_w52vg/edit?gid=34722178#gid=34722178" target="_blank" rel="noopener">원본 시트 ↗</a></div><div class="content-ledger" data-content-ledger="youtube"><div class="plan-note"><b>월 계획 9건</b> · 상세 일정 미입력 포함 잔여 9건</div><div class="activity-empty">이 월의 상세 일정 없음</div></div></div></div>
     <div class="foot">LIVE 빌드 08-09 15:56 · 매출/목표 = DuckDB 미러(08-09 15:15) · 품질/OKR/온드 = direct Sheet (<a href="https://docs.google.com/spreadsheets/d/1DgciUq9HLVs5Q-vt0GmuDrX8-Yd6T8SxEoRPudPWpPA/edit?gid=43885048#gid=43885048" target="_blank" rel="noopener">OKR ↗</a>)<br>audit: 라이브 GMV 미러 7건 vs Sheet 7건 → lagging (Sheet가 현재값, 현재월 기준) · 일반광고 재계산 = 2026-07-30 공개 스냅샷 이후 신규 부킹 반영분</div>
   </main>
+
 </div>
+<section id="liveWindow" class="live-window" data-live-window="weekly-performance" role="dialog" aria-modal="false" aria-labelledby="liveWindowTitle" aria-hidden="true">
+  <div class="live-window-bar">
+    <div class="live-window-title"><b id="liveWindowTitle">라이브 주간 성과 창</b><small>좌측 라이브 탭 전용 UI · 방송별 데이터 GMV 기준</small></div>
+    <button class="live-window-close" type="button" data-live-close>대시보드로 돌아가기</button>
+  </div>
+  <div class="live-window-body">
+    <div class="live-hero">
+      <section class="live-hero-main" aria-label="8월 1주차 라이브 성과 요약">
+        <span class="live-eyebrow">8월 1주차 · 8/3–8/6 · 완료 7건</span>
+        <h2>총액은 회복됐지만,<br>방송당 효율 회복으로 보긴 어려움</h2>
+        <p><b>방송별 데이터 GMV 1.87억</b>은 WoW +78.3%로 회복됐지만, 진행건수 증가 효과가 컸습니다. 방당 GMV는 -23.6%, 직전 4주 평균 대비 -26.9%라서 다음 주 운영은 “더 많이 편성”보다 <b>상품력·혜택·도달 gate</b>를 먼저 봐야 합니다.</p>
+        <div class="live-kpi-strip num" aria-label="라이브 주간 핵심 지표">
+          <div class="live-kpi"><small>진행</small><b>7건</b><em>전주 +4건</em></div>
+          <div class="live-kpi"><small>방송별 GMV</small><b>1.87억</b><em>WoW +78.3%</em></div>
+          <div class="live-kpi"><small>방당 GMV</small><b>2,666만</b><em>WoW -23.6%</em></div>
+          <div class="live-kpi"><small>시청</small><b>49.2만</b><em>평균 7.0만</em></div>
+          <div class="live-kpi"><small>클릭률</small><b>4.6%</b><em>+1.9%p</em></div>
+          <div class="live-kpi"><small>구매</small><b>1,619</b><em>구매율 0.33%</em></div>
+          <div class="live-kpi"><small>AF 수취액</small><b>5,685만</b><em>비용 1,375만</em></div>
+          <div class="live-kpi"><small>마진</small><b>4,310만</b><em>AF-비용</em></div>
+        </div>
+      </section>
+      <aside class="live-hero-side" aria-label="패키지별 해석">
+        <div class="live-window-section-title">패키지 렌즈</div>
+        <div class="live-pulse num">
+          <div class="live-pulse-row"><b>시그니처</b><span class="live-pulse-track"><i class="live-pulse-fill" style="width:97%"></i></span><span>시청 97%</span></div>
+          <div class="live-pulse-row"><b>시그니처 GMV</b><span class="live-pulse-track"><i class="live-pulse-fill weak" style="width:47%"></i></span><span>46.5%</span></div>
+          <div class="live-pulse-row"><b>에센셜</b><span class="live-pulse-track"><i class="live-pulse-fill" style="width:41%"></i></span><span>GMV 41.2%</span></div>
+          <div class="live-pulse-row"><b>스마트</b><span class="live-pulse-track"><i class="live-pulse-fill weak" style="width:12%"></i></span><span>GMV 12.4%</span></div>
+          <div class="live-pulse-row"><b>신제품 gate</b><span class="live-pulse-track"><i class="live-pulse-fill risk" style="width:26%"></i></span><span>쿠첸 클릭 0.9%</span></div>
+        </div>
+      </aside>
+    </div>
+    <div class="live-board">
+      <section class="live-panel" aria-label="운영 인사이트">
+        <h3>운영 판단</h3>
+        <div class="live-insights">
+          <div class="live-insight"><span><b>시그니처는 도달을 만들었지만 GMV 효율은 약함.</b> 대형 노출이 매출을 자동 보장하지 않으므로 시그니처는 사전수요·혜택·경쟁 라이브 점검이 필요합니다.</span></div>
+          <div class="live-insight"><span><b>에센셜/스마트는 저도달이어도 상품력과 객단가가 맞으면 GMV를 받침.</b> 다우닝처럼 단독 공급·혜택 반응이 있는 고단가 상품은 작은 도달에서도 성과가 납니다.</span></div>
+          <div class="live-insight"><span><b>BAS playbook은 재현 후보.</b> 브랜드 동시 마케팅, 라이브 단독 구성, 시즌성, 저관여 소모품 조합을 다음 편성 체크리스트로 올립니다.</span></div>
+        </div>
+      </section>
+      <section class="live-panel" aria-label="방송별 콜아웃">
+        <h3>방송 콜아웃</h3>
+        <div class="live-card-grid">
+          <div class="live-case"><span class="tag">재현</span><span class="brand">BAS</span><p>도달 15.6만, GMV 3,427만. 브랜드 동시 마케팅+단독 구성+시즌성 조합.</p></div>
+          <div class="live-case"><span class="tag">고GMV</span><span class="brand">다우닝</span><p>저도달 3,722명이어도 GMV 6,045만. 고단가·혜택·상품 전환력 확인.</p></div>
+          <div class="live-case risk"><span class="tag">Gate</span><span class="brand">쿠첸</span><p>도달 16.0만 대비 클릭률 0.9%. 고관여 신제품은 신뢰자산/경쟁편성 사전 점검.</p></div>
+        </div>
+        <div class="live-next">
+          <div class="step"><b>1. 편성 gate</b><small>시그니처는 도달 계획과 구매 이유를 분리 검토</small></div>
+          <div class="step"><b>2. 상품력 우선</b><small>에센셜은 도달보다 단독성·혜택·객단가 우선</small></div>
+          <div class="step"><b>3. 회고 루프</b><small>BAS/다우닝 패턴은 다음 주 후보에 태깅</small></div>
+        </div>
+      </section>
+    </div>
+    <div class="live-source"><b>basis</b> 방송별 데이터 GMV 기준 · 공개 UI용 요약 · 내부 raw/path/회고 전문 미노출</div>
+  </div>
+</section>
 <script>
 
 var tipEl = document.createElement('div'); tipEl.className = 'tip'; document.body.appendChild(tipEl);
@@ -2166,4 +2250,21 @@ document.querySelectorAll('.g').forEach(function(x) {
 });
 var h = location.hash.match(/^#m(\d+)$/);
 showMonth(h ? Math.min(12, Math.max(1, +h[1])) : CUR);
+
+var liveWindow = document.getElementById('liveWindow');
+var liveLaunch = document.querySelector('[data-live-launch]');
+var homeNav = document.querySelector('[data-nav-home]');
+function setLiveWindow(open) {
+  if (!liveWindow) return;
+  liveWindow.classList.toggle('open', open);
+  liveWindow.setAttribute('aria-hidden', open ? 'false' : 'true');
+  document.body.classList.toggle('live-window-open', open);
+  if (liveLaunch) { liveLaunch.classList.toggle('on', open); liveLaunch.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+  if (homeNav) homeNav.classList.toggle('on', !open);
+  tipEl.classList.remove('show');
+}
+if (liveLaunch) liveLaunch.addEventListener('click', function(e) { e.preventDefault(); setLiveWindow(true); });
+if (homeNav) homeNav.addEventListener('click', function(e) { e.preventDefault(); setLiveWindow(false); });
+document.querySelectorAll('[data-live-close]').forEach(function(btn) { btn.addEventListener('click', function() { setLiveWindow(false); }); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') setLiveWindow(false); });
 </script></body></html>

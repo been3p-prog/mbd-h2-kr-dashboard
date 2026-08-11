@@ -65,6 +65,17 @@ def _probe_script(target_month: int) -> str:
         "out.links={live:!!document.querySelector('a[href*=\"1Kw-IMgnP\"]'),"
         "yt:!!document.querySelector('a[href*=\"1mMkGwBuWr\"]'),"
         "okr:!!document.querySelector('a[href*=\"1DgciUq9HLVs\"]')};"
+        "var liveLaunch=document.querySelector('[data-live-launch]');"
+        "var liveWindow=document.querySelector('[data-live-window=\"weekly-performance\"]');"
+        "out.liveWindow={hasLaunch:!!liveLaunch,hasWindow:!!liveWindow,beforeHidden:liveWindow?liveWindow.getAttribute('aria-hidden'):null};"
+        "if(liveLaunch&&liveWindow){liveLaunch.click();out.liveWindow.afterOpen=liveWindow.classList.contains('open');"
+        "out.liveWindow.ariaOpen=liveWindow.getAttribute('aria-hidden');"
+        "out.liveWindow.expanded=liveLaunch.getAttribute('aria-expanded');"
+        "out.liveWindow.title=!!liveWindow.querySelector('#liveWindowTitle');"
+        "out.liveWindow.basis=/방송별 데이터 GMV 기준/.test(liveWindow.textContent||'');"
+        "var close=liveWindow.querySelector('[data-live-close]');if(close){close.click();}"
+        "out.liveWindow.afterClose=liveWindow.classList.contains('open');"
+        "out.liveWindow.ariaClose=liveWindow.getAttribute('aria-hidden');}"
         "var rest=document.querySelector('.mvr[data-m=\"'+sel.value+'\"]');"
         "var futureRoots=document.querySelectorAll('.mv[data-phase=\"future\"]');"
         "var futureForbidden=Array.prototype.reduce.call(futureRoots,function(n,x){"
@@ -199,6 +210,22 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
         links = result.get("links") or {}
         if not all(links.get(k) for k in ("live", "yt", "okr")):
             errors.append(f"{tag}: required source sheet links missing: {links}")
+    live_window = result.get("liveWindow") or {}
+    if not isinstance(live_window, dict):
+        errors.append(f"{tag}: live-window evidence missing")
+    else:
+        if not live_window.get("hasLaunch") or not live_window.get("hasWindow"):
+            errors.append(f"{tag}: live-window launch/window missing: {live_window}")
+        if live_window.get("beforeHidden") != "true":
+            errors.append(f"{tag}: live-window should be hidden before click: {live_window}")
+        if live_window.get("afterOpen") is not True or live_window.get("ariaOpen") != "false":
+            errors.append(f"{tag}: live-window did not open via left nav: {live_window}")
+        if live_window.get("expanded") != "true":
+            errors.append(f"{tag}: live nav aria-expanded not true after click: {live_window}")
+        if live_window.get("title") is not True or live_window.get("basis") is not True:
+            errors.append(f"{tag}: live-window title/basis missing: {live_window}")
+        if live_window.get("afterClose") is not False or live_window.get("ariaClose") != "true":
+            errors.append(f"{tag}: live-window did not close cleanly: {live_window}")
     return errors
 
 
@@ -232,7 +259,7 @@ def main() -> int:
         f"month_switch={current}->{target}; overflow=0; "
         f"css_widths=desktop:{observed_widths.get('desktop')},"
         f"mobile:{observed_widths.get('mobile')}; "
-        "source_links=present; lower_cards=green; future_negative_control=green"
+        "source_links=present; lower_cards=green; live_window=green; future_negative_control=green"
     )
     return 0
 
