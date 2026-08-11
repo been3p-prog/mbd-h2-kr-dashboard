@@ -279,12 +279,15 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'data-live-broadcast-card="downing"', 'data-live-broadcast-card="bas"',
                    'data-live-broadcast-card="hweehwee"', '쿠쿠 셀럽 라이브',
                    '한정 인기 상품은 15~20분 조기 품절', '에어차차 80%',
-                   '컬러 모델 구매 시 화이트 날개 증정 조건'):
+                   '컬러 모델 구매 시 화이트 날개 증정 조건', '가로 풀폭',
+                   '.live-window{position:fixed;inset:16px;',
+                   '@media (max-width:1180px){.live-window{inset:14px}'):
         if marker not in html:
             errors.append(f"missing live window marker {marker!r}")
     if html.count('data-live-broadcast-card=') != 7:
         errors.append(f"live broadcast cards {html.count('data-live-broadcast-card=')} != 7")
-    for marker in ('data-live-weekly-analysis=', '원본 rows 302–308', '공식 회고 전문'):
+    for marker in ('data-live-weekly-analysis=', '원본 rows 302–308', '공식 회고 전문',
+                   'inset:22px 28px 22px 278px', 'inset:16px 18px 16px 238px'):
         if marker in html:
             errors.append(f"obsolete inline/raw live analysis marker present: {marker!r}")
     for marker in ('.team{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px}',

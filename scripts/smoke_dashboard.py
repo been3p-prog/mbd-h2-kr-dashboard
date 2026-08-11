@@ -73,6 +73,8 @@ def _probe_script(target_month: int) -> str:
         "out.liveWindow.expanded=liveLaunch.getAttribute('aria-expanded');"
         "out.liveWindow.title=!!liveWindow.querySelector('#liveWindowTitle');"
         "out.liveWindow.basis=/방송별 데이터 GMV 기준/.test(liveWindow.textContent||'');"
+        "var lr=liveWindow.getBoundingClientRect();out.liveWindow.rect={left:Math.round(lr.left),"
+        "rightGap:Math.round(window.innerWidth-lr.right),width:Math.round(lr.width),viewport:window.innerWidth};"
         "var close=liveWindow.querySelector('[data-live-close]');if(close){close.click();}"
         "out.liveWindow.afterClose=liveWindow.classList.contains('open');"
         "out.liveWindow.ariaClose=liveWindow.getAttribute('aria-hidden');}"
@@ -224,6 +226,24 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
             errors.append(f"{tag}: live nav aria-expanded not true after click: {live_window}")
         if live_window.get("title") is not True or live_window.get("basis") is not True:
             errors.append(f"{tag}: live-window title/basis missing: {live_window}")
+        rect = live_window.get("rect") or {}
+        if not isinstance(rect, dict):
+            errors.append(f"{tag}: live-window full-width rect missing: {live_window}")
+        else:
+            left, right_gap, rect_width, viewport = (
+                rect.get("left"), rect.get("rightGap"), rect.get("width"), rect.get("viewport"))
+            max_gap = 24 if tag == "desktop" else 16
+            if not all(isinstance(value, int) for value in (left, right_gap, rect_width, viewport)):
+                errors.append(f"{tag}: invalid live-window rect metrics: {rect}")
+            else:
+                left_i, right_gap_i, rect_width_i, viewport_i = (
+                    cast(int, left), cast(int, right_gap), cast(int, rect_width), cast(int, viewport))
+                if (left_i > max_gap or right_gap_i > max_gap or
+                        rect_width_i < viewport_i - (max_gap * 2)):
+                    errors.append(
+                        f"{tag}: live-window is not horizontally full width enough "
+                        f"(left={left_i}, rightGap={right_gap_i}, "
+                        f"width={rect_width_i}, viewport={viewport_i})")
         if live_window.get("afterClose") is not False or live_window.get("ariaClose") != "true":
             errors.append(f"{tag}: live-window did not close cleanly: {live_window}")
     return errors
@@ -259,7 +279,8 @@ def main() -> int:
         f"month_switch={current}->{target}; overflow=0; "
         f"css_widths=desktop:{observed_widths.get('desktop')},"
         f"mobile:{observed_widths.get('mobile')}; "
-        "source_links=present; lower_cards=green; live_window=green; future_negative_control=green"
+        "source_links=present; lower_cards=green; live_window=green; "
+        "live_window_full_width=green; future_negative_control=green"
     )
     return 0
 

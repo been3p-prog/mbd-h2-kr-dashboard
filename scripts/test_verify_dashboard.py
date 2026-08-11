@@ -175,12 +175,16 @@ class DashboardGuardTest(unittest.TestCase):
                        'data-live-broadcast-card="downing"', 'data-live-broadcast-card="bas"',
                        'data-live-broadcast-card="hweehwee"', '쿠쿠 셀럽 라이브',
                        '한정 인기 상품은 15~20분 조기 품절', '에어차차 80%',
-                       '컬러 모델 구매 시 화이트 날개 증정 조건'):
+                       '컬러 모델 구매 시 화이트 날개 증정 조건', '가로 풀폭',
+                       '.live-window{position:fixed;inset:16px;',
+                       '@media (max-width:1180px){.live-window{inset:14px'):
             self.assertIn(marker, self.html)
         self.assertEqual(self.html.count('data-live-broadcast-card='), 7)
         self.assertNotIn('data-live-weekly-analysis=', self.html)
         self.assertNotIn('원본 rows 302–308', self.html)
         self.assertNotIn('공식 회고 전문', self.html)
+        self.assertNotIn('inset:22px 28px 22px 278px', self.html)
+        self.assertNotIn('inset:16px 18px 16px 238px', self.html)
 
     def test_live_window_marker_removal_fails(self):
         bad = self.html.replace('data-live-window="weekly-performance"', 'data-live-window="removed"', 1)
@@ -461,6 +465,7 @@ class SmokeViewportPolicyTest(unittest.TestCase):
                 "expanded": "true",
                 "title": True,
                 "basis": True,
+                "rect": {"left": 10, "rightGap": 10, "width": width - 20, "viewport": width},
                 "afterClose": False,
                 "ariaClose": "true",
             },
@@ -481,6 +486,12 @@ class SmokeViewportPolicyTest(unittest.TestCase):
         result.pop("lower")
         errors = sd._check_viewport(result, 390, 844, "mobile", switch_expected=None)
         self.assertTrue(any("lower-card" in e for e in errors))
+
+    def test_live_window_not_full_width_fails(self):
+        result = self._result(1440)
+        result["liveWindow"]["rect"] = {"left": 278, "rightGap": 28, "width": 1134, "viewport": 1440}
+        errors = sd._check_viewport(result, 1440, 900, "desktop", switch_expected=None)
+        self.assertTrue(any("not horizontally full width" in e for e in errors), errors)
 
     def test_future_forbidden_labels_fail(self):
         result = self._result(390)
