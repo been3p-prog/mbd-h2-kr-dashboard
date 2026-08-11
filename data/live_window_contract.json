@@ -1,0 +1,75 @@
+{
+  "contract_id": "mbd-live-window-2026-08-w1-v1",
+  "source": {
+    "sheet_name": "[MBD] 라이브커머스 마스터시트",
+    "spreadsheet_id": "1Kw-IMgnP_kj0qY3q8thqsrPQ_KQvypTAX3hT5J-Gp4Q",
+    "tab": "[DB]구좌 RAW",
+    "header_row": 25,
+    "period": "2026-08-03~2026-08-06",
+    "sheet_rows": [302, 303, 304, 305, 306, 307, 308]
+  },
+  "rules": {
+    "broadcast_card_amount": {
+      "label": "거래액",
+      "visible_prefix": "1D",
+      "source_column": "일 전체 GMV (라이브 브랜드 전체)"
+    },
+    "weekly_efficiency": {
+      "labels": ["방송별 GMV", "방당 GMV"],
+      "source_column": "방송별 데이터 GMV"
+    },
+    "during_live": {
+      "label": "1H",
+      "source_column": "라이브 1H GMV"
+    }
+  },
+  "required_copy": [
+    "거래액 기준 분리",
+    "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 방송간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
+    "시청 · 클릭률 · 구매 · 1D 거래액을 한 장에서 비교",
+    "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
+    "상단 주간/방당 효율=`방송별 데이터 GMV`",
+    "generic GMV 표기 금지"
+  ],
+  "forbidden_in_live_window": [
+    "6,045만",
+    "방송GMV",
+    "방송GMV 6,045만",
+    "방송GMV 6,045만 · 1D 1.41억",
+    "<small>방송GMV</small>",
+    "카드 거래액은 1D 거래액 기준"
+  ],
+  "hero_kpis": [
+    {"label": "진행", "value": "7건", "em": "전주 +4건", "source_basis": "count rows 302-308"},
+    {"label": "방송별 GMV", "value": "1.87억", "em": "WoW +78.3%", "source_basis": "sum 방송별 데이터 GMV"},
+    {"label": "방당 GMV", "value": "2,666만", "em": "WoW -23.6%", "source_basis": "avg 방송별 데이터 GMV per broadcast"},
+    {"label": "시청", "value": "49.2만", "em": "평균 7.0만", "source_basis": "sum/avg 라이브 시청자 (비로그인 포함)"},
+    {"label": "클릭률", "value": "4.6%", "em": "+1.9%p", "source_basis": "sum 상품 클릭수 / sum live viewers"},
+    {"label": "구매", "value": "1,619", "em": "구매율 0.33%", "source_basis": "sum 라이브 구매자수"},
+    {"label": "AF 수취액", "value": "5,685만", "em": "비용 1,375만", "source_basis": "sum AF수취액 / 비용"},
+    {"label": "마진", "value": "4,310만", "em": "AF-비용", "source_basis": "AF수취액 - 비용"}
+  ],
+  "required_narrative": [
+    "방송별 데이터 GMV 1.87억",
+    "WoW +78.3%",
+    "방당 GMV는 -23.6%",
+    "직전 4주 평균 대비 -26.9%",
+    "저도달 3,722명이어도 1D 거래액 1.41억"
+  ],
+  "package_lens": [
+    {"label": "시그니처", "value": "시청 97%", "source_basis": "시그니처 viewer share"},
+    {"label": "시그니처 GMV", "value": "46.5%", "source_basis": "시그니처 방송별 데이터 GMV share"},
+    {"label": "에센셜", "value": "GMV 41.2%", "source_basis": "에센셜 방송별 데이터 GMV share"},
+    {"label": "스마트", "value": "GMV 12.4%", "source_basis": "스마트 방송별 데이터 GMV share"},
+    {"label": "신제품 gate", "value": "쿠첸 클릭 0.9%", "source_basis": "쿠첸 상품 클릭수 / viewers"}
+  ],
+  "broadcast_cards": {
+    "frosch": {"brand": "프로쉬", "meta": "8/3 · Minnie · 시그니처 · 어서오!세일", "sheet_row": 302, "metrics": {"시청": "16.1만", "클릭률": "5.5%", "구매": "737", "거래액": "1D 8,630만"}, "source_won": {"일 전체 GMV (라이브 브랜드 전체)": 86299200, "방송별 데이터 GMV": 31506080}},
+    "cuchen": {"brand": "쿠첸", "meta": "8/4 · Jeff · 시그니처 · 오늘it집", "sheet_row": 303, "metrics": {"시청": "16.0만", "클릭률": "0.9%", "구매": "59", "거래액": "1D 3,846만"}, "source_won": {"일 전체 GMV (라이브 브랜드 전체)": 38457185, "방송별 데이터 GMV": 20958710}},
+    "pampers": {"brand": "팸퍼스", "meta": "8/5 · Jeff · 스마트 · 어서오!세일", "sheet_row": 304, "metrics": {"시청": "3,364", "클릭률": "42.9%", "구매": "131", "거래액": "1D 6,659만"}, "source_won": {"일 전체 GMV (라이브 브랜드 전체)": 66589800, "방송별 데이터 GMV": 23046100}},
+    "truecook": {"brand": "트루쿡", "meta": "8/5 · 외주 · 에센셜 · 어서오!세일", "sheet_row": 305, "metrics": {"시청": "3,397", "클릭률": "43.8%", "구매": "78", "거래액": "1D 2,806만"}, "source_won": {"일 전체 GMV (라이브 브랜드 전체)": 28064550, "방송별 데이터 GMV": 9806800}},
+    "downing": {"brand": "다우닝", "meta": "8/5 · 외주 · 에센셜 · 어서오!세일", "sheet_row": 306, "metrics": {"시청": "3,722", "클릭률": "30.5%", "구매": "30", "거래액": "1D 1.41억"}, "source_won": {"일 전체 GMV (라이브 브랜드 전체)": 141286085, "방송별 데이터 GMV": 60449660}},
+    "bas": {"brand": "BAS", "meta": "8/6 · Jeff · 시그니처 · 어서오!세일", "sheet_row": 307, "metrics": {"시청": "15.6만", "클릭률": "4.8%", "구매": "563", "거래액": "1D 6,374만"}, "source_won": {"일 전체 GMV (라이브 브랜드 전체)": 63739900, "방송별 데이터 GMV": 34273200}},
+    "hweehwee": {"brand": "휘휘", "meta": "8/6 · 외주 · 에센셜 · 어서오!세일", "sheet_row": 308, "metrics": {"시청": "3,936", "클릭률": "20.0%", "구매": "21", "거래액": "1D 1,281만"}, "source_won": {"일 전체 GMV (라이브 브랜드 전체)": 12805000, "방송별 데이터 GMV": 6565000}}
+  }
+}
