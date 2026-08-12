@@ -95,6 +95,7 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertNotIn('YouTube Analytics 원천 미적재', self.html)
         self.assertNotIn('data-yt-channel-overview=', self.html)
         self.assertIn('data-adgen-booking-rate=', self.html)
+        self.assertIn('비취소 부킹률', self.html)
         self.assertIn('비취소 부킹건수 ÷ 부킹건수 목표', self.html)
         self.assertIn('data-live-revenue-breakdown=', self.html)
         self.assertIn('data-live-package-mom=', self.html)

@@ -363,8 +363,8 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         if marker not in html:
             errors.append(f"missing quality-card MoM marker {marker!r}")
 
-    # [2026-08-09/10] 일반광고 부킹률과 라이브 package 매출/진행건수 팝업 구조의 공개 DOM 회귀 방지.
-    for marker in ('data-adgen-booking-rate=', '부킹률', '비취소 부킹건수 ÷ 부킹건수 목표',
+    # [2026-08-09/10] 일반광고 비취소 부킹률과 라이브 package 매출/진행건수 팝업 구조의 공개 DOM 회귀 방지.
+    for marker in ('data-adgen-booking-rate=', '비취소 부킹률', '비취소 부킹건수 ÷ 부킹건수 목표',
                    'data-live-revenue-breakdown=', 'data-live-package-mom=', '패키지별 매출',
                    'MoM ', '패키지 총액 = AF 패키지비', '진행건수 = 확정 편성건',
                    'data-live-progress-count=', 'data-live-package-count=',
