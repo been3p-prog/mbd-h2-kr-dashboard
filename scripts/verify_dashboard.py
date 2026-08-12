@@ -290,6 +290,36 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
             errors.append(f"missing live window marker {marker!r}")
     if html.count('data-live-broadcast-card=') != 7:
         errors.append(f"live broadcast cards {html.count('data-live-broadcast-card=')} != 7")
+
+    # [2026-08-12 correction] 좌측 유튜브 탭도 기존 월별 ledger가 아니라 전용 주간리포팅 창을 연다.
+    for marker in ('data-yt-launch', 'aria-controls="youtubeWindow"',
+                   'id="youtubeWindow"', 'data-yt-window="weekly-detail"',
+                   '유튜브 주간 리포팅 창', '좌측 유튜브 탭 전용 UI',
+                   'D+1~D+7 rolling benchmark', 'function setYoutubeWindow(open)',
+                   'data-yt-close', 'LF 비포애프터가 주간 성장 대부분',
+                   '동일 D+N × LF/SF × IP', 'public snapshot 기준 2026-08-11 23:57 KST',
+                   'data-yt-weekly-card="beforeafter-lf-ep91"',
+                   'data-yt-weekly-card="nationhome-lf-ep9"',
+                   'data-yt-weekly-card="beforeafter-sf-room"',
+                   'data-yt-weekly-card="beforeafter-sf-deposit"',
+                   'data-yt-weekly-card="nationhome-sf-storage"',
+                   '5평 원룸 공간 4개로 나눠 쓰는 방법 | 비포애프터 ep.91',
+                   '388,292', 'P90+', '1000/50부터 시작해서 인테리어에만 1억 7천 쓴 역대급 집',
+                   '보조 기여는 있으나 LF 히트로 보긴 어려움',
+                   'SF 전국내집자랑 -123.0K', '혼수의기술 기발행 쇼츠 재상승',
+                   '.yt-window{position:fixed;inset:16px;',
+                   '@media (max-width:1180px){.yt-window{inset:14px'):
+        if marker not in html:
+            errors.append(f"missing youtube window marker {marker!r}")
+    if html.count('data-yt-weekly-card=') != 5:
+        errors.append(f"youtube weekly cards {html.count('data-yt-weekly-card=')} != 5")
+    for marker in ('data-yt-weekly-analysis-raw=', 'youtube_views.duckdb',
+                   'fact_public_dplusn_', 'v_public_dplusn_',
+                   'client_secret_', 'secrets/youtube', 'NOT_AUTHENTICATED',
+                   'inline 유튜브 주간 분석'):
+        if marker in html:
+            errors.append(f"obsolete inline/raw youtube analysis marker present: {marker!r}")
+
     for marker in ('data-live-weekly-analysis=', '원본 rows 302–308', '공식 회고 전문',
                    '방송GMV 6,045만', '<small>방송GMV</small><b>6,045만</b>',
                    '방송별 카드/방당 효율=`방송별 데이터 GMV`',

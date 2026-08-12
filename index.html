@@ -276,12 +276,22 @@ body.live-window-open{overflow:hidden}
 @media (max-width:1180px){.live-window{inset:14px}.live-hero,.live-board,.live-broadcast-grid{grid-template-columns:1fr}.live-kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:720px){.live-window{inset:10px;border-radius:18px}.live-window-bar{padding:15px}.live-window-body{padding:14px}.live-hero-main{padding:18px}.live-hero-main h2{font-size:24px}.live-kpi-strip,.live-card-grid,.live-next,.live-broadcast-grid{grid-template-columns:1fr}.live-broadcast-head{display:block}.live-broadcast-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.live-mix-row{padding:10px}}
 
+/* [2026-08-12] 좌측 유튜브 탭 클릭 시 열리는 별도 주간리포팅 창 — D+1~D+7 벤치마크 기반 */
+body.live-window-open,body.yt-window-open{overflow:hidden}
+.yt-window{position:fixed;inset:16px;z-index:82;display:none;grid-template-rows:auto minmax(0,1fr);background:rgba(255,255,255,.97);border:1px solid rgba(15,23,42,.10);border-radius:24px;box-shadow:0 24px 70px rgba(15,23,42,.22);overflow:hidden;backdrop-filter:blur(18px);word-break:keep-all;overflow-wrap:break-word}
+.yt-window.open{display:grid}.yt-window::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,#EF4444,#F97316,#FDE68A)}
+.yt-window-bar{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.90)}
+.yt-window-title{display:flex;flex-direction:column;gap:3px}.yt-window-title b{font-size:18px;letter-spacing:-.03em}.yt-window-title small{font-size:12px;color:var(--sub);font-weight:650}.yt-window-close{border:1px solid var(--line);background:#fff;color:var(--sub);border-radius:999px;padding:8px 12px;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer}.yt-window-close:hover{color:var(--navy);background:#F8FAFC}
+.yt-window-body{position:relative;z-index:1;overflow:auto;padding:22px;background:linear-gradient(180deg,#FFF7ED 0%,#FFFFFF 42%,#F5F7FA 100%)}.yt-hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:18px;align-items:stretch}.yt-hero-main,.yt-hero-side,.yt-panel{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}.yt-hero-main{padding:24px}.yt-eyebrow{display:inline-flex;align-items:center;gap:7px;border-radius:999px;background:#FFF1F2;color:#E11D48;padding:7px 11px;font-size:12px;font-weight:850}.yt-eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:#EF4444}.yt-hero-main h2{margin-top:15px;font-size:30px;line-height:1.18;letter-spacing:-.045em;color:var(--navy)}.yt-hero-main p{margin-top:10px;color:var(--sub);font-size:14px;line-height:1.75;max-width:760px}.yt-hero-main p b{color:var(--navy)}.yt-kpi-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}.yt-kpi{border:1px solid #E8EDF3;border-radius:14px;padding:13px 14px;background:#FAFCFF}.yt-kpi small{display:block;color:var(--label);font-size:11px;font-weight:800}.yt-kpi b{display:block;margin-top:4px;color:var(--navy);font-size:22px;font-weight:900;letter-spacing:-.045em}.yt-kpi em{display:block;margin-top:3px;font-style:normal;color:var(--sub);font-size:11px;font-weight:650}.yt-hero-side{padding:18px;display:flex;flex-direction:column;gap:12px}.yt-window-section-title{font-size:13px;font-weight:900;color:var(--navy);letter-spacing:-.02em}.yt-bench-list{display:grid;gap:9px}.yt-bench-row{border:1px solid #E8EDF3;border-radius:13px;background:#F8FAFC;padding:10px 11px}.yt-bench-row b{display:block;color:var(--navy);font-size:12.5px}.yt-bench-row small{display:block;margin-top:4px;color:var(--sub);font-size:11.5px;line-height:1.55}.yt-board{display:grid;grid-template-columns:.9fr 1.1fr;gap:18px;margin-top:18px}.yt-panel{padding:18px}.yt-panel h3{font-size:16px;letter-spacing:-.03em;margin-bottom:12px}.yt-insights{display:grid;gap:10px}.yt-insight{display:grid;grid-template-columns:9px minmax(0,1fr);gap:10px;align-items:start;padding:12px;border-radius:14px;background:#F8FAFC;color:var(--sub);font-size:13px;line-height:1.65}.yt-insight::before{content:"";width:9px;height:9px;border-radius:50%;background:#EF4444;margin-top:6px}.yt-insight b{color:var(--navy)}.yt-driver-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.yt-driver{border:1px solid #E8EDF3;border-radius:15px;background:#fff;padding:13px}.yt-driver .tag{display:inline-flex;border-radius:999px;padding:4px 8px;background:#FFF1F2;color:#E11D48;font-size:10.5px;font-weight:900}.yt-driver .tag.down{background:var(--blue-soft);color:var(--blue)}.yt-driver b{display:block;margin-top:8px;font-size:18px;color:var(--navy);letter-spacing:-.03em}.yt-driver small{display:block;margin-top:4px;color:var(--sub);font-size:11.5px;line-height:1.5}.yt-weekly-panel{margin-top:18px}.yt-weekly-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:13px}.yt-weekly-head h3{margin:0}.yt-weekly-head small{display:block;color:var(--sub);font-size:11.5px;font-weight:650;line-height:1.6}.yt-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.yt-weekly-card{border:1px solid #E8EDF3;border-radius:16px;background:#fff;padding:14px;display:grid;gap:10px}.yt-weekly-card.hit{border-color:#FECACA;background:#FFF8F8}.yt-weekly-card.watch{border-color:#BFDBFE;background:#F8FBFF}.yt-weekly-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.yt-weekly-title b{display:block;font-size:15px;color:var(--navy);letter-spacing:-.03em;line-height:1.35}.yt-weekly-title small{display:block;margin-top:3px;color:var(--label);font-size:11px;font-weight:700}.yt-tier{display:inline-flex;white-space:nowrap;border-radius:999px;padding:5px 8px;background:#FFF1F2;color:#E11D48;font-size:10.5px;font-weight:900}.yt-weekly-card.watch .yt-tier{background:var(--blue-soft);color:var(--blue)}.yt-weekly-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.yt-weekly-metrics span{border-radius:11px;background:#F8FAFC;padding:8px 9px}.yt-weekly-metrics small{display:block;color:var(--label);font-size:10px;font-weight:800}.yt-weekly-metrics b{display:block;margin-top:2px;color:var(--navy);font-size:13px;font-weight:900;letter-spacing:-.035em}.yt-card-note{border-radius:12px;background:#F8FAFC;color:var(--sub);padding:10px 11px;font-size:12.5px;line-height:1.62}.yt-card-note b{color:var(--navy)}.yt-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}.yt-actions .step{border-radius:14px;background:#F8FAFC;border:1px solid #E8EDF3;padding:12px}.yt-actions .step b{display:block;font-size:13px}.yt-actions .step small{display:block;margin-top:5px;color:var(--sub);font-size:11.5px;line-height:1.6}.yt-source{margin-top:14px;color:var(--label);font-size:11px;font-weight:650}.yt-source b{color:var(--sub)}
+@media (max-width:1180px){.yt-window{inset:14px}.yt-hero,.yt-board{grid-template-columns:1fr}.yt-kpi-strip,.yt-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){.yt-window{inset:10px;border-radius:18px}.yt-window-bar{padding:15px}.yt-window-body{padding:14px}.yt-hero-main{padding:18px}.yt-hero-main h2{font-size:24px}.yt-kpi-strip,.yt-driver-grid,.yt-card-grid,.yt-actions{grid-template-columns:1fr}.yt-weekly-head{display:block}.yt-weekly-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 @media (max-width:700px){.qcells.yt-qcells{grid-template-columns:repeat(2,minmax(0,1fr))}.yt-qcells .qcell{min-height:104px}}
 </style></head><body>
 <div class="app">
   <aside class="side">
     <div class="logo">MBD <b>대시보드</b><span>H2 KR · B22N</span></div><hr>
-    <nav><a class="on" href="#m8" data-nav-home><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>대시보드</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>일반광고</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M10 3h4v4a2 2 0 1 0 4 0V3h3v7h-4a2 2 0 1 0 0 4h4v7h-7v-4a2 2 0 1 0-4 0v4H3v-7h4a2 2 0 1 0 0-4H3V3h7z" transform="scale(.9) translate(1.3 1.3)"/></svg>통광마</a><a href="#live-window" data-live-launch aria-controls="liveWindow" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h3l2.5 12h11L22 7H7"/><circle cx="10" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>라이브</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10.5 9.5l5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg>유튜브</a></nav>
+    <nav><a class="on" href="#m8" data-nav-home><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>대시보드</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>일반광고</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M10 3h4v4a2 2 0 1 0 4 0V3h3v7h-4a2 2 0 1 0 0 4h4v7h-7v-4a2 2 0 1 0-4 0v4H3v-7h4a2 2 0 1 0 0-4H3V3h7z" transform="scale(.9) translate(1.3 1.3)"/></svg>통광마</a><a href="#live-window" data-live-launch aria-controls="liveWindow" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h3l2.5 12h11L22 7H7"/><circle cx="10" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>라이브</a><a href="#youtube-window" data-yt-launch aria-controls="youtubeWindow" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10.5 9.5l5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg>유튜브</a></nav>
     <div class="side-foot"><div class="t">LIVE · 실데이터</div>
       <div class="s">빌드 08-09 15:56<br>고정 URL 운영본</div></div>
   </aside>
@@ -2158,6 +2168,93 @@ body.live-window-open{overflow:hidden}
   </main>
 
 </div>
+<section id="youtubeWindow" class="yt-window" data-yt-window="weekly-detail" role="dialog" aria-modal="false" aria-labelledby="youtubeWindowTitle" aria-hidden="true">
+  <div class="yt-window-bar">
+    <div class="yt-window-title"><b id="youtubeWindowTitle">유튜브 주간 리포팅 창</b><small>좌측 유튜브 탭 전용 UI · D+1~D+7 rolling benchmark</small></div>
+    <button class="yt-window-close" type="button" data-yt-close>대시보드로 돌아가기</button>
+  </div>
+  <div class="yt-window-body">
+    <div class="yt-hero">
+      <section class="yt-hero-main" aria-label="8월 1주차 유튜브 주간 성과 요약">
+        <span class="yt-eyebrow">8월 1주차 · 8/3–8/9 · 발행 7건</span>
+        <h2>LF 비포애프터가 주간 성장 대부분을 만들고, SF는 신규 효율보다 기발행 재상승이 큰 주</h2>
+        <p><b>주간 판단:</b> 조회 성장의 1차 동인은 LF 신작 <b>비포애프터 ep.91</b>입니다. SF는 발행량은 있었지만 신규 쇼츠 효율이 넓게 터진 주는 아니고, <b>혼수의기술 기발행 쇼츠 재상승</b>이 보조 상승을 만들었습니다.</p>
+        <div class="yt-kpi-strip num">
+          <div class="yt-kpi"><small>발행</small><b>7건</b><em>LF 2 · SF 5</em></div>
+          <div class="yt-kpi"><small>D+N 최신 누적</small><b>49.6만</b><em>D+1~D+7 도래 기준</em></div>
+          <div class="yt-kpi"><small>LF 기여</small><b>42.1만</b><em>85.0% · 비포애프터 중심</em></div>
+          <div class="yt-kpi"><small>SF 기여</small><b>7.4만</b><em>15.0% · 신규 쇼츠 약세</em></div>
+        </div>
+      </section>
+      <aside class="yt-hero-side" aria-label="D+N 기준 업데이트 상태">
+        <div class="yt-window-section-title">D+1~D+7 기준 업데이트 상태</div>
+        <div class="yt-bench-list">
+          <div class="yt-bench-row"><b>벤치마크 기준</b><small>동일 D+N × LF/SF × IP(depth2) P50/P75/P90. IP 표본이 작으면 ALL 보조 기준으로 낮춰 해석.</small></div>
+          <div class="yt-bench-row"><b>판정 룰</b><small>P50 미만=보수 / P75 이상=잘 나옴 / P90 이상=히트 후보. n&lt;5는 표본 작음 표시.</small></div>
+          <div class="yt-bench-row"><b>업데이트</b><small>public snapshot 기준 2026-08-11 23:57 KST 반영. D+N 미도래 콘텐츠는 collecting으로 표시.</small></div>
+        </div>
+      </aside>
+    </div>
+    <div class="yt-board">
+      <section class="yt-panel" aria-label="주간 판단">
+        <h3>이번 주 판단</h3>
+        <div class="yt-insights">
+          <div class="yt-insight"><span><b>상승은 LF 신작 집중형.</b> 비포애프터 ep.91이 D+7 38.8만으로 같은 IP P90을 넘겼고, 주간 총평의 핵심입니다.</span></div>
+          <div class="yt-insight"><span><b>SF는 넓은 개선 아님.</b> 신규 SF 5건 중 일부는 P50~P75권, 전국내집자랑 SF는 P50 미만이라 포맷 전체 회복으로 보긴 어렵습니다.</span></div>
+          <div class="yt-insight"><span><b>기발행 재상승 분리 필요.</b> 혼수의기술 SF 기발행 영상이 +13.8만을 보탰지만, 신규 주간 콘텐츠 품질과는 별도 신호입니다.</span></div>
+        </div>
+      </section>
+      <section class="yt-panel" aria-label="콘텐츠 드라이버">
+        <h3>뎁스/IP 드라이버</h3>
+        <div class="yt-driver-grid num">
+          <div class="yt-driver"><span class="tag">상승</span><b>LF 비포애프터 +328.0K</b><small>ep.91 신작 히트가 LF 성장을 대부분 설명.</small></div>
+          <div class="yt-driver"><span class="tag">상승</span><b>SF 혼수의기술 +137.6K</b><small>기발행 쇼츠 재상승. 신규 발행 성과와 분리해서 봐야 함.</small></div>
+          <div class="yt-driver"><span class="tag down">하락</span><b>SF 전국내집자랑 -123.0K</b><small>전주 히트 쇼츠 소진 영향. 이번 주 신규 SF는 보수 판정.</small></div>
+          <div class="yt-driver"><span class="tag down">하락</span><b>SF 비포애프터 -28.1K</b><small>LF 비포애프터와 달리 SF 비포애프터는 포맷 전환력이 약했음.</small></div>
+        </div>
+      </section>
+    </div>
+    <section class="yt-panel yt-weekly-panel" aria-label="D+N 콘텐츠 판정">
+      <div class="yt-weekly-head">
+        <h3>D+N 콘텐츠 판정</h3>
+        <small>각 카드는 동일 D+N × LF/SF × IP 벤치마크와 비교. `표본 작음`은 방향성 참고만.</small>
+      </div>
+      <div class="yt-card-grid num">
+        <article class="yt-weekly-card hit" data-yt-weekly-card="beforeafter-lf-ep91">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=NFd8lN83gWw" target="_blank" rel="noopener">5평 원룸 공간 4개로 나눠 쓰는 방법 | 비포애프터 ep.91<span aria-hidden="true">↗</span></a></b><small>LF · 비포애프터 · D+7</small></div><span class="yt-tier">P90+</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>388,292</b></span><span><small>P50</small><b>244,080</b></span><span><small>P75</small><b>316,186</b></span><span><small>P90</small><b>359,450</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> 이번 주 대표 히트. LF 비포애프터 후속/파생 쇼츠까지 같이 체크.</div>
+        </article>
+        <article class="yt-weekly-card watch" data-yt-weekly-card="nationhome-lf-ep9">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=VpP_AYE1EBg" target="_blank" rel="noopener">1000/50부터 시작해서 인테리어에만 1억 7천 쓴 역대급 집<span aria-hidden="true">↗</span></a></b><small>LF · 전국내집자랑 · D+5</small></div><span class="yt-tier">P50↓</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>33,184</b></span><span><small>P50</small><b>37,615</b></span><span><small>P75</small><b>39,831</b></span><span><small>P90</small><b>41,160</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> 보조 기여는 있으나 LF 히트로 보긴 어려움. 제목/초반 유지율 확인 필요.</div>
+        </article>
+        <article class="yt-weekly-card" data-yt-weekly-card="beforeafter-sf-room">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=hBVJCDFxzcE" target="_blank" rel="noopener">5평 원룸을 4개의 공간으로 나눌 수 있을까?<span aria-hidden="true">↗</span></a></b><small>SF · 비포애프터 · D+6</small></div><span class="yt-tier">P75</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>32,562</b></span><span><small>P50</small><b>18,356</b></span><span><small>P75</small><b>32,562</b></span><span><small>P90</small><b>36,247</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> 같은 IP 안에서는 선방. 다만 주간 전체를 끌 정도의 P90권은 아님.</div>
+        </article>
+        <article class="yt-weekly-card" data-yt-weekly-card="beforeafter-sf-deposit">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=h0IbWds1vcg" target="_blank" rel="noopener">전세금을 못 돌려 받아서 그냥 살기로 했습니다<span aria-hidden="true">↗</span></a></b><small>SF · 비포애프터 · D+7</small></div><span class="yt-tier">P50~P75</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>18,837</b></span><span><small>P50</small><b>14,445</b></span><span><small>P75</small><b>24,068</b></span><span><small>P90</small><b>33,485</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> 안정권이지만 확산형 히트는 아님. 소재 hook은 유지, 시리즈 반복성 확인.</div>
+        </article>
+        <article class="yt-weekly-card watch" data-yt-weekly-card="nationhome-sf-storage">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=4GZzqqJHHSc" target="_blank" rel="noopener">벽인 줄 알았어요! 벽 속 수납공간<span aria-hidden="true">↗</span></a></b><small>SF · 전국내집자랑 · D+4</small></div><span class="yt-tier">P50↓</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>10,577</b></span><span><small>P50</small><b>13,133</b></span><span><small>P75</small><b>15,932</b></span><span><small>P90</small><b>16,431</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> SF 전국내집자랑은 전주 히트 소진 대비 신규 모멘텀이 약함.</div>
+        </article>
+      </div>
+      <div class="yt-actions">
+        <div class="step"><b>다음 주 1</b><small>비포애프터 ep.91 잔존 조회와 파생 SF 전환을 추적.</small></div>
+        <div class="step"><b>다음 주 2</b><small>SF 전국내집자랑은 P50 미만 소재를 hook/초반 컷 기준으로 재점검.</small></div>
+        <div class="step"><b>다음 주 3</b><small>혼수의기술 재상승은 기발행 library signal로 분리해 재활용 후보만 표시.</small></div>
+      </div>
+      <div class="yt-source"><b>데이터 기준:</b> MBD YT SSOT + public snapshot D+1~D+7 benchmark · 주간 판단용 sanitized view</div>
+    </section>
+  </div>
+</section>
 <section id="liveWindow" class="live-window" data-live-window="weekly-performance" role="dialog" aria-modal="false" aria-labelledby="liveWindowTitle" aria-hidden="true">
   <div class="live-window-bar">
     <div class="live-window-title"><b id="liveWindowTitle">라이브 주간 성과 창</b><small>좌측 라이브 탭 전용 UI · 거래액 기준 분리</small></div>
@@ -2311,18 +2408,42 @@ showMonth(h ? Math.min(12, Math.max(1, +h[1])) : CUR);
 
 var liveWindow = document.getElementById('liveWindow');
 var liveLaunch = document.querySelector('[data-live-launch]');
+var youtubeWindow = document.getElementById('youtubeWindow');
+var youtubeLaunch = document.querySelector('[data-yt-launch]');
 var homeNav = document.querySelector('[data-nav-home]');
+function setHomeActive() {
+  var anyOpen = (liveWindow && liveWindow.classList.contains('open')) || (youtubeWindow && youtubeWindow.classList.contains('open'));
+  if (homeNav) homeNav.classList.toggle('on', !anyOpen);
+}
+function setYoutubeWindow(open) {
+  if (!youtubeWindow) return;
+  if (open && liveWindow) {
+    liveWindow.classList.remove('open');
+    liveWindow.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('live-window-open');
+    if (liveLaunch) { liveLaunch.classList.remove('on'); liveLaunch.setAttribute('aria-expanded', 'false'); }
+  }
+  youtubeWindow.classList.toggle('open', open);
+  youtubeWindow.setAttribute('aria-hidden', open ? 'false' : 'true');
+  document.body.classList.toggle('yt-window-open', open);
+  if (youtubeLaunch) { youtubeLaunch.classList.toggle('on', open); youtubeLaunch.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+  setHomeActive();
+  tipEl.classList.remove('show');
+}
 function setLiveWindow(open) {
   if (!liveWindow) return;
+  if (open && youtubeWindow) setYoutubeWindow(false);
   liveWindow.classList.toggle('open', open);
   liveWindow.setAttribute('aria-hidden', open ? 'false' : 'true');
   document.body.classList.toggle('live-window-open', open);
   if (liveLaunch) { liveLaunch.classList.toggle('on', open); liveLaunch.setAttribute('aria-expanded', open ? 'true' : 'false'); }
-  if (homeNav) homeNav.classList.toggle('on', !open);
+  setHomeActive();
   tipEl.classList.remove('show');
 }
 if (liveLaunch) liveLaunch.addEventListener('click', function(e) { e.preventDefault(); setLiveWindow(true); });
-if (homeNav) homeNav.addEventListener('click', function(e) { e.preventDefault(); setLiveWindow(false); });
+if (youtubeLaunch) youtubeLaunch.addEventListener('click', function(e) { e.preventDefault(); setYoutubeWindow(true); });
+if (homeNav) homeNav.addEventListener('click', function(e) { e.preventDefault(); setLiveWindow(false); setYoutubeWindow(false); });
 document.querySelectorAll('[data-live-close]').forEach(function(btn) { btn.addEventListener('click', function() { setLiveWindow(false); }); });
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') setLiveWindow(false); });
+document.querySelectorAll('[data-yt-close]').forEach(function(btn) { btn.addEventListener('click', function() { setYoutubeWindow(false); }); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { setLiveWindow(false); setYoutubeWindow(false); } });
 </script></body></html>

@@ -78,6 +78,22 @@ def _probe_script(target_month: int) -> str:
         "var close=liveWindow.querySelector('[data-live-close]');if(close){close.click();}"
         "out.liveWindow.afterClose=liveWindow.classList.contains('open');"
         "out.liveWindow.ariaClose=liveWindow.getAttribute('aria-hidden');}"
+        "var ytLaunch=document.querySelector('[data-yt-launch]');"
+        "var ytWindow=document.querySelector('[data-yt-window=\"weekly-detail\"]');"
+        "out.youtubeWindow={hasLaunch:!!ytLaunch,hasWindow:!!ytWindow,beforeHidden:ytWindow?ytWindow.getAttribute('aria-hidden'):null};"
+        "if(ytLaunch&&ytWindow){if(liveLaunch&&liveWindow){liveLaunch.click();}ytLaunch.click();"
+        "out.youtubeWindow.afterOpen=ytWindow.classList.contains('open');"
+        "out.youtubeWindow.ariaOpen=ytWindow.getAttribute('aria-hidden');"
+        "out.youtubeWindow.expanded=ytLaunch.getAttribute('aria-expanded');"
+        "out.youtubeWindow.title=!!ytWindow.querySelector('#youtubeWindowTitle');"
+        "out.youtubeWindow.basis=/D\\+1~D\\+7/.test(ytWindow.textContent||'')&&/LF 비포애프터/.test(ytWindow.textContent||'')&&/동일 D\\+N/.test(ytWindow.textContent||'');"
+        "out.youtubeWindow.cardCount=ytWindow.querySelectorAll('[data-yt-weekly-card]').length;"
+        "out.youtubeWindow.liveClosed=liveWindow?!liveWindow.classList.contains('open'):true;"
+        "var yr=ytWindow.getBoundingClientRect();out.youtubeWindow.rect={left:Math.round(yr.left),"
+        "rightGap:Math.round(window.innerWidth-yr.right),width:Math.round(yr.width),viewport:window.innerWidth};"
+        "var yclose=ytWindow.querySelector('[data-yt-close]');if(yclose){yclose.click();}"
+        "out.youtubeWindow.afterClose=ytWindow.classList.contains('open');"
+        "out.youtubeWindow.ariaClose=ytWindow.getAttribute('aria-hidden');}"
         "var rest=document.querySelector('.mvr[data-m=\"'+sel.value+'\"]');"
         "var futureRoots=document.querySelectorAll('.mv[data-phase=\"future\"]');"
         "var futureForbidden=Array.prototype.reduce.call(futureRoots,function(n,x){"
@@ -246,6 +262,44 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
                         f"width={rect_width_i}, viewport={viewport_i})")
         if live_window.get("afterClose") is not False or live_window.get("ariaClose") != "true":
             errors.append(f"{tag}: live-window did not close cleanly: {live_window}")
+    youtube_window = result.get("youtubeWindow") or {}
+    if not isinstance(youtube_window, dict):
+        errors.append(f"{tag}: youtube-window evidence missing")
+    else:
+        if not youtube_window.get("hasLaunch") or not youtube_window.get("hasWindow"):
+            errors.append(f"{tag}: youtube-window launch/window missing: {youtube_window}")
+        if youtube_window.get("beforeHidden") != "true":
+            errors.append(f"{tag}: youtube-window should be hidden before click: {youtube_window}")
+        if youtube_window.get("afterOpen") is not True or youtube_window.get("ariaOpen") != "false":
+            errors.append(f"{tag}: youtube-window did not open via left nav: {youtube_window}")
+        if youtube_window.get("expanded") != "true":
+            errors.append(f"{tag}: youtube nav aria-expanded not true after click: {youtube_window}")
+        if youtube_window.get("title") is not True or youtube_window.get("basis") is not True:
+            errors.append(f"{tag}: youtube-window title/basis missing: {youtube_window}")
+        if youtube_window.get("cardCount") != 5:
+            errors.append(f"{tag}: youtube-window cardCount={youtube_window.get('cardCount')} != 5")
+        if youtube_window.get("liveClosed") is not True:
+            errors.append(f"{tag}: opening youtube-window did not close live-window: {youtube_window}")
+        rect = youtube_window.get("rect") or {}
+        if not isinstance(rect, dict):
+            errors.append(f"{tag}: youtube-window full-width rect missing: {youtube_window}")
+        else:
+            left, right_gap, rect_width, viewport = (
+                rect.get("left"), rect.get("rightGap"), rect.get("width"), rect.get("viewport"))
+            max_gap = 24 if tag == "desktop" else 16
+            if not all(isinstance(value, int) for value in (left, right_gap, rect_width, viewport)):
+                errors.append(f"{tag}: invalid youtube-window rect metrics: {rect}")
+            else:
+                left_i, right_gap_i, rect_width_i, viewport_i = (
+                    cast(int, left), cast(int, right_gap), cast(int, rect_width), cast(int, viewport))
+                if (left_i > max_gap or right_gap_i > max_gap or
+                        rect_width_i < viewport_i - (max_gap * 2)):
+                    errors.append(
+                        f"{tag}: youtube-window is not horizontally full width enough "
+                        f"(left={left_i}, rightGap={right_gap_i}, "
+                        f"width={rect_width_i}, viewport={viewport_i})")
+        if youtube_window.get("afterClose") is not False or youtube_window.get("ariaClose") != "true":
+            errors.append(f"{tag}: youtube-window did not close cleanly: {youtube_window}")
     return errors
 
 
@@ -280,7 +334,8 @@ def main() -> int:
         f"css_widths=desktop:{observed_widths.get('desktop')},"
         f"mobile:{observed_widths.get('mobile')}; "
         "source_links=present; lower_cards=green; live_window=green; "
-        "live_window_full_width=green; future_negative_control=green"
+        "live_window_full_width=green; youtube_window=green; "
+        "youtube_window_full_width=green; future_negative_control=green"
     )
     return 0
 

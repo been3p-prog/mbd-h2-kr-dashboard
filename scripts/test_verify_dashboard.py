@@ -213,6 +213,42 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertNotIn('<div class="live-pulse-row"><b>시그니처 GMV</b>', self.html)
         self.assertNotIn('<div class="live-pulse-row"><b>신제품 gate</b>', self.html)
 
+    def test_left_youtube_nav_opens_dedicated_weekly_window_contract(self):
+        for marker in ('data-yt-launch', 'aria-controls="youtubeWindow"',
+                       'id="youtubeWindow"', 'data-yt-window="weekly-detail"',
+                       '유튜브 주간 리포팅 창', '좌측 유튜브 탭 전용 UI',
+                       'D+1~D+7 rolling benchmark', 'function setYoutubeWindow(open)',
+                       'data-yt-close', 'LF 비포애프터가 주간 성장 대부분',
+                       '동일 D+N × LF/SF × IP', 'public snapshot 기준 2026-08-11 23:57 KST',
+                       'data-yt-weekly-card="beforeafter-lf-ep91"',
+                       'data-yt-weekly-card="nationhome-lf-ep9"',
+                       'data-yt-weekly-card="beforeafter-sf-room"',
+                       'data-yt-weekly-card="beforeafter-sf-deposit"',
+                       'data-yt-weekly-card="nationhome-sf-storage"',
+                       '5평 원룸 공간 4개로 나눠 쓰는 방법 | 비포애프터 ep.91',
+                       '388,292', 'P90+', '1000/50부터 시작해서 인테리어에만 1억 7천 쓴 역대급 집',
+                       '보조 기여는 있으나 LF 히트로 보긴 어려움',
+                       'SF 전국내집자랑 -123.0K', '혼수의기술 기발행 쇼츠 재상승',
+                       '.yt-window{position:fixed;inset:16px;',
+                       '@media (max-width:1180px){.yt-window{inset:14px'):
+            self.assertIn(marker, self.html)
+        self.assertEqual(self.html.count('data-yt-weekly-card='), 5)
+        self.assertNotIn('data-yt-weekly-analysis-raw=', self.html)
+        self.assertNotIn('youtube_views.duckdb', self.html)
+        self.assertNotIn('fact_public_dplusn_', self.html)
+        self.assertNotIn('v_public_dplusn_', self.html)
+
+    def test_youtube_window_marker_removal_fails(self):
+        bad = self.html.replace('data-yt-window="weekly-detail"', 'data-yt-window="removed"', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("missing youtube window marker" in error for error in errors), errors)
+
+    def test_inline_youtube_weekly_analysis_reappearance_fails(self):
+        bad = self.html.replace('<div class="content-ledger" data-content-ledger="youtube">',
+                                '<div class="content-ledger" data-content-ledger="youtube"><div data-yt-weekly-analysis-raw="8-1">youtube_views.duckdb fact_public_dplusn_video</div>', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("obsolete inline/raw youtube analysis marker" in error for error in errors), errors)
+
     def test_live_window_marker_removal_fails(self):
         bad = self.html.replace('data-live-window="weekly-performance"', 'data-live-window="removed"', 1)
         errors = vd.verify(bad, self.now, require_fresh=False)
@@ -497,6 +533,21 @@ class SmokeViewportPolicyTest(unittest.TestCase):
                 "expanded": "true",
                 "title": True,
                 "basis": True,
+                "rect": {"left": 10, "rightGap": 10, "width": width - 20, "viewport": width},
+                "afterClose": False,
+                "ariaClose": "true",
+            },
+            "youtubeWindow": {
+                "hasLaunch": True,
+                "hasWindow": True,
+                "beforeHidden": "true",
+                "afterOpen": True,
+                "ariaOpen": "false",
+                "expanded": "true",
+                "title": True,
+                "basis": True,
+                "cardCount": 5,
+                "liveClosed": True,
                 "rect": {"left": 10, "rightGap": 10, "width": width - 20, "viewport": width},
                 "afterClose": False,
                 "ariaClose": "true",
