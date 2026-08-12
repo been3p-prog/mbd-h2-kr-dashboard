@@ -191,6 +191,8 @@ class DashboardGuardTest(unittest.TestCase):
                        '구매 의향자 중심 유입', '브랜드 체력 대비 +25%', '기간 체력 대비 +16%',
                        '사전 알림 100% 포인트는 방문자 조건+럭키드로 연동 확인 후 결정',
                        '경쟁방송을 1주 전 알았는지', '수상+집',
+                       '패키지 믹스 해석', '시청 97% / 방송별 GMV 46.5%',
+                       '쿠첸 신제품 gate', '패키지가 아니라 편성 점검 신호입니다',
                        'data-live-broadcast-card="frosch"', 'data-live-broadcast-card="cuchen"',
                        'data-live-broadcast-card="pampers"', 'data-live-broadcast-card="truecook"',
                        'data-live-broadcast-card="downing"', 'data-live-broadcast-card="bas"',
@@ -208,6 +210,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertNotIn('공식 회고 전문', self.html)
         self.assertNotIn('inset:22px 28px 22px 278px', self.html)
         self.assertNotIn('inset:16px 18px 16px 238px', self.html)
+        self.assertNotIn('<div class="live-pulse-row"><b>시그니처 GMV</b>', self.html)
+        self.assertNotIn('<div class="live-pulse-row"><b>신제품 gate</b>', self.html)
 
     def test_live_window_marker_removal_fails(self):
         bad = self.html.replace('data-live-window="weekly-performance"', 'data-live-window="removed"', 1)

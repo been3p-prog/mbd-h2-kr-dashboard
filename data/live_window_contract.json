@@ -48,7 +48,11 @@
     "기간 체력 대비 +16%",
     "경쟁방송을 1주 전 알았는지",
     "사전 알림 100% 포인트는 방문자 조건+럭키드로 연동 확인 후 결정",
-    "data-live-meeting-highlight=\"2026-08-11-weekly-timeout\""
+    "data-live-meeting-highlight=\"2026-08-11-weekly-timeout\"",
+    "패키지 믹스 해석",
+    "시청 97% / 방송별 GMV 46.5%",
+    "쿠첸 신제품 gate",
+    "패키지가 아니라 편성 점검 신호입니다"
   ],
   "forbidden_in_live_window": [
     "6,045만",
@@ -56,7 +60,9 @@
     "방송GMV 6,045만",
     "방송GMV 6,045만 · 1D 1.41억",
     "<small>방송GMV</small>",
-    "카드 거래액은 1D 거래액 기준"
+    "카드 거래액은 1D 거래액 기준",
+    "<div class=\"live-pulse-row\"><b>시그니처 GMV</b>",
+    "<div class=\"live-pulse-row\"><b>신제품 gate</b>"
   ],
   "hero_kpis": [
     {
@@ -120,33 +126,31 @@
     "브랜드 체력 대비 +25%",
     "기간 체력 대비 +16%",
     "경쟁방송 사전인지 여부",
-    "수상+집"
+    "수상+집",
+    "패키지 믹스 해석",
+    "도달은 거의 전부 만들었지만",
+    "패키지가 아니라 편성 점검 신호"
   ],
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 97%",
-      "source_basis": "시그니처 viewer share"
-    },
-    {
-      "label": "시그니처 GMV",
-      "value": "46.5%",
-      "source_basis": "시그니처 방송별 데이터 GMV share"
+      "value": "시청 97% / 방송별 GMV 46.5%",
+      "source_basis": "시그니처 viewer share and broadcast GMV share"
     },
     {
       "label": "에센셜",
-      "value": "GMV 41.2%",
+      "value": "방송별 GMV 41.2%",
       "source_basis": "에센셜 방송별 데이터 GMV share"
     },
     {
       "label": "스마트",
-      "value": "GMV 12.4%",
+      "value": "방송별 GMV 12.4%",
       "source_basis": "스마트 방송별 데이터 GMV share"
     },
     {
-      "label": "신제품 gate",
-      "value": "쿠첸 클릭 0.9%",
-      "source_basis": "쿠첸 상품 클릭수 / viewers"
+      "label": "쿠첸 신제품 gate",
+      "value": "클릭률 0.9%",
+      "source_basis": "쿠첸 상품 클릭수 / viewers; not a package share"
     }
   ],
   "broadcast_cards": {

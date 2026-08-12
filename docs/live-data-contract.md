@@ -16,6 +16,7 @@ This contract is the release rule for the MBD H2 KR dashboard Live window. It wa
   - `브랜드 체력 대비 +25%` and `기간 체력 대비 +16%` for the Downing baseline labels.
   - `경쟁방송을 1주 전 알았는지` for the Cuchen competitor-live awareness check.
   - `사전 알림 100% 포인트는 방문자 조건+럭키드로 연동 확인 후 결정` and `수상+집` for the PGM/event guardrail.
+- Package lens clarity rule: do not show one package's reach share and GMV share as separate peer rows, and do not mix a one-broadcast risk signal into the package-share chart. The Live window should render package contribution as readable cards: `시그니처` = `시청 97% / 방송별 GMV 46.5%`, `에센셜` = `방송별 GMV 41.2%`, `스마트` = `방송별 GMV 12.4%`, and `쿠첸 신제품 gate` as a separate 편성 점검 신호 (`클릭률 0.9%`).
 
 ## Mandatory metric-basis rules
 
