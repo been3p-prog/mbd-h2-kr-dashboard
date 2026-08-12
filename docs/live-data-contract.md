@@ -9,6 +9,13 @@ This contract is the release rule for the MBD H2 KR dashboard Live window. It wa
 - Header row: `25`
 - Current Live-window slice: rows `302–308`, period `2026-08-03`–`2026-08-06`
 - Public dashboard reads a static snapshot. If source rows change, update `data/live_window_contract.json` from the sheet before editing copy.
+- Meeting source overlay: after the 2026-08-11 Tuesday Live Weekly Time-out, the Live window must surface the meeting emphasis without copying raw transcript. Required public markers include:
+  - `회의 하이라이트 · 8/11 Weekly Time-out`
+  - `Loca는 주간 총평+핵심 2개, PD는 방송별 인사이트/회고 작성`
+  - `구매 의향자 중심 유입`
+  - `브랜드 체력 대비 +25%` and `기간 체력 대비 +16%` for the Downing baseline labels.
+  - `경쟁방송을 1주 전 알았는지` for the Cuchen competitor-live awareness check.
+  - `사전 알림 100% 포인트는 방문자 조건+럭키드로 연동 확인 후 결정` and `수상+집` for the PGM/event guardrail.
 
 ## Mandatory metric-basis rules
 

@@ -269,6 +269,7 @@ body.live-window-open{overflow:hidden}
 .live-hero-side{padding:18px;display:flex;flex-direction:column;gap:12px}.live-window-section-title{font-size:13px;font-weight:900;color:var(--navy);letter-spacing:-.02em}.live-pulse{display:grid;gap:9px}.live-pulse-row{display:grid;grid-template-columns:90px minmax(0,1fr) auto;align-items:center;gap:10px;font-size:12px;color:var(--sub)}.live-pulse-row b{color:var(--navy);font-size:12.5px}.live-pulse-track{height:8px;border-radius:999px;background:#EEF2F7;overflow:hidden}.live-pulse-fill{display:block;height:100%;border-radius:999px;background:#00A1FF}.live-pulse-fill.weak{background:#93C5FD}.live-pulse-fill.risk{background:#EF4444}
 .live-board{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;margin-top:18px}.live-panel{padding:18px}.live-panel h3{font-size:16px;letter-spacing:-.03em;margin-bottom:12px}.live-insights{display:grid;gap:10px}.live-insight{display:grid;grid-template-columns:9px minmax(0,1fr);gap:10px;align-items:start;padding:12px;border-radius:14px;background:#F8FAFC;color:var(--sub);font-size:13px;line-height:1.65}.live-insight::before{content:"";width:9px;height:9px;border-radius:50%;background:#00A1FF;margin-top:6px}.live-insight b{color:var(--navy)}
 .live-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.live-case{border:1px solid #E8EDF3;border-radius:15px;padding:13px;background:#fff}.live-case .tag{display:inline-flex;border-radius:999px;padding:4px 8px;background:#F0F8FC;color:#0087D8;font-size:10.5px;font-weight:900}.live-case .brand{display:block;margin-top:8px;font-size:15px;font-weight:900;color:var(--navy)}.live-case p{margin-top:5px;color:var(--sub);font-size:12px;line-height:1.6}.live-case.risk .tag{background:var(--red-soft);color:var(--red)}
+.live-meeting{margin-top:14px;border:1px solid #DDEBFF;background:linear-gradient(135deg,#F8FBFF 0%,#F6FAFF 100%);border-radius:16px;padding:14px}.live-meeting h4{margin:0 0 8px;font-size:13px;color:var(--navy);letter-spacing:-.02em}.live-meeting ul{margin:0;padding-left:18px;color:var(--sub);font-size:12.5px;line-height:1.65}.live-meeting b{color:var(--navy)}
 .live-broadcast-panel{margin-top:18px}.live-broadcast-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:13px}.live-broadcast-head h3{margin:0}.live-broadcast-head small{display:block;color:var(--sub);font-size:11.5px;font-weight:650;line-height:1.6}.live-broadcast-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.live-broadcast-card{border:1px solid #E8EDF3;border-radius:16px;background:#fff;padding:14px;display:grid;gap:10px}.live-broadcast-card.top{border-color:#BFDBFE;background:#F8FBFF}.live-broadcast-card.risk{border-color:#FECACA;background:#FFF8F8}.live-broadcast-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.live-broadcast-title b{display:block;font-size:16px;color:var(--navy);letter-spacing:-.03em}.live-broadcast-title small{display:block;margin-top:3px;color:var(--label);font-size:11px;font-weight:700}.live-broadcast-tag{display:inline-flex;white-space:nowrap;border-radius:999px;padding:5px 8px;background:#F0F8FC;color:#0087D8;font-size:10.5px;font-weight:900}.live-broadcast-card.risk .live-broadcast-tag{background:var(--red-soft);color:var(--red)}.live-broadcast-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.live-broadcast-metrics span{border-radius:11px;background:#F8FAFC;padding:8px 9px}.live-broadcast-metrics small{display:block;color:var(--label);font-size:10px;font-weight:800}.live-broadcast-metrics b{display:block;margin-top:2px;color:var(--navy);font-size:13px;font-weight:900;letter-spacing:-.035em}.live-pd-note,.live-next-action{border-radius:12px;padding:10px 11px;font-size:12.5px;line-height:1.62}.live-pd-note{background:#F8FAFC;color:var(--sub)}.live-next-action{background:#F0F8FC;color:#0F5F8C}.live-pd-note b,.live-next-action b{color:var(--navy)}
 .live-next{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}.live-next .step{border-radius:14px;background:#F8FAFC;border:1px solid #E8EDF3;padding:12px}.live-next .step b{display:block;font-size:13px}.live-next .step small{display:block;margin-top:5px;color:var(--sub);font-size:11.5px;line-height:1.6}
 .live-source{margin-top:14px;color:var(--label);font-size:11px;font-weight:650}.live-source b{color:var(--sub)}
@@ -2194,22 +2195,30 @@ body.live-window-open{overflow:hidden}
       <section class="live-panel" aria-label="운영 인사이트">
         <h3>운영 판단</h3>
         <div class="live-insights">
-          <div class="live-insight"><span><b>시그니처는 도달을 만들었지만 GMV 효율은 약함.</b> 대형 노출이 매출을 자동 보장하지 않으므로 시그니처는 사전수요·혜택·경쟁 라이브 점검이 필요합니다.</span></div>
-          <div class="live-insight"><span><b>에센셜/스마트는 저도달이어도 상품력과 객단가가 맞으면 GMV를 받침.</b> 다우닝처럼 단독 공급·혜택 반응이 있는 고단가 상품은 작은 도달에서도 성과가 납니다.</span></div>
-          <div class="live-insight"><span><b>BAS playbook은 재현 후보.</b> 브랜드 동시 마케팅, 라이브 단독 구성, 시즌성, 저관여 소모품 조합을 다음 편성 체크리스트로 올립니다.</span></div>
+          <div class="live-insight"><span><b>총평은 진행건수 회복과 방당 효율 하락을 분리.</b> 이번 주는 7건으로 총액은 회복됐지만 방당 GMV는 -23.6%라서 Loca 총평은 전체 지표 + 핵심 2개만 남기고, 방송별 회고는 PD가 직접 보강하는 구조가 필요합니다.</span></div>
+          <div class="live-insight"><span><b>낮은 도달 자체보다 유입의 질을 먼저 판정.</b> 다우닝은 유입·시청·전환이 낮아도 고관여 구매자와 객단가로 브랜드 체력 대비 +25%, 기간 체력 대비 +16%를 만들었으므로 “구매 의향자 중심 유입”으로 하이라이트합니다.</span></div>
+          <div class="live-insight"><span><b>시그니처/신제품은 도달보다 구매 이유 gate.</b> BAS는 시즌성·단독 구성·브랜드 동시 마케팅이 맞은 재현 후보이고, 쿠첸은 경쟁방송 사전인지와 리뷰/스타일링샷 같은 신뢰자산 확인 전까지 gate로 둡니다.</span></div>
         </div>
       </section>
       <section class="live-panel" aria-label="핵심 방송 콜아웃">
         <h3>핵심 콜아웃</h3>
         <div class="live-card-grid">
-          <div class="live-case"><span class="tag">재현</span><span class="brand">BAS</span><p>1D 거래액 6,374만. 브랜드 동시 마케팅+단독 구성+시즌성 조합.</p></div>
-          <div class="live-case"><span class="tag">고GMV</span><span class="brand">다우닝</span><p>저도달 3,722명이어도 1D 거래액 1.41억. 고단가·혜택·상품 전환력 확인.</p></div>
-          <div class="live-case risk"><span class="tag">Gate</span><span class="brand">쿠첸</span><p>도달 16.0만 대비 클릭률 0.9%. 고관여 신제품은 신뢰자산/경쟁편성 사전 점검.</p></div>
+          <div class="live-case"><span class="tag">재현</span><span class="brand">BAS</span><p>1D 거래액 6,374만. 생활용품 시그니처+브랜드 동시 마케팅+단독 구성+여름 냄새 수요로 전환율 상위권.</p></div>
+          <div class="live-case"><span class="tag">질적 유입</span><span class="brand">다우닝</span><p>저도달 3,722명이어도 1D 거래액 1.41억. 브랜드 체력 +25%·기간 체력 +16%, “살 사람 오게” 만든 케이스.</p></div>
+          <div class="live-case risk"><span class="tag">Gate</span><span class="brand">쿠첸</span><p>도달 16.0만 대비 클릭률 0.9%. 경쟁방송을 1주 전 알았는지와 신제품 신뢰자산 확보 여부가 점검 포인트.</p></div>
+        </div>
+        <div class="live-meeting" data-live-meeting-highlight="2026-08-11-weekly-timeout">
+          <h4>회의 하이라이트 · 8/11 Weekly Time-out</h4>
+          <ul>
+            <li><b>리포트 역할 분리:</b> Loca는 주간 총평+핵심 2개, PD는 방송별 인사이트/회고 작성.</li>
+            <li><b>수상한 집:</b> ‘수상+집’ 메타포에 집중, 사전 알림 100% 포인트는 방문자 조건+럭키드로 연동 확인 후 결정.</li>
+            <li><b>경쟁방송:</b> 쿠첸 건은 1주 전 사전인지 여부 확인 후 편성 캘린더 gate에 반영.</li>
+          </ul>
         </div>
         <div class="live-next">
-          <div class="step"><b>1. 편성 gate</b><small>시그니처는 도달 계획과 구매 이유를 분리 검토</small></div>
-          <div class="step"><b>2. 상품력 우선</b><small>에센셜은 도달보다 단독성·혜택·객단가 우선</small></div>
-          <div class="step"><b>3. 회고 루프</b><small>방송별 PD 회고를 다음 편성 체크리스트로 태깅</small></div>
+          <div class="step"><b>1. 편성 gate</b><small>시그니처/신제품은 경쟁방송·신뢰자산·구매 이유 확인</small></div>
+          <div class="step"><b>2. 질적 유입</b><small>저도달이라도 브랜드/기간 체력 대비 성과가 있으면 하이라이트</small></div>
+          <div class="step"><b>3. 회고 루프</b><small>회의에서 다룬 방송을 PD 회고 카드와 다음 편성 체크리스트로 태깅</small></div>
         </div>
       </section>
     </div>
@@ -2225,8 +2234,8 @@ body.live-window-open{overflow:hidden}
         <article class="live-broadcast-card risk" data-live-broadcast-card="cuchen">
           <div class="live-broadcast-title"><div><b>쿠첸</b><small>8/4 · Jeff · 시그니처 · 오늘it집</small></div><span class="live-broadcast-tag">신제품 gate</span></div>
           <div class="live-broadcast-metrics num"><span><small>시청</small><b>16.0만</b></span><span><small>클릭률</small><b>0.9%</b></span><span><small>구매</small><b>59</b></span><span><small>거래액</small><b>1D 3,846만</b></span></div>
-          <div class="live-pd-note"><b>PD 회고</b> 음식물처리기 신제품 런칭으로 도달은 충분했지만 쿠쿠 셀럽 라이브와 같은 날 충돌. 리뷰·스타일링샷 부재로 신뢰도 확보가 약했습니다.</div>
-          <div class="live-next-action"><b>다음 액션</b> 고관여 신제품은 경쟁 라이브 캘린더, 리뷰 자산, 카테고리 신뢰도 확보 전 gate 통과 후 편성.</div>
+          <div class="live-pd-note"><b>PD 회고</b> 음식물처리기 신제품 런칭으로 도달은 충분했지만 쿠쿠 셀럽 라이브와 같은 날 충돌. 회의에서는 같은 카테고리/셀럽 라이브를 1주 전 인지했는지 확인하고, 리뷰·스타일링샷 등 신뢰자산 부재를 별도 gate로 보자는 쪽으로 정리됐습니다.</div>
+          <div class="live-next-action"><b>다음 액션</b> 고관여 신제품은 경쟁방송 사전인지 여부, 리뷰 자산, 카테고리 신뢰도 확보 전 gate 통과 후 편성.</div>
         </article>
         <article class="live-broadcast-card" data-live-broadcast-card="pampers">
           <div class="live-broadcast-title"><div><b>팸퍼스</b><small>8/5 · Jeff · 스마트 · 어서오!세일</small></div><span class="live-broadcast-tag">저도달 고의향</span></div>
@@ -2243,14 +2252,14 @@ body.live-window-open{overflow:hidden}
         <article class="live-broadcast-card top" data-live-broadcast-card="downing">
           <div class="live-broadcast-title"><div><b>다우닝</b><small>8/5 · 외주 · 에센셜 · 어서오!세일</small></div><span class="live-broadcast-tag">고GMV</span></div>
           <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,722</b></span><span><small>클릭률</small><b>30.5%</b></span><span><small>구매</small><b>30</b></span><span><small>거래액</small><b>1D 1.41억</b></span></div>
-          <div class="live-pd-note"><b>PD 회고</b> 메인 상품을 전환하고 타 홈쇼핑 채널 중심 플랫 모델을 오늘의집 특별 공급. 가격·혜택 댓글 반응이 좋았고, 사전알림도 직전 대비 상승했습니다.</div>
-          <div class="live-next-action"><b>다음 액션</b> 에센셜이라도 단독 공급·고단가·명확한 혜택 반응이 있으면 저도달 고GMV 후보로 우선 편성.</div>
+          <div class="live-pd-note"><b>PD 회고</b> 회의에서 유입은 줄었지만 구매 의향자만 들어와 전환된 케이스로 해석. 메인 상품 전환, 타 홈쇼핑 채널 중심 플랫 모델의 오늘의집 특별 공급, 가격·혜택 댓글 반응이 고관여 구매와 객단가를 만들었습니다.</div>
+          <div class="live-next-action"><b>다음 액션</b> 에센셜이라도 브랜드 체력 대비 +25%·기간 체력 대비 +16%처럼 체력 대비 성과가 있으면 저도달 고의향 후보로 우선 편성.</div>
         </article>
         <article class="live-broadcast-card top" data-live-broadcast-card="bas">
           <div class="live-broadcast-title"><div><b>BAS</b><small>8/6 · Jeff · 시그니처 · 어서오!세일</small></div><span class="live-broadcast-tag">BAS playbook</span></div>
           <div class="live-broadcast-metrics num"><span><small>시청</small><b>15.6만</b></span><span><small>클릭률</small><b>4.8%</b></span><span><small>구매</small><b>563</b></span><span><small>거래액</small><b>1D 6,374만</b></span></div>
-          <div class="live-pd-note"><b>PD 회고</b> 브랜드 카톡·메타광고·카페 바이럴 동시 집행, 라이브 단독 구성, 여름 냄새 시즌 수요, 저관여 소모품 특성이 구매자 질을 만들었습니다.</div>
-          <div class="live-next-action"><b>다음 액션</b> 브랜드 동시 마케팅+라이브 단독 묶음+시즌성+저관여 소모품 조합은 다음 주 재현 후보로 태깅.</div>
+          <div class="live-pd-note"><b>PD 회고</b> 회의에서 생활용품 시그니처가 붙었을 때 유입과 거래액이 같이 오른 대표 케이스로 확인. 브랜드 카톡·메타광고·카페 바이럴, 라이브 단독 구성, 여름 냄새 시즌 수요, 저관여 소모품 특성이 전환율 상위권을 만들었습니다.</div>
+          <div class="live-next-action"><b>다음 액션</b> 브랜드 동시 마케팅+라이브 단독 묶음+시즌성+저관여 소모품 조합은 BAS playbook으로 다음 편성 재현 후보 태깅.</div>
         </article>
         <article class="live-broadcast-card risk" data-live-broadcast-card="hweehwee">
           <div class="live-broadcast-title"><div><b>휘휘</b><small>8/6 · 외주 · 에센셜 · 어서오!세일</small></div><span class="live-broadcast-tag">인지/조건</span></div>
