@@ -363,8 +363,8 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         if marker not in html:
             errors.append(f"missing quality-card MoM marker {marker!r}")
 
-    # [2026-08-09/10] 일반광고 비취소 부킹률과 라이브 package 매출/진행건수 팝업 구조의 공개 DOM 회귀 방지.
-    for marker in ('data-adgen-booking-rate=', '비취소 부킹률', '비취소 부킹건수 ÷ 부킹건수 목표',
+    # [2026-08-12] 일반광고 부킹률은 목표가 아니라 Supabase 수용가능 구좌수 대비로 고정한다.
+    for marker in ('data-adgen-booking-rate=', '비취소 구좌 부킹률', '비취소 부킹구좌수 ÷ 수용가능 구좌수',
                    'data-live-revenue-breakdown=', 'data-live-package-mom=', '패키지별 매출',
                    'MoM ', '패키지 총액 = AF 패키지비', '진행건수 = 확정 편성건',
                    'data-live-progress-count=', 'data-live-package-count=',
@@ -372,6 +372,9 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    '시그니처 하위', '에센셜 하위', '스마트 하위'):
         if marker not in html:
             errors.append(f"missing sales-structure marker {marker!r}")
+    for marker in ('부킹건수 목표', '비취소 부킹건수 ÷ 부킹건수 목표'):
+        if marker in html:
+            errors.append(f"obsolete booking-rate target denominator present: {marker!r}")
     if html.count('data-live-progress-count=') != 9:
         errors.append(f"live progress count markers {html.count('data-live-progress-count=')} != 9")
     if html.count('data-live-package-count=') != 27:
