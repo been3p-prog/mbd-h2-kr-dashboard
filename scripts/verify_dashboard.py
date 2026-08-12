@@ -393,6 +393,27 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         if marker not in html:
             errors.append(f"missing quality-card MoM marker {marker!r}")
 
+    # [2026-08-12] 품질 카드 하위 월별 추이는 평균을 누적하지 않고 square bar + 전체평균 선으로 고정한다.
+    for marker in ('.quality-trend{margin-top:16px', '.qt-bar{rx:0;shape-rendering:crispEdges}',
+                   'data-quality-trend="live-8"', 'data-quality-trend="youtube-8"',
+                   'data-quality-trend-kind="live-package-average"',
+                   'data-quality-trend-kind="yt-format-average"',
+                   '평균치는 누적하지 않음', 'square bar=패키지별 평균',
+                   'square bar=LF/SF 평균', '검은선=전체 평균',
+                   '시그니처 평균', '스마트 평균', '에센셜 평균',
+                   'LF 평균', 'SF 평균', '8월 LF n=2 · SF n=5'):
+        if marker not in html:
+            errors.append(f"missing quality trend marker {marker!r}")
+    live_trend_count = html.count('data-quality-trend="live-')
+    youtube_trend_count = html.count('data-quality-trend="youtube-')
+    if live_trend_count != 12:
+        errors.append(f"live quality trend charts {live_trend_count} != 12")
+    if youtube_trend_count != 12:
+        errors.append(f"youtube quality trend charts {youtube_trend_count} != 12")
+    for marker in ('누적 높이=전체 평균', '평균 기여분(패키지 총', '포맷 총조회수 ÷ 전체 발행수'):
+        if marker in html:
+            errors.append(f"obsolete stacked-average quality trend marker present: {marker!r}")
+
     # [2026-08-12] 일반광고 부킹률은 목표가 아니라 Supabase 수용가능 구좌수 대비로 고정한다.
     for marker in ('data-adgen-booking-rate=', '비취소 구좌 부킹률', '비취소 부킹구좌수 ÷ 수용가능 구좌수',
                    'data-live-revenue-breakdown=', 'data-live-package-mom=', '패키지별 매출',
