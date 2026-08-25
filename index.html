@@ -286,7 +286,10 @@ body.live-window-open{overflow:hidden}
 @media (max-width:720px){.live-window{inset:10px;border-radius:18px}.live-window-bar{padding:15px}.live-window-body{padding:14px}.live-hero-main{padding:18px}.live-hero-main h2{font-size:24px}.live-kpi-strip,.live-card-grid,.live-next,.live-broadcast-grid{grid-template-columns:1fr}.live-broadcast-head{display:block}.live-broadcast-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.live-mix-row{padding:10px}}
 
 /* [2026-08-12] 좌측 유튜브 탭 클릭 시 열리는 별도 주간리포팅 창 — D+1~D+7 벤치마크 기반 */
-body.live-window-open,body.yt-window-open{overflow:hidden}
+/* [2026-08-25] action-window-open 추가 — B22N 액션아이템 사이드뷰(iframe)도 열림 시 배경 스크롤 잠금 */
+body.live-window-open,body.yt-window-open,body.action-window-open{overflow:hidden}
+.action-window-body{position:relative;min-height:0}
+.action-window-body iframe{width:100%;height:100%;border:0;display:block;background:#f7f8fa}
 .yt-window{position:fixed;inset:16px;z-index:82;display:none;grid-template-rows:auto minmax(0,1fr);background:rgba(255,255,255,.97);border:1px solid rgba(15,23,42,.10);border-radius:24px;box-shadow:0 24px 70px rgba(15,23,42,.22);overflow:hidden;backdrop-filter:blur(18px);word-break:keep-all;overflow-wrap:break-word}
 .yt-window.open{display:grid}.yt-window::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,#EF4444,#F97316,#FDE68A)}
 .yt-window-bar{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.90)}
@@ -300,7 +303,7 @@ body.live-window-open,body.yt-window-open{overflow:hidden}
 <div class="app">
   <aside class="side">
     <div class="logo">MBD <b>대시보드</b><span>H2 KR · B22N</span></div><hr>
-    <nav><a class="on" href="#m8" data-nav-home><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>대시보드</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>일반광고</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M10 3h4v4a2 2 0 1 0 4 0V3h3v7h-4a2 2 0 1 0 0 4h4v7h-7v-4a2 2 0 1 0-4 0v4H3v-7h4a2 2 0 1 0 0-4H3V3h7z" transform="scale(.9) translate(1.3 1.3)"/></svg>통광마</a><a href="#live-window" data-live-launch aria-controls="liveWindow" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h3l2.5 12h11L22 7H7"/><circle cx="10" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>라이브</a><a href="#youtube-window" data-yt-launch aria-controls="youtubeWindow" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10.5 9.5l5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg>유튜브</a></nav>
+    <nav><a class="on" href="#m8" data-nav-home><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>대시보드</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>일반광고</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M10 3h4v4a2 2 0 1 0 4 0V3h3v7h-4a2 2 0 1 0 0 4h4v7h-7v-4a2 2 0 1 0-4 0v4H3v-7h4a2 2 0 1 0 0-4H3V3h7z" transform="scale(.9) translate(1.3 1.3)"/></svg>통광마</a><a href="#live-window" data-live-launch aria-controls="liveWindow" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h3l2.5 12h11L22 7H7"/><circle cx="10" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>라이브</a><a href="#youtube-window" data-yt-launch aria-controls="youtubeWindow" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="4"/><path d="M10.5 9.5l5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg>유튜브</a><!-- [2026-08-25] B22N 액션아이템 탭 추가 — Mission Control(iframe 사이드뷰) 진입점 --><a href="#action-window" data-action-launch aria-controls="actionWindow" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5l1.5 1.5 3-3"/><path d="M3.5 12l1.5 1.5 3-3"/><path d="M3.5 18.5l1.5 1.5 3-3"/><path d="M11 6h10M11 12.5h10M11 19h10"/></svg>액션아이템</a></nav>
     <div class="side-foot"><div class="t">LIVE · 실데이터</div>
       <div class="s">빌드 08-09 15:56<br>고정 URL 운영본</div></div>
   </aside>
@@ -2226,6 +2229,17 @@ body.live-window-open,body.yt-window-open{overflow:hidden}
   </main>
 
 </div>
+<!-- [2026-08-25] B22N 액션아이템 사이드뷰 — Mission Control(Vercel, 접근 코드 인증)을 iframe으로 임베드. 데이터는 이 레포에 저장되지 않음 -->
+<section id="actionWindow" class="yt-window" role="dialog" aria-modal="false" aria-labelledby="actionWindowTitle" aria-hidden="true">
+  <div class="yt-window-bar">
+    <div class="yt-window-title"><b id="actionWindowTitle">B22N 액션아이템</b><small>Mission Control · 팀 전용(접근 코드 필요) · 데이터는 별도 서버 저장</small></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a class="yt-window-close" style="text-decoration:none" href="https://b22n-mission-control.vercel.app" target="_blank" rel="noopener">새 탭에서 열기</a>
+      <button class="yt-window-close" type="button" data-action-close>대시보드로 돌아가기</button>
+    </div>
+  </div>
+  <div class="action-window-body"><iframe id="actionFrame" title="B22N Mission Control" referrerpolicy="no-referrer" data-src="https://b22n-mission-control.vercel.app"></iframe></div>
+</section>
 <section id="youtubeWindow" class="yt-window" data-yt-window="weekly-detail" data-yt-period="mtd" data-owned-media-window="youtube" data-yt-window-latest-date="2026-08-24" role="dialog" aria-modal="false" aria-labelledby="youtubeWindowTitle" aria-hidden="true">
   <div class="yt-window-bar">
     <div class="yt-window-title"><b id="youtubeWindowTitle">온드미디어 상세탭</b><small>디폴트 금월 누적 · 주차별 보기 · YouTube Analytics 기준</small></div>
@@ -2578,12 +2592,16 @@ var liveLaunch = document.querySelector('[data-live-launch]');
 var youtubeWindow = document.getElementById('youtubeWindow');
 var youtubeLaunch = document.querySelector('[data-yt-launch]');
 var homeNav = document.querySelector('[data-nav-home]');
+// [2026-08-25] B22N 액션아이템 사이드뷰 요소 — Mission Control iframe 임베드
+var actionWindow = document.getElementById('actionWindow');
+var actionLaunch = document.querySelector('[data-action-launch]');
 function setHomeActive() {
-  var anyOpen = (liveWindow && liveWindow.classList.contains('open')) || (youtubeWindow && youtubeWindow.classList.contains('open'));
+  var anyOpen = (liveWindow && liveWindow.classList.contains('open')) || (youtubeWindow && youtubeWindow.classList.contains('open')) || (actionWindow && actionWindow.classList.contains('open'));
   if (homeNav) homeNav.classList.toggle('on', !anyOpen);
 }
 function setYoutubeWindow(open) {
   if (!youtubeWindow) return;
+  if (open) setActionWindow(false); // [2026-08-25] 세 사이드뷰 상호배타 유지
   if (open && liveWindow) {
     liveWindow.classList.remove('open');
     liveWindow.setAttribute('aria-hidden', 'true');
@@ -2599,6 +2617,7 @@ function setYoutubeWindow(open) {
 }
 function setLiveWindow(open) {
   if (!liveWindow) return;
+  if (open) setActionWindow(false); // [2026-08-25] 세 사이드뷰 상호배타 유지
   if (open && youtubeWindow) setYoutubeWindow(false);
   liveWindow.classList.toggle('open', open);
   liveWindow.setAttribute('aria-hidden', open ? 'false' : 'true');
@@ -2607,10 +2626,25 @@ function setLiveWindow(open) {
   setHomeActive();
   tipEl.classList.remove('show');
 }
+// [2026-08-25] B22N 액션아이템 사이드뷰 토글 — iframe은 첫 오픈 시에만 로드 (일반 방문자 브라우저에서 불필요한 앱 로드 방지)
+function setActionWindow(open) {
+  if (!actionWindow) return;
+  if (open) { setLiveWindow(false); setYoutubeWindow(false); }
+  var frame = document.getElementById('actionFrame');
+  if (open && frame && !frame.src) frame.src = frame.getAttribute('data-src');
+  actionWindow.classList.toggle('open', open);
+  actionWindow.setAttribute('aria-hidden', open ? 'false' : 'true');
+  document.body.classList.toggle('action-window-open', open);
+  if (actionLaunch) { actionLaunch.classList.toggle('on', open); actionLaunch.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+  setHomeActive();
+  tipEl.classList.remove('show');
+}
 if (liveLaunch) liveLaunch.addEventListener('click', function(e) { e.preventDefault(); setLiveWindow(true); });
 if (youtubeLaunch) youtubeLaunch.addEventListener('click', function(e) { e.preventDefault(); setYoutubeWindow(true); });
-if (homeNav) homeNav.addEventListener('click', function(e) { e.preventDefault(); setLiveWindow(false); setYoutubeWindow(false); });
+if (actionLaunch) actionLaunch.addEventListener('click', function(e) { e.preventDefault(); setActionWindow(true); });
+if (homeNav) homeNav.addEventListener('click', function(e) { e.preventDefault(); setLiveWindow(false); setYoutubeWindow(false); setActionWindow(false); });
 document.querySelectorAll('[data-live-close]').forEach(function(btn) { btn.addEventListener('click', function() { setLiveWindow(false); }); });
 document.querySelectorAll('[data-yt-close]').forEach(function(btn) { btn.addEventListener('click', function() { setYoutubeWindow(false); }); });
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { setLiveWindow(false); setYoutubeWindow(false); } });
+document.querySelectorAll('[data-action-close]').forEach(function(btn) { btn.addEventListener('click', function() { setActionWindow(false); }); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { setLiveWindow(false); setYoutubeWindow(false); setActionWindow(false); } });
 </script></body></html>
