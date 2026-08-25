@@ -384,10 +384,13 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     if 'data-yt-channel-overview=' in html:
         errors.append("obsolete youtube left-subscriber overview present")
 
-    # [2026-08-11] 라이브/유튜브 품질 카드에도 전월 대비가 첫눈에 보이도록 고정한다.
+    # [2026-08-25] 라이브 품질 카드는 일일 DuckDB refresh 대상이므로 특정 과거 수치가
+    # 아니라 1D 기준 marker와 MoM surface 존재를 검증한다. 유튜브는 아직 정적 snapshot marker 유지.
     for marker in ('.qcell .qmom{font-size:11px;font-weight:850',
                    'data-live-quality-mom-main="8"', 'data-live-quality-mom="8-overall"',
-                   'data-live-quality-mom="8-signature"', 'MoM ▲ 69.8%', 'MoM ▲ 39.4%',
+                   'data-live-quality-mom="8-signature"', 'data-live-quality-mom="8-smart"',
+                   'data-live-quality-mom="8-essential"', '1D 평균 거래액',
+                   '8월 목표 1.00억 대비',
                    'data-yt-quality-mom-main="8"', 'MoM ▼ 36.8%', 'MoM ▲ 0.3%',
                    'MoM ▲ 33.9%', 'MoM ▼ 79.2%'):
         if marker not in html:
