@@ -387,7 +387,7 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     # [2026-08-11] 라이브/유튜브 품질 카드에도 전월 대비가 첫눈에 보이도록 고정한다.
     for marker in ('.qcell .qmom{font-size:11px;font-weight:850',
                    'data-live-quality-mom-main="8"', 'data-live-quality-mom="8-overall"',
-                   'data-live-quality-mom="8-signature"', 'MoM ▼ 25.1%', 'MoM ▼ 52.0%',
+                   'data-live-quality-mom="8-signature"', 'MoM ▲ 69.8%', 'MoM ▲ 39.4%',
                    'data-yt-quality-mom-main="8"', 'MoM ▼ 36.8%', 'MoM ▲ 0.3%',
                    'MoM ▲ 33.9%', 'MoM ▼ 79.2%'):
         if marker not in html:

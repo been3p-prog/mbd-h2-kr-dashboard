@@ -85,8 +85,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('08-09 기준 · 조회수 1,126,735', self.html)
         self.assertIn('data-live-quality-mom-main="8"', self.html)
         self.assertIn('data-live-quality-mom="8-overall"', self.html)
-        self.assertIn('MoM ▼ 25.1%', self.html)
-        self.assertIn('MoM ▼ 52.0%', self.html)
+        self.assertIn('MoM ▲ 69.8%', self.html)
+        self.assertIn('MoM ▲ 39.4%', self.html)
         self.assertIn('data-yt-quality-mom-main="8"', self.html)
         self.assertIn('MoM ▼ 36.8%', self.html)
         self.assertIn('MoM ▲ 0.3%', self.html)
@@ -347,7 +347,7 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertEqual(manifest.get("live_gmv_basis"), "1D")
         self.assertIn("라이브 1D 평균거래액 · 품질", self.html)
         self.assertIn("1D 평균 거래액", self.html)
-        self.assertIn("8월 목표 1.00억 대비 62.5%", self.html)
+        self.assertIn("8월 목표 1.00억 대비 141.7%", self.html)
         self.assertNotIn("방송 평균 거래액", self.html)
 
     # [2026-08-07] 일반광고 hover는 보이는 KPI 반복이 아니라 3유형 금액+MoM이어야 한다.
