@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MBD H2 KR 대시보드 — 2026</title><!-- [2026-08-10] 유튜브 카드 MBD YT SSOT 기준 반영 — Weekly/Monthly row 정합성 기준 -->
-<script type="application/json" id="mbd-public-guard">{"schema":"mbd-public-guard-v3","built_at_kst":"2026-08-25T11:45:53+09:00","source_snapshot_as_of":{"revenue_mirror":"2026-08-25T11:45:53+09:00","live_quality":"2026-08-25T11:45:53+09:00","yt_quality":"2026-08-25T11:45:53+09:00","okr_targets":"2026-08-25T11:45:53+09:00","owned_media":"2026-08-25T11:45:53+09:00"},"source_status":{"live_quality":"current","yt_quality":"current","okr_targets":"current","owned_media":"current"},"default_month":8,"public_scope":["ad_gen","ad_int","live"],"raw_rows_included":false,"sanitized_rows_included":true,"public_detail_fields":{"live":["date","status","brand","program","package","replay_url","viewer_count","gmv_1d","gmv_3h"],"youtube":["date","status","form","title","url","views_total","views_d7","pis"]},"live_avg_gmv_target_won":100000000,"live_gmv_basis":"1D","generator":"mbd-dash-v5/render_venus.py","source_payload_sha256":"17a94c5bc1db708928f0ed04821a0bf4fcf044a71e6f50f1a7ea208bf6d68ac8"}</script><style>
+<script type="application/json" id="mbd-public-guard">{"schema":"mbd-public-guard-v3","built_at_kst":"2026-08-25T14:11:30+09:00","source_snapshot_as_of":{"revenue_mirror":"2026-08-25T14:11:30+09:00","live_quality":"2026-08-25T14:11:30+09:00","yt_quality":"2026-08-25T14:11:30+09:00","okr_targets":"2026-08-25T14:11:30+09:00","owned_media":"2026-08-25T14:11:30+09:00"},"source_status":{"live_quality":"current","yt_quality":"current","okr_targets":"current","owned_media":"current"},"default_month":8,"public_scope":["ad_gen","ad_int","live"],"raw_rows_included":false,"sanitized_rows_included":true,"public_detail_fields":{"live":["date","status","brand","program","package","replay_url","viewer_count","gmv_1d","gmv_3h"],"youtube":["date","status","form","title","url","views_total","views_d7","pis"]},"live_avg_gmv_target_won":100000000,"live_gmv_basis":"1D","generator":"mbd-dash-v5/render_venus.py","source_payload_sha256":"5a15ecc095ee1e608f4c4c17b6af0fbcad0d6e13dbda0230d4427dc8f698d0af"}</script><style>
 :root{
   --bg:#F5F7FA; --card:#FFFFFF;
   --navy:#0F172A; --label:#94A3B8; --sub:#64748B;
@@ -2222,208 +2222,317 @@ body.live-window-open,body.yt-window-open{overflow:hidden}
       <div class="quality-trend" data-quality-trend="youtube-12" data-quality-trend-kind="yt-format-average"><div class="qt-head"><b>월별 평균 추이 · LF/SF별 평균</b><span>평균치는 누적하지 않음 · square bar=LF/SF 평균 · 검은선=전체 평균</span></div><svg viewBox="0 0 1060 210" role="img" aria-label="월별 평균 추이 · LF/SF별 평균"><line class="qt-grid" x1="37" y1="174.0" x2="1036" y2="174.0"/><line class="qt-grid" x1="37" y1="128.0" x2="1036" y2="128.0"/><line class="qt-grid" x1="37" y1="82.0" x2="1036" y2="82.0"/><text class="qt-top" x="93.0" y="24" text-anchor="middle">1.2만</text><text class="qt-delta flat" x="93.0" y="40" text-anchor="middle">—</text><rect class="qt-bar" x="76.5" y="165.2" width="15" height="8.8" fill="#2f64e9"/><rect class="qt-bar" x="94.5" y="169.7" width="15" height="4.3" fill="#9b7af4"/><text class="qt-month" x="93.0" y="196" text-anchor="middle">1월</text><text class="qt-top" x="175.0" y="24" text-anchor="middle">5.6만</text><text class="qt-delta pos" x="175.0" y="40" text-anchor="middle">+4.3만</text><rect class="qt-bar" x="158.5" y="140.7" width="15" height="33.3" fill="#2f64e9"/><rect class="qt-bar" x="176.5" y="155.7" width="15" height="18.3" fill="#9b7af4"/><text class="qt-month" x="175.0" y="196" text-anchor="middle">2월</text><text class="qt-top" x="257.0" y="24" text-anchor="middle">8.9만</text><text class="qt-delta pos" x="257.0" y="40" text-anchor="middle">+3.4만</text><rect class="qt-bar" x="240.5" y="154.4" width="15" height="19.6" fill="#2f64e9"/><text class="qt-tiny" x="248.0" y="149.4" text-anchor="middle">5.3만</text><rect class="qt-bar" x="258.5" y="136.4" width="15" height="37.6" fill="#9b7af4"/><text class="qt-tiny" x="266.0" y="131.4" text-anchor="middle">10.2만</text><text class="qt-month" x="257.0" y="196" text-anchor="middle">3월</text><text class="qt-top" x="339.0" y="24" text-anchor="middle">6.3만</text><text class="qt-delta neg" x="339.0" y="40" text-anchor="middle">−2.6만</text><rect class="qt-bar" x="322.5" y="170.2" width="15" height="3.8" fill="#2f64e9"/><rect class="qt-bar" x="340.5" y="145.9" width="15" height="28.1" fill="#9b7af4"/><text class="qt-month" x="339.0" y="196" text-anchor="middle">4월</text><text class="qt-top" x="421.0" y="24" text-anchor="middle">2.2만</text><text class="qt-delta neg" x="421.0" y="40" text-anchor="middle">−4.1만</text><rect class="qt-bar" x="404.5" y="156.1" width="15" height="17.9" fill="#2f64e9"/><rect class="qt-bar" x="422.5" y="167.5" width="15" height="6.5" fill="#9b7af4"/><text class="qt-month" x="421.0" y="196" text-anchor="middle">5월</text><text class="qt-top" x="503.0" y="24" text-anchor="middle">2.9만</text><text class="qt-delta pos" x="503.0" y="40" text-anchor="middle">+0.6만</text><rect class="qt-bar" x="486.5" y="137.2" width="15" height="36.8" fill="#2f64e9"/><rect class="qt-bar" x="504.5" y="170.0" width="15" height="4.0" fill="#9b7af4"/><text class="qt-month" x="503.0" y="196" text-anchor="middle">6월</text><text class="qt-top" x="585.0" y="24" text-anchor="middle">8.9만</text><text class="qt-delta pos" x="585.0" y="40" text-anchor="middle">+6.0만</text><line class="qt-target" x1="558.0" y1="159.3" x2="612.0" y2="159.3"/><rect class="qt-bar" x="568.5" y="89.0" width="15" height="85.0" fill="#2f64e9"/><text class="qt-tiny" x="576.0" y="84.0" text-anchor="middle">23.1만</text><rect class="qt-bar" x="586.5" y="151.7" width="15" height="22.3" fill="#9b7af4"/><text class="qt-tiny" x="594.0" y="146.7" text-anchor="middle">6.1만</text><text class="qt-month" x="585.0" y="196" text-anchor="middle">7월</text><text class="qt-top" x="667.0" y="24" text-anchor="middle">5.6만</text><text class="qt-delta neg" x="667.0" y="40" text-anchor="middle">−3.3만</text><line class="qt-target" x1="640.0" y1="155.6" x2="694.0" y2="155.6"/><rect class="qt-bar" x="650.5" y="113.2" width="15" height="60.8" fill="#2f64e9"/><text class="qt-tiny" x="658.0" y="108.2" text-anchor="middle">16.5만</text><rect class="qt-bar" x="668.5" y="169.4" width="15" height="4.6" fill="#9b7af4"/><text class="qt-tiny" x="676.0" y="164.4" text-anchor="middle">1.3만</text><text class="qt-month" x="667.0" y="196" text-anchor="middle">8월</text><text class="qt-top" x="749.0" y="24" text-anchor="middle">—</text><text class="qt-delta flat" x="749.0" y="40" text-anchor="middle">예정</text><line class="qt-target" x1="722.0" y1="155.6" x2="776.0" y2="155.6"/><text class="qt-month" x="749.0" y="196" text-anchor="middle">9월</text><text class="qt-top" x="831.0" y="24" text-anchor="middle">—</text><text class="qt-delta flat" x="831.0" y="40" text-anchor="middle">예정</text><line class="qt-target" x1="804.0" y1="155.6" x2="858.0" y2="155.6"/><text class="qt-month" x="831.0" y="196" text-anchor="middle">10월</text><text class="qt-top" x="913.0" y="24" text-anchor="middle">—</text><text class="qt-delta flat" x="913.0" y="40" text-anchor="middle">예정</text><line class="qt-target" x1="886.0" y1="155.6" x2="940.0" y2="155.6"/><text class="qt-month" x="913.0" y="196" text-anchor="middle">11월</text><rect class="qt-focus" x="962.0" y="27" width="66" height="158" rx="10"/><text class="qt-top on" x="995.0" y="24" text-anchor="middle">—</text><text class="qt-delta flat" x="995.0" y="40" text-anchor="middle">예정</text><line class="qt-target" x1="968.0" y1="155.6" x2="1022.0" y2="155.6"/><text class="qt-month on" x="995.0" y="196" text-anchor="middle">12월</text><path class="qt-avg-line" d="M93.0 169.5 L175.0 153.5 L257.0 141.1 L339.0 150.8 L421.0 165.7 L503.0 163.5 L585.0 141.3 L667.0 153.3"/><circle class="qt-avg-dot" cx="93.0" cy="169.5" r="4"/><circle class="qt-avg-dot" cx="175.0" cy="153.5" r="4"/><circle class="qt-avg-dot" cx="257.0" cy="141.1" r="4"/><circle class="qt-avg-dot" cx="339.0" cy="150.8" r="4"/><circle class="qt-avg-dot" cx="421.0" cy="165.7" r="4"/><circle class="qt-avg-dot" cx="503.0" cy="163.5" r="4"/><circle class="qt-avg-dot" cx="585.0" cy="141.3" r="4"/><circle class="qt-avg-dot" cx="667.0" cy="153.3" r="4"/></svg><div class="qt-legend"><span><i style="background:#2f64e9"></i>LF 평균</span><span><i style="background:#9b7af4"></i>SF 평균</span><span><i class="line"></i>전체 평균</span><span><i class="line" style="border-top-color:#64748B"></i>월 목표</span></div><div class="qt-note">8월 LF n=2 · SF n=5 · 현재월/미도래월은 해석 보수</div></div><!-- /quality-trend -->
       <div class="subh">주차별 콘텐츠
         <a class="sheet" href="https://docs.google.com/spreadsheets/d/1mMkGwBuWr_L0YXvmDlGtPGzpm9kAgk8VQubjC_w52vg/edit?gid=34722178#gid=34722178" target="_blank" rel="noopener">원본 시트 ↗</a></div><div class="content-ledger" data-content-ledger="youtube"><div class="plan-note"><b>월 계획 9건</b> · 상세 일정 미입력 포함 잔여 9건</div><div class="activity-empty">이 월의 상세 일정 없음</div></div></div></div>
-    <div class="foot">LIVE 빌드 08-25 11:45 · 라이브 1D/RAW = DuckDB live.raw_slots 8/1~8/24 · ingest 2026-08-25T11:45:53+09:00 · 매출/OKR/온드/유튜브 = 기존 공개 스냅샷 (<a href="https://docs.google.com/spreadsheets/d/1DgciUq9HLVs5Q-vt0GmuDrX8-Yd6T8SxEoRPudPWpPA/edit?gid=43885048#gid=43885048" target="_blank" rel="noopener">OKR ↗</a>)<br>audit: 라이브 1D 품질 24건 readback green · 정적 Pages daily refresh는 Hermes cron에서 수행</div>
+    <div class="foot">LIVE 빌드 08-25 14:11 · 라이브 1D/RAW = DuckDB live.raw_slots 8/1~8/24 · ingest 2026-08-25T14:11:30+09:00 · 매출/OKR/온드/유튜브 = 기존 공개 스냅샷 (<a href="https://docs.google.com/spreadsheets/d/1DgciUq9HLVs5Q-vt0GmuDrX8-Yd6T8SxEoRPudPWpPA/edit?gid=43885048#gid=43885048" target="_blank" rel="noopener">OKR ↗</a>)<br>audit: 라이브 1D 품질 24건 readback green · 정적 Pages daily refresh는 Hermes cron에서 수행</div>
   </main>
 
 </div>
-<section id="youtubeWindow" class="yt-window" data-yt-window="weekly-detail" role="dialog" aria-modal="false" aria-labelledby="youtubeWindowTitle" aria-hidden="true">
+<section id="youtubeWindow" class="yt-window" data-yt-window="weekly-detail" data-yt-period="mtd" data-owned-media-window="youtube" data-yt-window-latest-date="2026-08-24" role="dialog" aria-modal="false" aria-labelledby="youtubeWindowTitle" aria-hidden="true">
   <div class="yt-window-bar">
-    <div class="yt-window-title"><b id="youtubeWindowTitle">유튜브 주간 리포팅 창</b><small>좌측 유튜브 탭 전용 UI · D+1~D+7 rolling benchmark</small></div>
+    <div class="yt-window-title"><b id="youtubeWindowTitle">온드미디어 상세탭</b><small>디폴트 금월 누적 · 주차별 보기 · YouTube Analytics 기준</small></div>
     <button class="yt-window-close" type="button" data-yt-close>대시보드로 돌아가기</button>
   </div>
   <div class="yt-window-body">
     <div class="yt-hero">
-      <section class="yt-hero-main" aria-label="8월 1주차 유튜브 주간 성과 요약">
-        <span class="yt-eyebrow">8월 1주차 · 8/3–8/9 · 발행 7건</span>
-        <h2>LF 비포애프터가 주간 성장 대부분을 만들고, SF는 신규 효율보다 기발행 재상승이 큰 주</h2>
-        <p><b>주간 판단:</b> 조회 성장의 1차 동인은 LF 신작 <b>비포애프터 ep.91</b>입니다. SF는 발행량은 있었지만 신규 쇼츠 효율이 넓게 터진 주는 아니고, <b>혼수의기술 기발행 쇼츠 재상승</b>이 보조 상승을 만들었습니다.</p>
-        <div class="yt-kpi-strip num">
-          <div class="yt-kpi"><small>발행</small><b>7건</b><em>LF 2 · SF 5</em></div>
-          <div class="yt-kpi"><small>D+N 최신 누적</small><b>49.6만</b><em>D+1~D+7 도래 기준</em></div>
-          <div class="yt-kpi"><small>LF 기여</small><b>42.1만</b><em>85.0% · 비포애프터 중심</em></div>
-          <div class="yt-kpi"><small>SF 기여</small><b>7.4만</b><em>15.0% · 신규 쇼츠 약세</em></div>
-        </div>
-      </section>
-      <aside class="yt-hero-side" aria-label="D+N 기준 업데이트 상태">
-        <div class="yt-window-section-title">D+1~D+7 기준 업데이트 상태</div>
+      <div class="yt-hero-main" aria-label="8월 온드미디어 금월 누적 요약">
+        <span class="yt-eyebrow">8월 금월 누적 · 8/1–8/24 · 진행 중</span>
+        <h2>온드미디어도 금월 누적이 디폴트,<br>주차별로 쪼개서 확인</h2>
+        <p><b>YouTube 조회수 319만</b>까지 반영했습니다. 상단은 월누적 Analytics, 아래는 주차별 Analytics row입니다. 콘텐츠 카드는 public D+N 참고이며, 월/주차 headline과 섞어 판정하지 않습니다.</p>
+        <div class="yt-kpi-strip num" aria-label="온드미디어 금월 누적 핵심 지표"><div class="yt-kpi"><small>조회수</small><b>319만</b><em>8/1–8/24</em></div><div class="yt-kpi"><small>발행</small><b>20건</b><em>LF 5 · SF 15</em></div><div class="yt-kpi"><small>당월/당주 발행 기여</small><b>95만</b><em>기간 내 발행 cohort</em></div><div class="yt-kpi"><small>기발행 기여</small><b>218만</b><em>기존 library cohort</em></div><div class="yt-kpi"><small>인게이지먼트</small><b>34,250</b><em>좋아요+댓글+공유</em></div><div class="yt-kpi"><small>좋아요</small><b>24,803</b><em>댓글 931</em></div><div class="yt-kpi"><small>공유</small><b>8,516</b><em>미매칭 5.5만</em></div></div>
+      </div>
+      <aside class="yt-hero-side" aria-label="온드미디어 기준">
+        <div class="yt-window-section-title">기준 분리</div>
         <div class="yt-bench-list">
-          <div class="yt-bench-row"><b>벤치마크 기준</b><small>동일 D+N × LF/SF × IP(depth2) P50/P75/P90. IP 표본이 작으면 ALL 보조 기준으로 낮춰 해석.</small></div>
-          <div class="yt-bench-row"><b>판정 룰</b><small>P50 미만=보수 / P75 이상=잘 나옴 / P90 이상=히트 후보. n&lt;5는 표본 작음 표시.</small></div>
-          <div class="yt-bench-row"><b>업데이트</b><small>public snapshot 기준 2026-08-11 23:57 KST 반영. D+N 미도래 콘텐츠는 collecting으로 표시.</small></div>
+          <div class="yt-bench-row"><b>디폴트</b><small>금월 누적: YouTube Analytics API period row, metric_end=2026-08-24.</small></div>
+          <div class="yt-bench-row"><b>주차별 보기</b><small>weekly Analytics row. 현재 주차가 0/partial이면 월누적과 별도로 수집중 표시.</small></div>
+          <div class="yt-bench-row"><b>콘텐츠 카드</b><small>public D+N complete snapshot. Highlight/Lowlight는 벤치마크가 있을 때만 별도 판정.</small></div>
         </div>
       </aside>
     </div>
     <div class="yt-board">
-      <section class="yt-panel" aria-label="주간 판단">
-        <h3>이번 주 판단</h3>
+      <div class="yt-panel" aria-label="온드 월누적 판단">
+        <h3>이번 달 누적 판단</h3>
         <div class="yt-insights">
-          <div class="yt-insight"><span><b>상승은 LF 신작 집중형.</b> 비포애프터 ep.91이 D+7 38.8만으로 같은 IP P90을 넘겼고, 주간 총평의 핵심입니다.</span></div>
-          <div class="yt-insight"><span><b>SF는 넓은 개선 아님.</b> 신규 SF 5건 중 일부는 P50~P75권, 전국내집자랑 SF는 P50 미만이라 포맷 전체 회복으로 보긴 어렵습니다.</span></div>
-          <div class="yt-insight"><span><b>기발행 재상승 분리 필요.</b> 혼수의기술 SF 기발행 영상이 +13.8만을 보탰지만, 신규 주간 콘텐츠 품질과는 별도 신호입니다.</span></div>
+          <div class="yt-insight"><span><b>월 누적과 주차별을 분리.</b> 이전처럼 특정 1주차 D+N 창으로 고정하지 않고, 디폴트는 8/1–8/24 월누적입니다.</span></div>
+          <div class="yt-insight"><span><b>당월 발행 vs 기발행 분리.</b> 당월 발행 기여 95만, 기발행 기여 218만로 cohort를 분리합니다.</span></div>
+          <div class="yt-insight"><span><b>partial 표시.</b> 진행 중 월은 metric_end까지의 누적이며, 월말 확정 전에는 확정 수치로 말하지 않습니다.</span></div>
         </div>
-      </section>
-      <section class="yt-panel" aria-label="콘텐츠 드라이버">
-        <h3>뎁스/IP 드라이버</h3>
-        <div class="yt-driver-grid num">
-          <div class="yt-driver"><span class="tag">상승</span><b>LF 비포애프터 +328.0K</b><small>ep.91 신작 히트가 LF 성장을 대부분 설명.</small></div>
-          <div class="yt-driver"><span class="tag">상승</span><b>SF 혼수의기술 +137.6K</b><small>기발행 쇼츠 재상승. 신규 발행 성과와 분리해서 봐야 함.</small></div>
-          <div class="yt-driver"><span class="tag down">하락</span><b>SF 전국내집자랑 -123.0K</b><small>전주 히트 쇼츠 소진 영향. 이번 주 신규 SF는 보수 판정.</small></div>
-          <div class="yt-driver"><span class="tag down">하락</span><b>SF 비포애프터 -28.1K</b><small>LF 비포애프터와 달리 SF 비포애프터는 포맷 전환력이 약했음.</small></div>
-        </div>
-      </section>
+      </div>
+      <div class="yt-panel" aria-label="온드 주차 요약">
+        <h3>주차별 요약</h3>
+        <div class="live-next" data-yt-week-summary="8"><div class="step"><b>7/27–8/2</b><small>조회 75만 · 당주 15만 · 기발행 60만 · 완료</small></div><div class="step"><b>8/3–8/9</b><small>조회 139만 · 당주 53만 · 기발행 85만 · 완료</small></div><div class="step"><b>8/10–8/16</b><small>조회 109만 · 당주 14만 · 기발행 91만 · 완료</small></div><div class="step"><b>8/17–8/23</b><small>조회 53만 · 당주 8.2만 · 기발행 43만 · 완료</small></div><div class="step"><b>8/24–8/30</b><small>조회 0 · 당주 0 · 기발행 0 · 수집중</small></div></div>
+      </div>
     </div>
-    <section class="yt-panel yt-weekly-panel" aria-label="D+N 콘텐츠 판정">
-      <div class="yt-weekly-head">
-        <h3>D+N 콘텐츠 판정</h3>
-        <small>각 카드는 동일 D+N × LF/SF × IP 벤치마크와 비교. `표본 작음`은 방향성 참고만.</small>
-      </div>
+    <div class="yt-panel yt-weekly-panel" aria-label="온드 주차별 상세">
+      <div class="yt-weekly-head"><h3>주차별 보기</h3><small>Weekly = 월~일 KST. headline은 Analytics, 콘텐츠 카드는 public D+N 참고.</small></div>
+      <div class="yt-weekly-accordion" data-yt-weekly-view="8">
+        <details class="week-group yt-week-group" data-yt-week-group="1" open>
+          <summary data-week-toggle="yt-1"><span class="week-label">온드 1주차 <small>7/27–8/2 · 완료 · 조회 75만 · 당주 15만 · 기발행 60만</small></span><span class="week-chevron" aria-hidden="true"></span></summary>
+          <div class="week-items"><div class="yt-kpi-strip num yt-week-kpis"><div class="yt-kpi"><small>조회수</small><b>75만</b><em>7/27–8/2</em></div><div class="yt-kpi"><small>당월/당주 발행 기여</small><b>15만</b><em>기간 내 발행 cohort</em></div><div class="yt-kpi"><small>기발행 기여</small><b>60만</b><em>기존 library cohort</em></div><div class="yt-kpi"><small>인게이지먼트</small><b>8,153</b><em>좋아요+댓글+공유</em></div><div class="yt-kpi"><small>좋아요</small><b>6,289</b><em>댓글 240</em></div><div class="yt-kpi"><small>공유</small><b>1,624</b><em>미매칭 118</em></div></div></div>
+        </details>
+        <details class="week-group yt-week-group" data-yt-week-group="2">
+          <summary data-week-toggle="yt-2"><span class="week-label">온드 2주차 <small>8/3–8/9 · 완료 · 조회 139만 · 당주 53만 · 기발행 85만</small></span><span class="week-chevron" aria-hidden="true"></span></summary>
+          <div class="week-items"><div class="yt-kpi-strip num yt-week-kpis"><div class="yt-kpi"><small>조회수</small><b>139만</b><em>8/3–8/9</em></div><div class="yt-kpi"><small>당월/당주 발행 기여</small><b>53만</b><em>기간 내 발행 cohort</em></div><div class="yt-kpi"><small>기발행 기여</small><b>85만</b><em>기존 library cohort</em></div><div class="yt-kpi"><small>인게이지먼트</small><b>18,909</b><em>좋아요+댓글+공유</em></div><div class="yt-kpi"><small>좋아요</small><b>13,517</b><em>댓글 539</em></div><div class="yt-kpi"><small>공유</small><b>4,853</b><em>미매칭 3,462</em></div></div></div>
+        </details>
+        <details class="week-group yt-week-group" data-yt-week-group="3">
+          <summary data-week-toggle="yt-3"><span class="week-label">온드 3주차 <small>8/10–8/16 · 완료 · 조회 109만 · 당주 14만 · 기발행 91만</small></span><span class="week-chevron" aria-hidden="true"></span></summary>
+          <div class="week-items"><div class="yt-kpi-strip num yt-week-kpis"><div class="yt-kpi"><small>조회수</small><b>109만</b><em>8/10–8/16</em></div><div class="yt-kpi"><small>당월/당주 발행 기여</small><b>14만</b><em>기간 내 발행 cohort</em></div><div class="yt-kpi"><small>기발행 기여</small><b>91만</b><em>기존 library cohort</em></div><div class="yt-kpi"><small>인게이지먼트</small><b>9,199</b><em>좋아요+댓글+공유</em></div><div class="yt-kpi"><small>좋아요</small><b>6,760</b><em>댓글 224</em></div><div class="yt-kpi"><small>공유</small><b>2,215</b><em>미매칭 3.4만</em></div></div></div>
+        </details>
+        <details class="week-group yt-week-group" data-yt-week-group="4">
+          <summary data-week-toggle="yt-4"><span class="week-label">온드 4주차 <small>8/17–8/23 · 완료 · 조회 53만 · 당주 8.2만 · 기발행 43만</small></span><span class="week-chevron" aria-hidden="true"></span></summary>
+          <div class="week-items"><div class="yt-kpi-strip num yt-week-kpis"><div class="yt-kpi"><small>조회수</small><b>53만</b><em>8/17–8/23</em></div><div class="yt-kpi"><small>당월/당주 발행 기여</small><b>8.2만</b><em>기간 내 발행 cohort</em></div><div class="yt-kpi"><small>기발행 기여</small><b>43만</b><em>기존 library cohort</em></div><div class="yt-kpi"><small>인게이지먼트</small><b>4,402</b><em>좋아요+댓글+공유</em></div><div class="yt-kpi"><small>좋아요</small><b>3,207</b><em>댓글 129</em></div><div class="yt-kpi"><small>공유</small><b>1,066</b><em>미매칭 1.8만</em></div></div></div>
+        </details>
+        <details class="week-group yt-week-group" data-yt-week-group="5">
+          <summary data-week-toggle="yt-5"><span class="week-label">온드 5주차 <small>8/24–8/30 · 수집중 · Analytics weekly partial 미반영 · 월누적에는 포함 가능</small></span><span class="week-chevron" aria-hidden="true"></span></summary>
+          <div class="week-items"><div class="yt-kpi-strip num yt-week-kpis"><div class="yt-kpi"><small>조회수</small><b>0</b><em>8/24–8/24</em></div><div class="yt-kpi"><small>당월/당주 발행 기여</small><b>0</b><em>기간 내 발행 cohort</em></div><div class="yt-kpi"><small>기발행 기여</small><b>0</b><em>기존 library cohort</em></div><div class="yt-kpi"><small>인게이지먼트</small><b>0</b><em>좋아요+댓글+공유</em></div><div class="yt-kpi"><small>좋아요</small><b>0</b><em>댓글 0</em></div><div class="yt-kpi"><small>공유</small><b>0</b><em>미매칭 0</em></div></div></div>
+        </details></div>
+    </div>
+    <div class="yt-panel yt-weekly-panel" aria-label="D+N 콘텐츠 참고">
+      <div class="yt-weekly-head"><h3>콘텐츠 D+N 참고</h3><small>완료된 public D+N snapshot만 표시. 월누적 headline과 기준을 섞지 않음.</small></div>
       <div class="yt-card-grid num">
-        <article class="yt-weekly-card hit" data-yt-weekly-card="beforeafter-lf-ep91">
-          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=NFd8lN83gWw" target="_blank" rel="noopener">5평 원룸 공간 4개로 나눠 쓰는 방법 | 비포애프터 ep.91<span aria-hidden="true">↗</span></a></b><small>LF · 비포애프터 · D+7</small></div><span class="yt-tier">P90+</span></div>
-          <div class="yt-weekly-metrics"><span><small>현재</small><b>388,292</b></span><span><small>P50</small><b>244,080</b></span><span><small>P75</small><b>316,186</b></span><span><small>P90</small><b>359,450</b></span></div>
-          <div class="yt-card-note"><b>판정:</b> 이번 주 대표 히트. LF 비포애프터 후속/파생 쇼츠까지 같이 체크.</div>
+        <article class="yt-weekly-card" data-yt-weekly-card="mtd-NFd8lN83gWw">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=NFd8lN83gWw" target="_blank" rel="noopener">5평 원룸 공간 4개로 나눠 쓰는 방법 | 비포애프터 ep.91<span aria-hidden="true">↗</span></a></b><small>LF · 비포애프터 · 8/3</small></div><span class="yt-tier">D+7</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>388,292</b></span><span><small>기준</small><b>public D+N</b></span><span><small>상태</small><b>complete</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> 월 누적 상세탭의 콘텐츠 참고 카드입니다. Highlight/Lowlight 판정은 동종 D+N 벤치마크가 있을 때만 별도 표시합니다.</div>
         </article>
-        <article class="yt-weekly-card watch" data-yt-weekly-card="nationhome-lf-ep9">
-          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=VpP_AYE1EBg" target="_blank" rel="noopener">1000/50부터 시작해서 인테리어에만 1억 7천 쓴 역대급 집<span aria-hidden="true">↗</span></a></b><small>LF · 전국내집자랑 · D+5</small></div><span class="yt-tier">P50↓</span></div>
-          <div class="yt-weekly-metrics"><span><small>현재</small><b>33,184</b></span><span><small>P50</small><b>37,615</b></span><span><small>P75</small><b>39,831</b></span><span><small>P90</small><b>41,160</b></span></div>
-          <div class="yt-card-note"><b>판정:</b> 보조 기여는 있으나 LF 히트로 보긴 어려움. 제목/초반 유지율 확인 필요.</div>
+        <article class="yt-weekly-card" data-yt-weekly-card="mtd-VpP_AYE1EBg">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=VpP_AYE1EBg" target="_blank" rel="noopener">1000/50부터 시작해서 인테리어에만 1억 7천 쓴 역대급 집ㅣ전국내집자랑 ep.9<span aria-hidden="true">↗</span></a></b><small>LF · 전국내집자랑/전국내방자랑 · 8/6</small></div><span class="yt-tier">D+7</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>38,066</b></span><span><small>기준</small><b>public D+N</b></span><span><small>상태</small><b>complete</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> 월 누적 상세탭의 콘텐츠 참고 카드입니다. Highlight/Lowlight 판정은 동종 D+N 벤치마크가 있을 때만 별도 표시합니다.</div>
         </article>
-        <article class="yt-weekly-card" data-yt-weekly-card="beforeafter-sf-room">
-          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=hBVJCDFxzcE" target="_blank" rel="noopener">5평 원룸을 4개의 공간으로 나눌 수 있을까?<span aria-hidden="true">↗</span></a></b><small>SF · 비포애프터 · D+6</small></div><span class="yt-tier">P75</span></div>
-          <div class="yt-weekly-metrics"><span><small>현재</small><b>32,562</b></span><span><small>P50</small><b>18,356</b></span><span><small>P75</small><b>32,562</b></span><span><small>P90</small><b>36,247</b></span></div>
-          <div class="yt-card-note"><b>판정:</b> 같은 IP 안에서는 선방. 다만 주간 전체를 끌 정도의 P90권은 아님.</div>
+        <article class="yt-weekly-card" data-yt-weekly-card="mtd-3efWOUWyOgM">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=3efWOUWyOgM" target="_blank" rel="noopener">시공없이 페인트로 분위기 바꾼 4평 원룸 | 비포애프터 : 룸페어링 ep.2<span aria-hidden="true">↗</span></a></b><small>LF · 비포애프터 · 8/13</small></div><span class="yt-tier">D+5</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>37,516</b></span><span><small>기준</small><b>public D+N</b></span><span><small>상태</small><b>complete</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> 월 누적 상세탭의 콘텐츠 참고 카드입니다. Highlight/Lowlight 판정은 동종 D+N 벤치마크가 있을 때만 별도 표시합니다.</div>
         </article>
-        <article class="yt-weekly-card" data-yt-weekly-card="beforeafter-sf-deposit">
-          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=h0IbWds1vcg" target="_blank" rel="noopener">전세금을 못 돌려 받아서 그냥 살기로 했습니다<span aria-hidden="true">↗</span></a></b><small>SF · 비포애프터 · D+7</small></div><span class="yt-tier">P50~P75</span></div>
-          <div class="yt-weekly-metrics"><span><small>현재</small><b>18,837</b></span><span><small>P50</small><b>14,445</b></span><span><small>P75</small><b>24,068</b></span><span><small>P90</small><b>33,485</b></span></div>
-          <div class="yt-card-note"><b>판정:</b> 안정권이지만 확산형 히트는 아님. 소재 hook은 유지, 시리즈 반복성 확인.</div>
+        <article class="yt-weekly-card" data-yt-weekly-card="mtd-hBVJCDFxzcE">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=hBVJCDFxzcE" target="_blank" rel="noopener">5평 원룸을 4개의 공간으로 나눌 수 있을까? #shorts  #비포애프터<span aria-hidden="true">↗</span></a></b><small>SF · 비포애프터 · 8/5</small></div><span class="yt-tier">D+7</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>34,284</b></span><span><small>기준</small><b>public D+N</b></span><span><small>상태</small><b>complete</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> 월 누적 상세탭의 콘텐츠 참고 카드입니다. Highlight/Lowlight 판정은 동종 D+N 벤치마크가 있을 때만 별도 표시합니다.</div>
         </article>
-        <article class="yt-weekly-card watch" data-yt-weekly-card="nationhome-sf-storage">
-          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=4GZzqqJHHSc" target="_blank" rel="noopener">벽인 줄 알았어요! 벽 속 수납공간<span aria-hidden="true">↗</span></a></b><small>SF · 전국내집자랑 · D+4</small></div><span class="yt-tier">P50↓</span></div>
-          <div class="yt-weekly-metrics"><span><small>현재</small><b>10,577</b></span><span><small>P50</small><b>13,133</b></span><span><small>P75</small><b>15,932</b></span><span><small>P90</small><b>16,431</b></span></div>
-          <div class="yt-card-note"><b>판정:</b> SF 전국내집자랑은 전주 히트 소진 대비 신규 모멘텀이 약함.</div>
+        <article class="yt-weekly-card" data-yt-weekly-card="mtd-ZJDxxqDtvr4">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=ZJDxxqDtvr4" target="_blank" rel="noopener">조명 켜려다 피아노 치는 줄 알았습니다 #shorts #전국내집자랑<span aria-hidden="true">↗</span></a></b><small>SF · 전국내집자랑/전국내방자랑 · 8/10</small></div><span class="yt-tier">D+7</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>31,086</b></span><span><small>기준</small><b>public D+N</b></span><span><small>상태</small><b>complete</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> 월 누적 상세탭의 콘텐츠 참고 카드입니다. Highlight/Lowlight 판정은 동종 D+N 벤치마크가 있을 때만 별도 표시합니다.</div>
         </article>
-      </div>
-      <div class="yt-actions">
-        <div class="step"><b>다음 주 1</b><small>비포애프터 ep.91 잔존 조회와 파생 SF 전환을 추적.</small></div>
-        <div class="step"><b>다음 주 2</b><small>SF 전국내집자랑은 P50 미만 소재를 hook/초반 컷 기준으로 재점검.</small></div>
-        <div class="step"><b>다음 주 3</b><small>혼수의기술 재상승은 기발행 library signal로 분리해 재활용 후보만 표시.</small></div>
-      </div>
-      <div class="yt-source"><b>데이터 기준:</b> MBD YT SSOT + public snapshot D+1~D+7 benchmark · 주간 판단용 sanitized view</div>
-    </section>
+        <article class="yt-weekly-card" data-yt-weekly-card="mtd-Ev4OPukqJUc">
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="https://www.youtube.com/watch?v=Ev4OPukqJUc" target="_blank" rel="noopener">여기 혹시 호그와트인가요? #shorts #전국내집자랑<span aria-hidden="true">↗</span></a></b><small>SF · 전국내집자랑/전국내방자랑 · 8/13</small></div><span class="yt-tier">D+5</span></div>
+          <div class="yt-weekly-metrics"><span><small>현재</small><b>25,635</b></span><span><small>기준</small><b>public D+N</b></span><span><small>상태</small><b>complete</b></span></div>
+          <div class="yt-card-note"><b>판정:</b> 월 누적 상세탭의 콘텐츠 참고 카드입니다. Highlight/Lowlight 판정은 동종 D+N 벤치마크가 있을 때만 별도 표시합니다.</div>
+        </article></div>
+    </div>
+    <div class="yt-source"><b>데이터 기준:</b> YouTube Analytics API monthly/weekly period rows + public D+N snapshot · fetched_at 2026-08-25 00:04:15.170161 · raw_status ok</div>
   </div>
 </section>
-<section id="liveWindow" class="live-window" data-live-window="weekly-performance" role="dialog" aria-modal="false" aria-labelledby="liveWindowTitle" aria-hidden="true">
+<section id="liveWindow" class="live-window" data-live-window="weekly-performance" data-live-period="mtd" data-live-window-latest-date="2026-08-24" role="dialog" aria-modal="false" aria-labelledby="liveWindowTitle" aria-hidden="true">
   <div class="live-window-bar">
-    <div class="live-window-title"><b id="liveWindowTitle">라이브 주간 성과 창</b><small>좌측 라이브 탭 전용 UI · 거래액 기준 분리</small></div>
+    <div class="live-window-title"><b id="liveWindowTitle">라이브 성과 상세탭</b><small>디폴트 금월 누적 · 주차별 보기 · 거래액 기준 분리</small></div>
     <button class="live-window-close" type="button" data-live-close>대시보드로 돌아가기</button>
   </div>
   <div class="live-window-body">
     <div class="live-hero">
-      <section class="live-hero-main" aria-label="8월 1주차 라이브 성과 요약">
-        <span class="live-eyebrow">8월 1주차 · 8/3–8/6 · 완료 7건</span>
-        <h2>총액은 회복됐지만,<br>방송당 효율 회복으로 보긴 어려움</h2>
-        <p><b>방송별 데이터 GMV 1.87억</b>은 WoW +78.3%로 회복됐지만, 진행건수 증가 효과가 컸습니다. 방당 GMV는 -23.6%, 직전 4주 평균 대비 -26.9%라서 다음 주 운영은 “더 많이 편성”보다 <b>상품력·혜택·도달 gate</b>를 먼저 봐야 합니다.</p>
-        <div class="live-kpi-strip num" aria-label="라이브 주간 핵심 지표">
-          <div class="live-kpi"><small>진행</small><b>7건</b><em>전주 +4건</em></div>
-          <div class="live-kpi"><small>방송별 GMV</small><b>1.87억</b><em>WoW +78.3%</em></div>
-          <div class="live-kpi"><small>방당 GMV</small><b>2,666만</b><em>WoW -23.6%</em></div>
-          <div class="live-kpi"><small>시청</small><b>49.2만</b><em>평균 7.0만</em></div>
-          <div class="live-kpi"><small>클릭률</small><b>4.6%</b><em>+1.9%p</em></div>
-          <div class="live-kpi"><small>구매</small><b>1,619</b><em>구매율 0.33%</em></div>
-          <div class="live-kpi"><small>AF 수취액</small><b>5,685만</b><em>비용 1,375만</em></div>
-          <div class="live-kpi"><small>마진</small><b>4,310만</b><em>AF-비용</em></div>
-        </div>
-      </section>
-      <aside class="live-hero-side" aria-label="패키지 믹스와 편성 gate 해석">
-        <div class="live-window-section-title">패키지 믹스 해석</div>
-        <div class="live-pulse num">
-          <div class="live-mix-row"><b>시그니처</b><span><em>시청 97% / 방송별 GMV 46.5%</em><br>도달은 거의 전부 만들었지만, 매출 기여는 절반 미만입니다. 노출보다 구매 이유를 같이 봐야 합니다.</span></div>
-          <div class="live-mix-row"><b>에센셜</b><span><em>방송별 GMV 41.2%</em><br>도달은 작아도 다우닝처럼 고단가·혜택·상품 전환력이 있으면 주간 GMV를 받칩니다.</span></div>
-          <div class="live-mix-row"><b>스마트</b><span><em>방송별 GMV 12.4%</em><br>팸퍼스처럼 반복구매·단독혜택형 카테고리의 보조 기여로 해석합니다.</span></div>
-          <div class="live-mix-row risk"><b>쿠첸 신제품 gate</b><span><em>클릭률 0.9%</em><br>패키지가 아니라 편성 점검 신호입니다. 고관여 신제품은 경쟁방송·리뷰/스타일링샷·구매 이유 확인 후 편성.</span></div>
-        </div>
+      <div class="live-hero-main" aria-label="8월 금월 누적 라이브 성과 요약">
+        <span class="live-eyebrow">8월 금월 누적 · 8/3–8/24 · 완료 24건</span>
+        <h2>금월 누적 성과가 디폴트,<br>주차별로 쪼개서 확인</h2>
+        <p><b>1D 거래액 36.99억</b>, <b>방송별 데이터 GMV 18.22억</b>까지 반영했습니다. 완료·GMV 확인된 24건 기준이며, 미집계/0원 편성은 누적 성과에서 제외했습니다. 아래 주차별 보기에서 8월 각 주차를 펼쳐 방송별 수치를 확인합니다.</p>
+        <div class="live-kpi-strip num" aria-label="라이브 금월 누적 핵심 지표"><div class="live-kpi"><small>진행</small><b>24건</b><em>8/3–8/24 완료</em></div><div class="live-kpi"><small>1D 거래액</small><b>36.99억</b><em>브랜드 일거래액 누적</em></div><div class="live-kpi"><small>방송별 GMV</small><b>18.22억</b><em>방송 성과 누적</em></div><div class="live-kpi"><small>방당 GMV</small><b>7,593만</b><em>방송별 GMV 평균</em></div><div class="live-kpi"><small>시청</small><b>135만</b><em>평균 5.6만</em></div><div class="live-kpi"><small>클릭률</small><b>5.6%</b><em>클릭 75,500</em></div><div class="live-kpi"><small>구매</small><b>4,680</b><em>구매율 0.35%</em></div><div class="live-kpi"><small>AF/마진</small><b>1.68억</b><em>마진 1.28억</em></div></div>
+      </div>
+      <aside class="live-hero-side" aria-label="누적 패키지 믹스 해석">
+        <div class="live-window-section-title">누적 패키지 믹스 해석</div>
+        <div class="live-pulse num"><div class="live-mix-row"><b>시그니처</b><span><em>시청 84.3% / 방송별 GMV 32.8% · 8건</em><br>패키지 믹스는 거래액/도달을 분리해서 봅니다.</span></div><div class="live-mix-row"><b>스마트</b><span><em>시청 12.6% / 방송별 GMV 42.9% · 6건</em><br>패키지 믹스는 거래액/도달을 분리해서 봅니다.</span></div><div class="live-mix-row"><b>에센셜</b><span><em>시청 3.1% / 방송별 GMV 24.2% · 10건</em><br>패키지 믹스는 거래액/도달을 분리해서 봅니다.</span></div></div>
       </aside>
     </div>
     <div class="live-board">
-      <section class="live-panel" aria-label="운영 인사이트">
+      <div class="live-panel" aria-label="누적 운영 판단">
         <h3>운영 판단</h3>
         <div class="live-insights">
-          <div class="live-insight"><span><b>총평은 진행건수 회복과 방당 효율 하락을 분리.</b> 이번 주는 7건으로 총액은 회복됐지만 방당 GMV는 -23.6%라서 Loca 총평은 전체 지표 + 핵심 2개만 남기고, 방송별 회고는 PD가 직접 보강하는 구조가 필요합니다.</span></div>
-          <div class="live-insight"><span><b>낮은 도달 자체보다 유입의 질을 먼저 판정.</b> 다우닝은 유입·시청·전환이 낮아도 고관여 구매자와 객단가로 브랜드 체력 대비 +25%, 기간 체력 대비 +16%를 만들었으므로 “구매 의향자 중심 유입”으로 하이라이트합니다.</span></div>
-          <div class="live-insight"><span><b>시그니처/신제품은 도달보다 구매 이유 gate.</b> BAS는 시즌성·단독 구성·브랜드 동시 마케팅이 맞은 재현 후보이고, 쿠첸은 경쟁방송 사전인지와 리뷰/스타일링샷 같은 신뢰자산 확인 전까지 gate로 둡니다.</span></div>
+          <div class="live-insight"><span><b>월 누적과 주간을 분리.</b> 상단은 금월 누적, 아래는 주차별 완료 방송입니다. 1회성 8/6 스냅샷이 아니라 최신 완료일 8/24까지 갱신합니다.</span></div>
+          <div class="live-insight"><span><b>성과 기준 분리.</b> 카드 거래액은 1D 브랜드 일거래액, 월/주간 효율은 방송별 데이터 GMV, 1H는 방송 중 성과로 분리합니다.</span></div>
+          <div class="live-insight"><span><b>미집계/0원 편성 제외.</b> 아직 GMV가 들어오지 않은 향후/부분수집 row는 완료 성과로 보지 않고 다음 RAW 반영 때 자동 포함합니다.</span></div>
         </div>
-      </section>
-      <section class="live-panel" aria-label="핵심 방송 콜아웃">
-        <h3>핵심 콜아웃</h3>
-        <div class="live-card-grid">
-          <div class="live-case"><span class="tag">재현</span><span class="brand">BAS</span><p>1D 거래액 6,374만. 생활용품 시그니처+브랜드 동시 마케팅+단독 구성+여름 냄새 수요로 전환율 상위권.</p></div>
-          <div class="live-case"><span class="tag">질적 유입</span><span class="brand">다우닝</span><p>저도달 3,722명이어도 1D 거래액 1.41억. 브랜드 체력 +25%·기간 체력 +16%, “살 사람 오게” 만든 케이스.</p></div>
-          <div class="live-case risk"><span class="tag">Gate</span><span class="brand">쿠첸</span><p>도달 16.0만 대비 클릭률 0.9%. 경쟁방송을 1주 전 알았는지와 신제품 신뢰자산 확보 여부가 점검 포인트.</p></div>
-        </div>
-        <div class="live-meeting" data-live-meeting-highlight="2026-08-11-weekly-timeout">
-          <h4>회의 하이라이트 · 8/11 Weekly Time-out</h4>
-          <ul>
-            <li><b>리포트 역할 분리:</b> Loca는 주간 총평+핵심 2개, PD는 방송별 인사이트/회고 작성.</li>
-            <li><b>수상한 집:</b> ‘수상+집’ 메타포에 집중, 사전 알림 100% 포인트는 방문자 조건+럭키드로 연동 확인 후 결정.</li>
-            <li><b>경쟁방송:</b> 쿠첸 건은 1주 전 사전인지 여부 확인 후 편성 캘린더 gate에 반영.</li>
-          </ul>
-        </div>
-        <div class="live-next">
-          <div class="step"><b>1. 편성 gate</b><small>시그니처/신제품은 경쟁방송·신뢰자산·구매 이유 확인</small></div>
-          <div class="step"><b>2. 질적 유입</b><small>저도달이라도 브랜드/기간 체력 대비 성과가 있으면 하이라이트</small></div>
-          <div class="step"><b>3. 회고 루프</b><small>회의에서 다룬 방송을 PD 회고 카드와 다음 편성 체크리스트로 태깅</small></div>
-        </div>
-      </section>
-    </div>
-    <section class="live-panel live-broadcast-panel" aria-label="방송별 성과와 PD 회고">
-      <div class="live-broadcast-head"><div><h3>방송별 성과 &amp; PD 회고</h3><small>데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 방송간 효율=방송별 데이터 GMV · 1H=방송 중 성과.</small></div><small>시청 · 클릭률 · 구매 · 1D 거래액을 한 장에서 비교</small></div>
-      <div class="live-broadcast-grid">
-        <article class="live-broadcast-card top" data-live-broadcast-card="frosch">
-          <div class="live-broadcast-title"><div><b>프로쉬</b><small>8/3 · Minnie · 시그니처 · 어서오!세일</small></div><span class="live-broadcast-tag">도달 성공</span></div>
-          <div class="live-broadcast-metrics num"><span><small>시청</small><b>16.1만</b></span><span><small>클릭률</small><b>5.5%</b></span><span><small>구매</small><b>737</b></span><span><small>거래액</small><b>1D 8,630만</b></span></div>
-          <div class="live-pd-note"><b>PD 회고</b> 목표는 초과했지만 직전 카쇼라 3일 뒤 진행으로 식기세척기세제 미니 대기수요가 일부 흡수. 라벤더 욕실클리너는 반응 좋았으나 품절 처리 시그널이 늦었습니다.</div>
-          <div class="live-next-action"><b>다음 액션</b> 타몰 라이브 간격 관리 + 한정 인기 상품은 15~20분 조기 품절/재오픈으로 긴급성을 장치화.</div>
-        </article>
-        <article class="live-broadcast-card risk" data-live-broadcast-card="cuchen">
-          <div class="live-broadcast-title"><div><b>쿠첸</b><small>8/4 · Jeff · 시그니처 · 오늘it집</small></div><span class="live-broadcast-tag">신제품 gate</span></div>
-          <div class="live-broadcast-metrics num"><span><small>시청</small><b>16.0만</b></span><span><small>클릭률</small><b>0.9%</b></span><span><small>구매</small><b>59</b></span><span><small>거래액</small><b>1D 3,846만</b></span></div>
-          <div class="live-pd-note"><b>PD 회고</b> 음식물처리기 신제품 런칭으로 도달은 충분했지만 쿠쿠 셀럽 라이브와 같은 날 충돌. 회의에서는 같은 카테고리/셀럽 라이브를 1주 전 인지했는지 확인하고, 리뷰·스타일링샷 등 신뢰자산 부재를 별도 gate로 보자는 쪽으로 정리됐습니다.</div>
-          <div class="live-next-action"><b>다음 액션</b> 고관여 신제품은 경쟁방송 사전인지 여부, 리뷰 자산, 카테고리 신뢰도 확보 전 gate 통과 후 편성.</div>
-        </article>
-        <article class="live-broadcast-card" data-live-broadcast-card="pampers">
-          <div class="live-broadcast-title"><div><b>팸퍼스</b><small>8/5 · Jeff · 스마트 · 어서오!세일</small></div><span class="live-broadcast-tag">저도달 고의향</span></div>
-          <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,364</b></span><span><small>클릭률</small><b>42.9%</b></span><span><small>구매</small><b>131</b></span><span><small>거래액</small><b>1D 6,659만</b></span></div>
-          <div class="live-pd-note"><b>PD 회고</b> 에어차차 80% 비중으로 집중 소구하고 흡수성·통기성·탈수기 시연을 강화. 가격은 소폭 상승했지만 현 시점 최저가와 단독 혜택으로 6월 대비 회복세.</div>
-          <div class="live-next-action"><b>다음 액션</b> 육아/반복구매 카테고리는 대규모 도달보다 체감 시연+단독 혜택+최저가 신뢰를 우선.</div>
-        </article>
-        <article class="live-broadcast-card" data-live-broadcast-card="truecook">
-          <div class="live-broadcast-title"><div><b>트루쿡</b><small>8/5 · 외주 · 에센셜 · 어서오!세일</small></div><span class="live-broadcast-tag">반복 편성</span></div>
-          <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,397</b></span><span><small>클릭률</small><b>43.8%</b></span><span><small>구매</small><b>78</b></span><span><small>거래액</small><b>1D 2,806만</b></span></div>
-          <div class="live-pd-note"><b>PD 회고</b> 3회차 라이브로 편성 간격은 짧았지만 인기 라인업 세트와 혜택 차별화를 적용. 직전 대비 GMV는 개선됐고, 시청자는 당일 전반 유입 저조 영향.</div>
-          <div class="live-next-action"><b>다음 액션</b> 반복 편성 브랜드는 유입 회복 장치와 새 구성 이유를 먼저 만들고, 당일 전체 유입 저조와 브랜드 이슈를 분리.</div>
-        </article>
-        <article class="live-broadcast-card top" data-live-broadcast-card="downing">
-          <div class="live-broadcast-title"><div><b>다우닝</b><small>8/5 · 외주 · 에센셜 · 어서오!세일</small></div><span class="live-broadcast-tag">고GMV</span></div>
-          <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,722</b></span><span><small>클릭률</small><b>30.5%</b></span><span><small>구매</small><b>30</b></span><span><small>거래액</small><b>1D 1.41억</b></span></div>
-          <div class="live-pd-note"><b>PD 회고</b> 회의에서 유입은 줄었지만 구매 의향자만 들어와 전환된 케이스로 해석. 메인 상품 전환, 타 홈쇼핑 채널 중심 플랫 모델의 오늘의집 특별 공급, 가격·혜택 댓글 반응이 고관여 구매와 객단가를 만들었습니다.</div>
-          <div class="live-next-action"><b>다음 액션</b> 에센셜이라도 브랜드 체력 대비 +25%·기간 체력 대비 +16%처럼 체력 대비 성과가 있으면 저도달 고의향 후보로 우선 편성.</div>
-        </article>
-        <article class="live-broadcast-card top" data-live-broadcast-card="bas">
-          <div class="live-broadcast-title"><div><b>BAS</b><small>8/6 · Jeff · 시그니처 · 어서오!세일</small></div><span class="live-broadcast-tag">BAS playbook</span></div>
-          <div class="live-broadcast-metrics num"><span><small>시청</small><b>15.6만</b></span><span><small>클릭률</small><b>4.8%</b></span><span><small>구매</small><b>563</b></span><span><small>거래액</small><b>1D 6,374만</b></span></div>
-          <div class="live-pd-note"><b>PD 회고</b> 회의에서 생활용품 시그니처가 붙었을 때 유입과 거래액이 같이 오른 대표 케이스로 확인. 브랜드 카톡·메타광고·카페 바이럴, 라이브 단독 구성, 여름 냄새 시즌 수요, 저관여 소모품 특성이 전환율 상위권을 만들었습니다.</div>
-          <div class="live-next-action"><b>다음 액션</b> 브랜드 동시 마케팅+라이브 단독 묶음+시즌성+저관여 소모품 조합은 BAS playbook으로 다음 편성 재현 후보 태깅.</div>
-        </article>
-        <article class="live-broadcast-card risk" data-live-broadcast-card="hweehwee">
-          <div class="live-broadcast-title"><div><b>휘휘</b><small>8/6 · 외주 · 에센셜 · 어서오!세일</small></div><span class="live-broadcast-tag">인지/조건</span></div>
-          <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,936</b></span><span><small>클릭률</small><b>20.0%</b></span><span><small>구매</small><b>21</b></span><span><small>거래액</small><b>1D 1,281만</b></span></div>
-          <div class="live-pd-note"><b>PD 회고</b> 오늘의집 첫 라이브로 가성비·컬러 포지션을 소구했지만 구매인증이 후반에 몰렸고, 컬러 모델 구매 시 화이트 날개 증정 조건을 반복 질문했습니다.</div>
-          <div class="live-next-action"><b>다음 액션</b> 첫 라이브/저인지 브랜드는 조건을 고정 배너로 노출하고, 비교·결정 지연을 줄일 쇼호스트 멘트와 구매 트리거를 앞단에 배치.</div>
-        </article>
       </div>
-    </section>
-    <div class="live-source"><b>basis</b> 데이터 사용 룰 · 방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)` · 상단 주간/방당 효율=`방송별 데이터 GMV` · 1H 실시간 성과=`라이브 1H GMV` · generic GMV 표기 금지</div>
+      <div class="live-panel" aria-label="누적 핵심 방송과 주차 요약">
+        <h3>핵심 콜아웃</h3>
+        <div class="live-card-grid"><div class="live-case"><span class="tag">Top 1</span><span class="brand">LG전자</span><p>8/18 · 1D 5.53억 · 방송별 7,856만 · 시그니처</p></div><div class="live-case"><span class="tag">Top 2</span><span class="brand">시몬스</span><p>8/23 · 1D 4.75억 · 방송별 3.4억 · 스마트</p></div><div class="live-case"><span class="tag">Top 3</span><span class="brand">데스커</span><p>8/24 · 1D 4.74억 · 방송별 2.24억 · 스마트</p></div></div>
+        <div class="live-next" data-live-week-summary="8"><div class="step"><b>8월 1주차</b><small>8/3–8/6 · 완료 7건 · 1D 4.37억 · 방당 2,666만</small></div><div class="step"><b>8월 2주차</b><small>8/10–8/11 · 완료 2건 · 1D 2.52억 · 방당 4,953만</small></div><div class="step"><b>8월 3주차</b><small>8/17–8/20 · 완료 11건 · 1D 18.45억 · 방당 7,864만</small></div><div class="step"><b>8월 4주차</b><small>8/23–8/24 · 완료 4건 · 1D 11.65억 · 방당 1.68억</small></div></div>
+      </div>
+    </div>
+    <div class="live-panel live-broadcast-panel" aria-label="주차별 방송 성과">
+      <div class="live-broadcast-head"><div><h3>주차별 보기 · 방송별 성과</h3><small>데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.</small></div><small>시청 · 클릭률 · 구매 · 1D 거래액을 한 장에서 비교</small></div>
+      <div class="live-weekly-accordion" data-live-weekly-view="8">
+        <details class="week-group live-week-group" data-live-week-group="8-1">
+          <summary data-week-toggle="live-8-1"><span class="week-label">8월 1주차 <small>8/3–8/6 · 완료 7건 · 1D 4.37억 · 방송별 1.87억 · 방당 2,666만</small></span><span class="week-chevron" aria-hidden="true"></span></summary>
+          <div class="week-items">
+            <div class="live-kpi-strip num live-week-kpis"><div class="live-kpi"><small>진행</small><b>7건</b><em>8/3–8/6 완료</em></div><div class="live-kpi"><small>1D 거래액</small><b>4.37억</b><em>브랜드 일거래액 누적</em></div><div class="live-kpi"><small>방송별 GMV</small><b>1.87억</b><em>방송 성과 누적</em></div><div class="live-kpi"><small>방당 GMV</small><b>2,666만</b><em>방송별 GMV 평균</em></div><div class="live-kpi"><small>시청</small><b>49만</b><em>평균 7만</em></div><div class="live-kpi"><small>클릭률</small><b>4.6%</b><em>클릭 22,621</em></div><div class="live-kpi"><small>구매</small><b>1,619</b><em>구매율 0.33%</em></div><div class="live-kpi"><small>AF/마진</small><b>5,685만</b><em>마진 4,310만</em></div></div>
+            <div class="live-broadcast-grid">
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260803-01">
+          <div class="live-broadcast-title"><div><b>프로쉬</b><small>8/3 · Minnie · 시그니처 · 어서오!세일</small></div><span class="live-broadcast-tag">시그니처</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>16만</b></span><span><small>클릭률</small><b>5.5%</b></span><span><small>구매</small><b>737</b></span><span><small>거래액</small><b>1D 8,630만</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 3,151만 · 1H 3,790만 · AF 1,200만 · 비용 140만 · 마진 1,060만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card risk" data-live-broadcast-card="mtd-20260804-02">
+          <div class="live-broadcast-title"><div><b>쿠첸</b><small>8/4 · Jeff · 시그니처 · 오늘it집</small></div><span class="live-broadcast-tag">저클릭</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>16만</b></span><span><small>클릭률</small><b>0.9%</b></span><span><small>구매</small><b>59</b></span><span><small>거래액</small><b>1D 3,846만</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 2,096만 · 1H 2,172만 · AF 1,200만 · 비용 260만 · 마진 940만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260805-03">
+          <div class="live-broadcast-title"><div><b>다우닝</b><small>8/5 · 외주 · 에센셜 · 어서오!세일</small></div><span class="live-broadcast-tag">에센셜</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,722</b></span><span><small>클릭률</small><b>30.5%</b></span><span><small>구매</small><b>30</b></span><span><small>거래액</small><b>1D 1.41억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 6,045만 · 1H 8,075만 · AF 490만 · 비용 230만 · 마진 260만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260805-04">
+          <div class="live-broadcast-title"><div><b>트루쿡</b><small>8/5 · 외주 · 에센셜 · 어서오!세일</small></div><span class="live-broadcast-tag">에센셜</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,397</b></span><span><small>클릭률</small><b>43.8%</b></span><span><small>구매</small><b>78</b></span><span><small>거래액</small><b>1D 2,806만</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 981만 · 1H 1,132만 · AF 420만 · 비용 150만 · 마진 270만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260805-05">
+          <div class="live-broadcast-title"><div><b>팸퍼스</b><small>8/5 · Jeff · 스마트 · 어서오!세일</small></div><span class="live-broadcast-tag">스마트</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,364</b></span><span><small>클릭률</small><b>42.9%</b></span><span><small>구매</small><b>131</b></span><span><small>거래액</small><b>1D 6,659만</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 2,305만 · 1H 2,536만 · AF 775만 · 비용 205만 · 마진 570만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260806-06">
+          <div class="live-broadcast-title"><div><b>BAS</b><small>8/6 · Jeff · 시그니처 · 어서오!세일</small></div><span class="live-broadcast-tag">시그니처</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>16만</b></span><span><small>클릭률</small><b>4.8%</b></span><span><small>구매</small><b>563</b></span><span><small>거래액</small><b>1D 6,374만</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 3,427만 · 1H 4,037만 · AF 1,200만 · 비용 260만 · 마진 940만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260806-07">
+          <div class="live-broadcast-title"><div><b>휘휘</b><small>8/6 · 외주 · 에센셜 · 어서오!세일</small></div><span class="live-broadcast-tag">에센셜</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,936</b></span><span><small>클릭률</small><b>20.0%</b></span><span><small>구매</small><b>21</b></span><span><small>거래액</small><b>1D 1,280만</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 656만 · 1H 602만 · AF 400만 · 비용 130만 · 마진 270만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article></div>
+          </div>
+        </details>
+        <details class="week-group live-week-group" data-live-week-group="8-2">
+          <summary data-week-toggle="live-8-2"><span class="week-label">8월 2주차 <small>8/10–8/11 · 완료 2건 · 1D 2.52억 · 방송별 9,907만 · 방당 4,953만</small></span><span class="week-chevron" aria-hidden="true"></span></summary>
+          <div class="week-items">
+            <div class="live-kpi-strip num live-week-kpis"><div class="live-kpi"><small>진행</small><b>2건</b><em>8/10–8/11 완료</em></div><div class="live-kpi"><small>1D 거래액</small><b>2.52억</b><em>브랜드 일거래액 누적</em></div><div class="live-kpi"><small>방송별 GMV</small><b>9,907만</b><em>방송 성과 누적</em></div><div class="live-kpi"><small>방당 GMV</small><b>4,953만</b><em>방송별 GMV 평균</em></div><div class="live-kpi"><small>시청</small><b>33만</b><em>평균 16만</em></div><div class="live-kpi"><small>클릭률</small><b>2.9%</b><em>클릭 9,671</em></div><div class="live-kpi"><small>구매</small><b>800</b><em>구매율 0.24%</em></div><div class="live-kpi"><small>AF/마진</small><b>2,400만</b><em>마진 2,060만</em></div></div>
+            <div class="live-broadcast-grid">
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260810-08">
+          <div class="live-broadcast-title"><div><b>베베숲</b><small>8/10 · Minnie · 시그니처 · 일반</small></div><span class="live-broadcast-tag">시그니처</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>16만</b></span><span><small>클릭률</small><b>3.6%</b></span><span><small>구매</small><b>629</b></span><span><small>거래액</small><b>1D 1.3억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 3,278만 · 1H 3,278만 · AF 1,200만 · 비용 130만 · 마진 1,070만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260811-09">
+          <div class="live-broadcast-title"><div><b>쿠쿠</b><small>8/11 · Jeff · 시그니처 · 일반</small></div><span class="live-broadcast-tag">시그니처</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>17만</b></span><span><small>클릭률</small><b>2.3%</b></span><span><small>구매</small><b>171</b></span><span><small>거래액</small><b>1D 1.21억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 6,628만 · 1H 6,405만 · AF 1,200만 · 비용 210만 · 마진 990만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article></div>
+          </div>
+        </details>
+        <details class="week-group live-week-group" data-live-week-group="8-3">
+          <summary data-week-toggle="live-8-3"><span class="week-label">8월 3주차 <small>8/17–8/20 · 완료 11건 · 1D 18.45억 · 방송별 8.65억 · 방당 7,864만</small></span><span class="week-chevron" aria-hidden="true"></span></summary>
+          <div class="week-items">
+            <div class="live-kpi-strip num live-week-kpis"><div class="live-kpi"><small>진행</small><b>11건</b><em>8/17–8/20 완료</em></div><div class="live-kpi"><small>1D 거래액</small><b>18.45억</b><em>브랜드 일거래액 누적</em></div><div class="live-kpi"><small>방송별 GMV</small><b>8.65억</b><em>방송 성과 누적</em></div><div class="live-kpi"><small>방당 GMV</small><b>7,864만</b><em>방송별 GMV 평균</em></div><div class="live-kpi"><small>시청</small><b>51만</b><em>평균 4.6만</em></div><div class="live-kpi"><small>클릭률</small><b>5.0%</b><em>클릭 25,376</em></div><div class="live-kpi"><small>구매</small><b>1,088</b><em>구매율 0.22%</em></div><div class="live-kpi"><small>AF/마진</small><b>7,150만</b><em>마진 5,400만</em></div></div>
+            <div class="live-broadcast-grid">
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260817-10">
+          <div class="live-broadcast-title"><div><b>레어로우</b><small>8/17 · 외주 · 에센셜 · 12주년</small></div><span class="live-broadcast-tag">에센셜</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>5,327</b></span><span><small>클릭률</small><b>34.5%</b></span><span><small>구매</small><b>28</b></span><span><small>거래액</small><b>1D 4,266만</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 2,398만 · 1H 2,135만 · AF 400만 · 비용 130만 · 마진 270만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card top" data-live-broadcast-card="mtd-20260817-11">
+          <div class="live-broadcast-title"><div><b>에싸</b><small>8/17 · Jeff · 시그니처 · 12주년</small></div><span class="live-broadcast-tag">고1D</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>17만</b></span><span><small>클릭률</small><b>2.7%</b></span><span><small>구매</small><b>74</b></span><span><small>거래액</small><b>1D 3.3억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 2.46억 · 1H 2.23억 · AF 1,200만 · 비용 260만 · 마진 940만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card top" data-live-broadcast-card="mtd-20260818-12">
+          <div class="live-broadcast-title"><div><b>LG전자</b><small>8/18 · Minnie · 시그니처 · 12주년</small></div><span class="live-broadcast-tag">누적 Top</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>16만</b></span><span><small>클릭률</small><b>1.4%</b></span><span><small>구매</small><b>53</b></span><span><small>거래액</small><b>1D 5.53억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 7,856만 · 1H 1.46억 · AF 1,200만 · 비용 130만 · 마진 1,070만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260818-13">
+          <div class="live-broadcast-title"><div><b>동아오츠카</b><small>8/18 · 외주 · 에센셜 · 12주년</small></div><span class="live-broadcast-tag">에센셜</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,427</b></span><span><small>클릭률</small><b>42.0%</b></span><span><small>구매</small><b>141</b></span><span><small>거래액</small><b>1D 2,209만</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 225만 · 1H 269만 · AF 400만 · 비용 130만 · 마진 270만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260818-14">
+          <div class="live-broadcast-title"><div><b>오늘의집 layer</b><small>8/18 · Jeff · 스마트 · 12주년</small></div><span class="live-broadcast-tag">스마트</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>4,557</b></span><span><small>클릭률</small><b>32.9%</b></span><span><small>구매</small><b>65</b></span><span><small>거래액</small><b>1D 1.98억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 7,841만 · 1H 8,378만 · AF 110만 · 비용 250만 · 마진 -140만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260819-15">
+          <div class="live-broadcast-title"><div><b>로보락</b><small>8/19 · 외주 · 에센셜 · 12주년</small></div><span class="live-broadcast-tag">에센셜</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>4,164</b></span><span><small>클릭률</small><b>39.4%</b></span><span><small>구매</small><b>102</b></span><span><small>거래액</small><b>1D 1.71억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 1.24억 · 1H 1.51억 · AF 400만 · 비용 130만 · 마진 270만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260819-16">
+          <div class="live-broadcast-title"><div><b>롯데칠성</b><small>8/19 · 외주 · 에센셜 · 12주년</small></div><span class="live-broadcast-tag">에센셜</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>3,401</b></span><span><small>클릭률</small><b>23.8%</b></span><span><small>구매</small><b>71</b></span><span><small>거래액</small><b>1D 1,486만</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 109만 · 1H 222만 · AF 400만 · 비용 130만 · 마진 270만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260819-17">
+          <div class="live-broadcast-title"><div><b>리바트</b><small>8/19 · 외주 · 에센셜 · 12주년</small></div><span class="live-broadcast-tag">에센셜</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>4,388</b></span><span><small>클릭률</small><b>73.4%</b></span><span><small>구매</small><b>188</b></span><span><small>거래액</small><b>1D 1.77억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 1.07억 · 1H 1.1억 · AF 400만 · 비용 140만 · 마진 260만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260820-18">
+          <div class="live-broadcast-title"><div><b>까사미아</b><small>8/20 · Minnie · 시그니처 · 12주년</small></div><span class="live-broadcast-tag">시그니처</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>5,025</b></span><span><small>클릭률</small><b>28.6%</b></span><span><small>구매</small><b>41</b></span><span><small>거래액</small><b>1D 1.4억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 8,785만 · 1H 8,600만 · AF 1,200만 · 비용 140만 · 마진 1,060만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260820-19">
+          <div class="live-broadcast-title"><div><b>락앤락</b><small>8/20 · Jensen · 스마트 · 12주년</small></div><span class="live-broadcast-tag">스마트</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>4,748</b></span><span><small>클릭률</small><b>93.5%</b></span><span><small>구매</small><b>243</b></span><span><small>거래액</small><b>1D 4,800만</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 1,988만 · 1H 1,875만 · AF 700만 · 비용 130만 · 마진 570만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260820-20">
+          <div class="live-broadcast-title"><div><b>브레빌</b><small>8/20 · Jeff · 스마트 · 12주년</small></div><span class="live-broadcast-tag">스마트</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>14만</b></span><span><small>클릭률</small><b>1.6%</b></span><span><small>구매</small><b>82</b></span><span><small>거래액</small><b>1D 1.49억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 9,687만 · 1H 9,088만 · AF 740만 · 비용 180만 · 마진 560만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article></div>
+          </div>
+        </details>
+        <details class="week-group live-week-group" data-live-week-group="8-4" open>
+          <summary data-week-toggle="live-8-4"><span class="week-label">8월 4주차 <small>8/23–8/24 · 완료 4건 · 1D 11.65억 · 방송별 6.72억 · 방당 1.68억</small></span><span class="week-chevron" aria-hidden="true"></span></summary>
+          <div class="week-items">
+            <div class="live-kpi-strip num live-week-kpis"><div class="live-kpi"><small>진행</small><b>4건</b><em>8/23–8/24 완료</em></div><div class="live-kpi"><small>1D 거래액</small><b>11.65억</b><em>브랜드 일거래액 누적</em></div><div class="live-kpi"><small>방송별 GMV</small><b>6.72억</b><em>방송 성과 누적</em></div><div class="live-kpi"><small>방당 GMV</small><b>1.68억</b><em>방송별 GMV 평균</em></div><div class="live-kpi"><small>시청</small><b>2.3만</b><em>평균 5,642</em></div><div class="live-kpi"><small>클릭률</small><b>79.0%</b><em>클릭 17,832</em></div><div class="live-kpi"><small>구매</small><b>1,173</b><em>구매율 5.20%</em></div><div class="live-kpi"><small>AF/마진</small><b>1,600만</b><em>마진 1,060만</em></div></div>
+            <div class="live-broadcast-grid">
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260823-21">
+          <div class="live-broadcast-title"><div><b>매직캔</b><small>8/23 · 외주 · 에센셜 · 12주년</small></div><span class="live-broadcast-tag">에센셜</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>5,348</b></span><span><small>클릭률</small><b>136.9%</b></span><span><small>구매</small><b>591</b></span><span><small>거래액</small><b>1D 1.08억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 4,898만 · 1H 4,747만 · AF 400만 · 비용 130만 · 마진 270만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card top" data-live-broadcast-card="mtd-20260823-22">
+          <div class="live-broadcast-title"><div><b>시몬스</b><small>8/23 · Minnie · 스마트 · 12주년</small></div><span class="live-broadcast-tag">누적 Top</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>5,757</b></span><span><small>클릭률</small><b>39.4%</b></span><span><small>구매</small><b>88</b></span><span><small>거래액</small><b>1D 4.75억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 3.4억 · 1H 3.12억 · AF 700만 · 비용 140만 · 마진 560만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card top" data-live-broadcast-card="mtd-20260824-23">
+          <div class="live-broadcast-title"><div><b>데스커</b><small>8/24 · Jeff · 스마트 · 12주년</small></div><span class="live-broadcast-tag">누적 Top</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>6,932</b></span><span><small>클릭률</small><b>77.6%</b></span><span><small>구매</small><b>287</b></span><span><small>거래액</small><b>1D 4.74억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 2.24억 · 1H 1.93억 · AF 100만 · 비용 140만 · 마진 -40만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article>
+        <article class="live-broadcast-card" data-live-broadcast-card="mtd-20260824-24">
+          <div class="live-broadcast-title"><div><b>미닉스</b><small>8/24 · 외주 · 에센셜 · 12주년</small></div><span class="live-broadcast-tag">에센셜</span></div>
+          <div class="live-broadcast-metrics num"><span><small>시청</small><b>4,529</b></span><span><small>클릭률</small><b>63.2%</b></span><span><small>구매</small><b>207</b></span><span><small>거래액</small><b>1D 1.09억</b></span></div>
+          <div class="live-pd-note"><b>RAW 기준</b> 방송별 데이터 GMV 5,854만 · 1H 6,881만 · AF 400만 · 비용 130만 · 마진 270만</div>
+          <div class="live-next-action"><b>회고 상태</b> 해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용.</div>
+        </article></div>
+          </div>
+        </details></div>
+    </div>
+    <div class="live-source"><b>basis</b> 방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)` · 월/주간 효율=`방송별 데이터 GMV` · 1H 실시간 성과=`라이브 1H GMV` · generic GMV 표기 금지 · source DuckDB live.raw_slots · ingest 2026-08-25T14:11:32+09:00</div>
   </div>
 </section>
 <script>

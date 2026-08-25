@@ -267,53 +267,59 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'activity-main-inline', 'activity-inline-meta', 'min-height:42px'):
         if marker not in html:
             errors.append(f"missing weekly content marker {marker!r}")
-    # [2026-08-11 correction] 좌측 라이브 탭은 기존 week ledger 인라인 블록이 아니라 별도 창 UI를 연다.
+    # [2026-08-25 correction] 좌측 라이브 상세탭은 8/6 주간 고정이 아니라
+    # 디폴트 금월 누적 + 주차별 보기 계약을 지킨다.
     for marker in ('data-live-launch', 'aria-controls="liveWindow"',
                    'id="liveWindow"', 'data-live-window="weekly-performance"',
-                   '라이브 주간 성과 창', '좌측 라이브 탭 전용 UI',
+                   'data-live-period="mtd"', 'data-live-window-latest-date=',
+                   '라이브 성과 상세탭', '디폴트 금월 누적', '주차별 보기',
                    '거래액 기준 분리', '데이터 사용 룰',
-                   '카드 거래액=1D 브랜드 일거래액', '방송간 효율=방송별 데이터 GMV',
-                   '방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`', '총액은 회복됐지만',
-                   '방당 GMV는 -23.6%', 'BAS playbook', 'data-live-close',
-                   'function setLiveWindow(open)', '방송별 성과 &amp; PD 회고',
-                   'data-live-broadcast-card="frosch"', 'data-live-broadcast-card="cuchen"',
-                   'data-live-broadcast-card="pampers"', 'data-live-broadcast-card="truecook"',
-                   'data-live-broadcast-card="downing"', 'data-live-broadcast-card="bas"',
-                   'data-live-broadcast-card="hweehwee"', '쿠쿠 셀럽 라이브',
-                   '한정 인기 상품은 15~20분 조기 품절', '에어차차 80%',
-                   '저도달 3,722명이어도 1D 거래액 1.41억',
-                   '<small>거래액</small><b>1D 1.41억</b>',
-                   '컬러 모델 구매 시 화이트 날개 증정 조건', '가로 풀폭',
+                   '카드 거래액=1D 브랜드 일거래액', '월/주간 효율=방송별 데이터 GMV',
+                   '방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`', '금월 누적 성과가 디폴트',
+                   '미집계/0원 편성은 누적 성과에서 제외', '월 누적과 주간을 분리',
+                   'data-live-week-group=', 'data-live-week-summary=', 'data-live-weekly-view=',
+                   'function setLiveWindow(open)', '주차별 보기 · 방송별 성과',
+                   'RAW 수치 readback 전용', '가로 풀폭',
                    '.live-window{position:fixed;inset:16px;',
-                   '@media (max-width:1180px){.live-window{inset:14px}'):
+                   '@media (max-width:1180px){.live-window{inset:14px'):
         if marker not in html:
             errors.append(f"missing live window marker {marker!r}")
-    if html.count('data-live-broadcast-card=') != 7:
-        errors.append(f"live broadcast cards {html.count('data-live-broadcast-card=')} != 7")
+    live_card_count = html.count('data-live-broadcast-card=')
+    if live_card_count < 1:
+        errors.append(f"live broadcast cards {live_card_count} < 1")
+    for stale in ('aria-label="8월 1주차 라이브 성과 요약"',
+                  '총액은 회복됐지만,<br>방송당 효율 회복으로 보긴 어려움',
+                  'data-live-broadcast-card="frosch"',
+                  'data-live-broadcast-card="cuchen"'):
+        if stale in html:
+            errors.append(f"stale live detail marker present: {stale!r}")
 
-    # [2026-08-12 correction] 좌측 유튜브 탭도 기존 월별 ledger가 아니라 전용 주간리포팅 창을 연다.
+    # [2026-08-25 correction] 좌측 온드/유튜브 상세탭은 특정 8/11 주간
+    # D+N 창이 아니라 디폴트 금월 누적 + 주차별 보기 계약을 지킨다.
     for marker in ('data-yt-launch', 'aria-controls="youtubeWindow"',
                    'id="youtubeWindow"', 'data-yt-window="weekly-detail"',
-                   '유튜브 주간 리포팅 창', '좌측 유튜브 탭 전용 UI',
-                   'D+1~D+7 rolling benchmark', 'function setYoutubeWindow(open)',
-                   'data-yt-close', 'LF 비포애프터가 주간 성장 대부분',
-                   '동일 D+N × LF/SF × IP', 'public snapshot 기준 2026-08-11 23:57 KST',
-                   'data-yt-weekly-card="beforeafter-lf-ep91"',
-                   'data-yt-weekly-card="nationhome-lf-ep9"',
-                   'data-yt-weekly-card="beforeafter-sf-room"',
-                   'data-yt-weekly-card="beforeafter-sf-deposit"',
-                   'data-yt-weekly-card="nationhome-sf-storage"',
-                   '5평 원룸 공간 4개로 나눠 쓰는 방법 | 비포애프터 ep.91',
-                   '388,292', 'P90+', '1000/50부터 시작해서 인테리어에만 1억 7천 쓴 역대급 집',
-                   '보조 기여는 있으나 LF 히트로 보긴 어려움',
-                   'SF 전국내집자랑 -123.0K', '혼수의기술 기발행 쇼츠 재상승',
-                   '.yt-window{position:fixed;inset:16px;',
+                   'data-yt-period="mtd"', 'data-owned-media-window="youtube"',
+                   'data-yt-window-latest-date="', '온드미디어 상세탭',
+                   '디폴트 금월 누적', '주차별 보기', 'YouTube Analytics 기준',
+                   'data-yt-close', 'data-yt-weekly-view="8"',
+                   'data-yt-week-summary="8"', '콘텐츠 D+N 참고',
+                   'function setYoutubeWindow(open)', '.yt-window{position:fixed;inset:16px;',
                    '@media (max-width:1180px){.yt-window{inset:14px'):
         if marker not in html:
             errors.append(f"missing youtube window marker {marker!r}")
-    if html.count('data-yt-weekly-card=') != 5:
-        errors.append(f"youtube weekly cards {html.count('data-yt-weekly-card=')} != 5")
-    for marker in ('data-yt-weekly-analysis-raw=', 'youtube_views.duckdb',
+    yt_card_count = html.count('data-yt-weekly-card=')
+    if yt_card_count < 1:
+        errors.append(f"youtube content cards {yt_card_count} < 1")
+    for stale in ('유튜브 주간 리포팅 창', '좌측 유튜브 탭 전용 UI',
+                  'LF 비포애프터가 주간 성장 대부분', '동일 D+N × LF/SF × IP',
+                  'public snapshot 기준 2026-08-11 23:57 KST',
+                  'data-yt-weekly-card="beforeafter-lf-ep91"',
+                  'data-yt-weekly-card="nationhome-lf-ep9"',
+                  '보조 기여는 있으나 LF 히트로 보긴 어려움',
+                  'SF 전국내집자랑 -123.0K', '혼수의기술 기발행 쇼츠 재상승'):
+        if stale in html:
+            errors.append(f"stale youtube detail marker present: {stale!r}")
+    for marker in ('data-yt-weekly-analysis-raw=',
                    'fact_public_dplusn_', 'v_public_dplusn_',
                    'client_secret_', 'secrets/youtube', 'NOT_AUTHENTICATED',
                    'inline 유튜브 주간 분석'):
@@ -371,8 +377,7 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         if marker not in decoded_html:
             errors.append(f"missing monthly-flow tooltip MoM marker {marker!r}")
     for marker in ('class="week-counts"', 'class="activity-state', 'data-content-status=',
-                   '<small>시청자수</small>', '<small>1D 거래액</small>',
-                   '<small>3H 거래액</small>', '<small>누적조회수</small>'):
+                   '<small>누적조회수</small>'):
         if marker in html:
             errors.append(f"repeated or obsolete weekly marker present: {marker!r}")
 

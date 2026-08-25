@@ -1,0 +1,100 @@
+{
+  "contract_id": "owned-youtube-window-2026-08-mtd-v1",
+  "source": {
+    "duckdb": "/Users/sb.lee/automations/youtube-view-snapshot/youtube_views.duckdb",
+    "monthly_period": "2026-08-01~2026-08-24",
+    "period_complete": false,
+    "raw_status": "ok"
+  },
+  "required_copy": [
+    "온드미디어 상세탭",
+    "디폴트 금월 누적",
+    "주차별 보기",
+    "YouTube Analytics 기준",
+    "data-yt-period=\"mtd\"",
+    "data-owned-media-window=\"youtube\"",
+    "8월 금월 누적",
+    "월 누적과 주차별을 분리",
+    "당월 발행 vs 기발행 분리",
+    "콘텐츠 D+N 참고",
+    "public D+N snapshot"
+  ],
+  "forbidden_in_youtube_window": [
+    "LF 비포애프터가 주간 성장 대부분",
+    "public snapshot 기준 2026-08-11 23:57 KST",
+    "data-yt-weekly-card=\"beforeafter-lf-ep91\"",
+    "data-yt-weekly-card=\"nationhome-lf-ep9\""
+  ],
+  "hero_kpis": [
+    {
+      "label": "조회수",
+      "value": "319만",
+      "em": "8/1–8/24"
+    },
+    {
+      "label": "발행",
+      "value": "20건",
+      "em": "LF 5 · SF 15"
+    },
+    {
+      "label": "당월/당주 발행 기여",
+      "value": "95만",
+      "em": "기간 내 발행 cohort"
+    },
+    {
+      "label": "기발행 기여",
+      "value": "218만",
+      "em": "기존 library cohort"
+    },
+    {
+      "label": "인게이지먼트",
+      "value": "34,250",
+      "em": "좋아요+댓글+공유"
+    },
+    {
+      "label": "좋아요",
+      "value": "24,803",
+      "em": "댓글 931"
+    },
+    {
+      "label": "공유",
+      "value": "8,516",
+      "em": "미매칭 5.5만"
+    }
+  ],
+  "weekly_rows": [
+    {
+      "period": "7/27–8/2",
+      "views": 746147,
+      "complete": true
+    },
+    {
+      "period": "8/3–8/9",
+      "views": 1386025,
+      "complete": true
+    },
+    {
+      "period": "8/10–8/16",
+      "views": 1088081,
+      "complete": true
+    },
+    {
+      "period": "8/17–8/23",
+      "views": 531575,
+      "complete": true
+    },
+    {
+      "period": "8/24–8/30",
+      "views": 0,
+      "complete": false
+    }
+  ],
+  "content_cards": [
+    "NFd8lN83gWw",
+    "VpP_AYE1EBg",
+    "3efWOUWyOgM",
+    "hBVJCDFxzcE",
+    "ZJDxxqDtvr4",
+    "Ev4OPukqJUc"
+  ]
+}

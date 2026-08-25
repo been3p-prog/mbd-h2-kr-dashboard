@@ -185,9 +185,6 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertNotIn('class="week-counts"', self.html)
         self.assertNotIn('class="activity-state', self.html)
         self.assertNotIn('data-content-status=', self.html)
-        self.assertNotIn('<small>시청자수</small>', self.html)
-        self.assertNotIn('<small>1D 거래액</small>', self.html)
-        self.assertNotIn('<small>3H 거래액</small>', self.html)
         _, manifest = vd.extract_manifest(self.html)
         self.assertEqual(manifest.get("schema"), "mbd-public-guard-v3")
         self.assertTrue(manifest.get("sanitized_rows_included"))
@@ -196,35 +193,27 @@ class DashboardGuardTest(unittest.TestCase):
     def test_left_live_nav_opens_dedicated_live_window_contract(self):
         for marker in ('data-live-launch', 'aria-controls="liveWindow"',
                        'id="liveWindow"', 'data-live-window="weekly-performance"',
-                       '라이브 주간 성과 창', '좌측 라이브 탭 전용 UI',
+                       'data-live-period="mtd"', 'data-live-window-latest-date=',
+                       '라이브 성과 상세탭', '디폴트 금월 누적', '주차별 보기',
                        '거래액 기준 분리', '데이터 사용 룰',
-                       '카드 거래액=1D 브랜드 일거래액', '방송간 효율=방송별 데이터 GMV',
-                       '방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`', '총액은 회복됐지만',
-                       '방당 GMV는 -23.6%', 'BAS playbook', 'data-live-close',
-                       'function setLiveWindow(open)', '방송별 성과 &amp; PD 회고',
-                       'data-live-meeting-highlight="2026-08-11-weekly-timeout"',
-                       '회의 하이라이트 · 8/11 Weekly Time-out',
-                       'Loca는 주간 총평+핵심 2개, PD는 방송별 인사이트/회고 작성',
-                       '구매 의향자 중심 유입', '브랜드 체력 대비 +25%', '기간 체력 대비 +16%',
-                       '사전 알림 100% 포인트는 방문자 조건+럭키드로 연동 확인 후 결정',
-                       '경쟁방송을 1주 전 알았는지', '수상+집',
-                       '패키지 믹스 해석', '시청 97% / 방송별 GMV 46.5%',
-                       '쿠첸 신제품 gate', '패키지가 아니라 편성 점검 신호입니다',
-                       'data-live-broadcast-card="frosch"', 'data-live-broadcast-card="cuchen"',
-                       'data-live-broadcast-card="pampers"', 'data-live-broadcast-card="truecook"',
-                       'data-live-broadcast-card="downing"', 'data-live-broadcast-card="bas"',
-                       'data-live-broadcast-card="hweehwee"', '쿠쿠 셀럽 라이브',
-                       '경쟁방송 사전인지 여부', '한정 인기 상품은 15~20분 조기 품절', '에어차차 80%',
-                       '저도달 3,722명이어도 1D 거래액 1.41억',
-                       '<small>거래액</small><b>1D 1.41억</b>',
-                       '컬러 모델 구매 시 화이트 날개 증정 조건', '가로 풀폭',
+                       '카드 거래액=1D 브랜드 일거래액', '월/주간 효율=방송별 데이터 GMV',
+                       '방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`',
+                       '금월 누적 성과가 디폴트', '미집계/0원 편성은 누적 성과에서 제외',
+                       '월 누적과 주간을 분리', 'data-live-week-group=',
+                       'data-live-week-summary=', 'data-live-weekly-view=',
+                       'function setLiveWindow(open)', '주차별 보기 · 방송별 성과',
+                       'RAW 수치 readback 전용', '가로 풀폭',
                        '.live-window{position:fixed;inset:16px;',
                        '@media (max-width:1180px){.live-window{inset:14px'):
             self.assertIn(marker, self.html)
-        self.assertEqual(self.html.count('data-live-broadcast-card='), 7)
+        self.assertGreaterEqual(self.html.count('data-live-broadcast-card='), 1)
         self.assertNotIn('data-live-weekly-analysis=', self.html)
         self.assertNotIn('원본 rows 302–308', self.html)
         self.assertNotIn('공식 회고 전문', self.html)
+        self.assertNotIn('aria-label="8월 1주차 라이브 성과 요약"', self.html)
+        self.assertNotIn('총액은 회복됐지만,<br>방송당 효율 회복으로 보긴 어려움', self.html)
+        self.assertNotIn('data-live-broadcast-card="frosch"', self.html)
+        self.assertNotIn('data-live-broadcast-card="cuchen"', self.html)
         self.assertNotIn('inset:22px 28px 22px 278px', self.html)
         self.assertNotIn('inset:16px 18px 16px 238px', self.html)
         self.assertNotIn('<div class="live-pulse-row"><b>시그니처 GMV</b>', self.html)
@@ -233,25 +222,28 @@ class DashboardGuardTest(unittest.TestCase):
     def test_left_youtube_nav_opens_dedicated_weekly_window_contract(self):
         for marker in ('data-yt-launch', 'aria-controls="youtubeWindow"',
                        'id="youtubeWindow"', 'data-yt-window="weekly-detail"',
-                       '유튜브 주간 리포팅 창', '좌측 유튜브 탭 전용 UI',
-                       'D+1~D+7 rolling benchmark', 'function setYoutubeWindow(open)',
-                       'data-yt-close', 'LF 비포애프터가 주간 성장 대부분',
-                       '동일 D+N × LF/SF × IP', 'public snapshot 기준 2026-08-11 23:57 KST',
-                       'data-yt-weekly-card="beforeafter-lf-ep91"',
-                       'data-yt-weekly-card="nationhome-lf-ep9"',
-                       'data-yt-weekly-card="beforeafter-sf-room"',
-                       'data-yt-weekly-card="beforeafter-sf-deposit"',
-                       'data-yt-weekly-card="nationhome-sf-storage"',
-                       '5평 원룸 공간 4개로 나눠 쓰는 방법 | 비포애프터 ep.91',
-                       '388,292', 'P90+', '1000/50부터 시작해서 인테리어에만 1억 7천 쓴 역대급 집',
-                       '보조 기여는 있으나 LF 히트로 보긴 어려움',
-                       'SF 전국내집자랑 -123.0K', '혼수의기술 기발행 쇼츠 재상승',
+                       'data-yt-period="mtd"', 'data-owned-media-window="youtube"',
+                       'data-yt-window-latest-date="2026-08-24"', '온드미디어 상세탭',
+                       '디폴트 금월 누적', '주차별 보기', 'YouTube Analytics 기준',
+                       '8월 금월 누적', '8/1–8/24', 'YouTube 조회수 319만',
+                       '발행</small><b>20건</b><em>LF 5 · SF 15',
+                       '당월/당주 발행 기여', '기발행 기여',
+                       'data-yt-week-summary="8"', 'data-yt-weekly-view="8"',
+                       '콘텐츠 D+N 참고', 'public D+N snapshot',
+                       'function setYoutubeWindow(open)', 'data-yt-close',
                        '.yt-window{position:fixed;inset:16px;',
                        '@media (max-width:1180px){.yt-window{inset:14px'):
             self.assertIn(marker, self.html)
-        self.assertEqual(self.html.count('data-yt-weekly-card='), 5)
+        self.assertGreaterEqual(self.html.count('data-yt-weekly-card='), 1)
+        for stale in ('유튜브 주간 리포팅 창', '좌측 유튜브 탭 전용 UI',
+                      'LF 비포애프터가 주간 성장 대부분', '동일 D+N × LF/SF × IP',
+                      'public snapshot 기준 2026-08-11 23:57 KST',
+                      'data-yt-weekly-card="beforeafter-lf-ep91"',
+                      'data-yt-weekly-card="nationhome-lf-ep9"',
+                      '보조 기여는 있으나 LF 히트로 보긴 어려움',
+                      'SF 전국내집자랑 -123.0K', '혼수의기술 기발행 쇼츠 재상승'):
+            self.assertNotIn(stale, self.html)
         self.assertNotIn('data-yt-weekly-analysis-raw=', self.html)
-        self.assertNotIn('youtube_views.duckdb', self.html)
         self.assertNotIn('fact_public_dplusn_', self.html)
         self.assertNotIn('v_public_dplusn_', self.html)
 

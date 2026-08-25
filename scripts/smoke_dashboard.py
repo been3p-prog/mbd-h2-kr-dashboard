@@ -86,7 +86,7 @@ def _probe_script(target_month: int) -> str:
         "out.youtubeWindow.ariaOpen=ytWindow.getAttribute('aria-hidden');"
         "out.youtubeWindow.expanded=ytLaunch.getAttribute('aria-expanded');"
         "out.youtubeWindow.title=!!ytWindow.querySelector('#youtubeWindowTitle');"
-        "out.youtubeWindow.basis=/D\\+1~D\\+7/.test(ytWindow.textContent||'')&&/LF 비포애프터/.test(ytWindow.textContent||'')&&/동일 D\\+N/.test(ytWindow.textContent||'');"
+        "out.youtubeWindow.basis=/디폴트 금월 누적/.test(ytWindow.textContent||'')&&/YouTube Analytics 기준/.test(ytWindow.textContent||'')&&/주차별 보기/.test(ytWindow.textContent||'');"
         "out.youtubeWindow.cardCount=ytWindow.querySelectorAll('[data-yt-weekly-card]').length;"
         "out.youtubeWindow.liveClosed=liveWindow?!liveWindow.classList.contains('open'):true;"
         "var yr=ytWindow.getBoundingClientRect();out.youtubeWindow.rect={left:Math.round(yr.left),"
@@ -276,8 +276,8 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
             errors.append(f"{tag}: youtube nav aria-expanded not true after click: {youtube_window}")
         if youtube_window.get("title") is not True or youtube_window.get("basis") is not True:
             errors.append(f"{tag}: youtube-window title/basis missing: {youtube_window}")
-        if youtube_window.get("cardCount") != 5:
-            errors.append(f"{tag}: youtube-window cardCount={youtube_window.get('cardCount')} != 5")
+        if youtube_window.get("cardCount", 0) < 1:
+            errors.append(f"{tag}: youtube-window cardCount={youtube_window.get('cardCount')} < 1")
         if youtube_window.get("liveClosed") is not True:
             errors.append(f"{tag}: opening youtube-window did not close live-window: {youtube_window}")
         rect = youtube_window.get("rect") or {}

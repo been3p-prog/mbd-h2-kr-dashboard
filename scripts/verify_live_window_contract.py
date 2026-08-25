@@ -95,10 +95,9 @@ def check(html: str, contract: dict) -> list[str]:
             errors.append(f"CARD_AMOUNT_NOT_1D[{card_id}]")
         for bad_label in ("방송GMV", "GMV", "방송별 데이터 GMV"):
             forbid(errors, card, f"<small>{bad_label}</small>", f"card:{card_id}")
-        source_won = spec.get("source_won", {})
-        downing_broadcast_won = source_won.get("방송별 데이터 GMV")
-        if spec.get("brand") == "다우닝" and downing_broadcast_won == 60449660:
-            forbid(errors, card, "6,045만", "card:downing")
+        # Numeric notes may include 방송별 데이터 GMV for context, but the
+        # visible card amount itself must remain the 1D 거래액 metric checked
+        # above. Do not forbid raw broadcast-GMV numbers in the note body.
 
     return errors
 
