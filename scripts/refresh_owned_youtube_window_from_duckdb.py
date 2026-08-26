@@ -10,6 +10,7 @@ import argparse
 import datetime as dt
 import html as html_lib
 import json
+import re
 from pathlib import Path
 
 import duckdb
@@ -291,6 +292,25 @@ def replace_section(html: str, section: str) -> str:
     return html[:start] + section + html[end:]
 
 
+def update_manifest_sources(html: str, built: str) -> str:
+    manifest_re = re.compile(
+        r'(<script type="application/json" id="mbd-public-guard">)(.*?)(</script>)',
+        re.S,
+    )
+    match = manifest_re.search(html)
+    if not match:
+        raise RuntimeError("mbd-public-guard manifest not found")
+    manifest = json.loads(match.group(2))
+    manifest["built_at_kst"] = built
+    stamps = manifest.get("source_snapshot_as_of", {})
+    for key in ("yt_quality", "owned_media"):
+        if key not in stamps:
+            raise RuntimeError(f"unknown manifest source timestamp {key}")
+        stamps[key] = built
+    raw = json.dumps(manifest, ensure_ascii=False, separators=(",", ":"))
+    return manifest_re.sub(lambda m: m.group(1) + raw + m.group(3), html, count=1)
+
+
 def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = False) -> dict:
     now = dt.datetime.now(KST)
     con = duckdb.connect(str(db_path), read_only=True)
@@ -304,6 +324,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
     section, contract = render_section(month, weeks, publish_counts, top_content, now)
     html = html_path.read_text(encoding="utf-8")
     updated = replace_section(html, section)
+    updated = update_manifest_sources(updated, now.isoformat(timespec="seconds"))
     html_changed = updated != html
     contract_text = json.dumps(contract, ensure_ascii=False, indent=2, default=str) + "\n"
     old_contract = contract_path.read_text(encoding="utf-8") if contract_path.exists() else ""

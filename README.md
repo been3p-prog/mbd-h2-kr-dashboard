@@ -6,12 +6,13 @@ Stable GitHub Pages permalink for the dashboard.
 
 ```bash
 python3 -m unittest scripts/test_verify_dashboard.py -v
+python3 -m unittest scripts/test_refresh_current_raw.py -v
 python3 scripts/verify_dashboard.py index.html
 python3 scripts/smoke_dashboard.py index.html
 python3 scripts/verify_live_window_contract.py index.html
 ```
 
-The guard verifies selected-period diagnosis wiring, RAW/forecast semantic separation, the B22N revenue scope allowlist (`ad_gen`, `ad_int`, `live` only; `owned_youtube_ad` and `ogam` excluded), and visible stale-snapshot disclosure. GitHub Pages deploys only after the guard passes. A scheduled probe additionally fails when the published snapshot is older than 48 hours.
+The guard verifies selected-period diagnosis wiring, RAW/forecast semantic separation, the B22N revenue scope allowlist (`ad_gen`, `ad_int`, `live` only; `owned_youtube_ad` and `ogam` excluded), current-month RAW reconciliation, and per-source freshness isolation. The daily refresher excludes future, cancelled, 1P, and free-support rows from current RAW. GitHub Pages deploys only after the guard passes. A scheduled probe additionally fails when the published snapshot is older than 48 hours.
 
 ## Live data contract
 

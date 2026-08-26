@@ -26,6 +26,8 @@ class DashboardGuardTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.html, cls.path = _load_dashboard_html()
+        contract_path = Path(__file__).resolve().parents[1] / "data" / "owned_youtube_window_contract.json"
+        cls.owned_youtube_contract = json.loads(contract_path.read_text(encoding="utf-8"))
         # manifest built_at 기준으로 fresh/stale now 파생 (아티팩트 실제 날짜와 무관하게 안정)
         _, manifest = vd.extract_manifest(cls.html)
         built = dt.datetime.fromisoformat(manifest["built_at_kst"])
@@ -220,19 +222,26 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertNotIn('<div class="live-pulse-row"><b>신제품 gate</b>', self.html)
 
     def test_left_youtube_nav_opens_dedicated_weekly_window_contract(self):
+        contract = self.owned_youtube_contract
+        source = contract["source"]
+        hero = {item["label"]: item for item in contract["hero_kpis"]}
+        latest = source["monthly_period"].split("~", 1)[1]
         for marker in ('data-yt-launch', 'aria-controls="youtubeWindow"',
                        'id="youtubeWindow"', 'data-yt-window="weekly-detail"',
                        'data-yt-period="mtd"', 'data-owned-media-window="youtube"',
-                       'data-yt-window-latest-date="2026-08-24"', '온드미디어 상세탭',
+                       f'data-yt-window-latest-date="{latest}"', '온드미디어 상세탭',
                        '디폴트 금월 누적', '주차별 보기', 'YouTube Analytics 기준',
-                       '8월 금월 누적', '8/1–8/24', 'YouTube 조회수 319만',
-                       '발행</small><b>20건</b><em>LF 5 · SF 15',
+                       '8월 금월 누적', hero['조회수']['em'],
+                       f"YouTube 조회수 {hero['조회수']['value']}",
+                       f"발행</small><b>{hero['발행']['value']}</b><em>{hero['발행']['em']}",
                        '당월/당주 발행 기여', '기발행 기여',
                        'data-yt-week-summary="8"', 'data-yt-weekly-view="8"',
                        '콘텐츠 D+N 참고', 'public D+N snapshot',
                        'function setYoutubeWindow(open)', 'data-yt-close',
                        '.yt-window{position:fixed;inset:16px;',
                        '@media (max-width:1180px){.yt-window{inset:14px'):
+            self.assertIn(marker, self.html)
+        for marker in contract["required_copy"]:
             self.assertIn(marker, self.html)
         self.assertGreaterEqual(self.html.count('data-yt-weekly-card='), 1)
         for stale in ('유튜브 주간 리포팅 창', '좌측 유튜브 탭 전용 UI',
