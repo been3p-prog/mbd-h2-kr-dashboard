@@ -2,7 +2,7 @@
   "contract_id": "owned-youtube-window-2026-08-mtd-v1",
   "source": {
     "duckdb": "/Users/sb.lee/automations/youtube-view-snapshot/youtube_views.duckdb",
-    "monthly_period": "2026-08-01~2026-08-26",
+    "monthly_period": "2026-08-01~2026-08-27",
     "period_complete": false,
     "raw_status": "ok"
   },
@@ -28,38 +28,38 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "366만",
-      "em": "8/1–8/26"
+      "value": "378만",
+      "em": "8/1–8/27"
     },
     {
       "label": "발행",
-      "value": "21건",
-      "em": "LF 5 · SF 16"
+      "value": "22건",
+      "em": "LF 6 · SF 16"
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "118만",
+      "value": "121만",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "241만",
+      "value": "249만",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "38,666",
+      "value": "39,944",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "28,254",
-      "em": "댓글 1,061"
+      "value": "29,256",
+      "em": "댓글 1,099"
     },
     {
       "label": "공유",
-      "value": "9,351",
-      "em": "미매칭 7.7만"
+      "value": "9,589",
+      "em": "미매칭 8.7만"
     }
   ],
   "weekly_rows": [
@@ -80,12 +80,12 @@
     },
     {
       "period": "8/17–8/23",
-      "views": 860198,
+      "views": 857460,
       "complete": true
     },
     {
       "period": "8/24–8/30",
-      "views": 149437,
+      "views": 273567,
       "complete": false
     }
   ],
