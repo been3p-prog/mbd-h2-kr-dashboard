@@ -2,7 +2,7 @@
   "contract_id": "owned-youtube-window-2026-08-mtd-v1",
   "source": {
     "duckdb": "/Users/sb.lee/automations/youtube-view-snapshot/youtube_views.duckdb",
-    "monthly_period": "2026-08-01~2026-08-28",
+    "monthly_period": "2026-08-01~2026-08-29",
     "period_complete": false,
     "raw_status": "ok"
   },
@@ -28,8 +28,8 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "390만",
-      "em": "8/1–8/28"
+      "value": "414만",
+      "em": "8/1–8/29"
     },
     {
       "label": "발행",
@@ -38,28 +38,28 @@
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "125만",
+      "value": "135만",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "255만",
+      "value": "267만",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "40,936",
+      "value": "42,862",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "30,003",
-      "em": "댓글 1,141"
+      "value": "31,575",
+      "em": "댓글 1,230"
     },
     {
       "label": "공유",
-      "value": "9,792",
-      "em": "미매칭 10만"
+      "value": "10,057",
+      "em": "미매칭 12만"
     }
   ],
   "weekly_rows": [
@@ -85,7 +85,7 @@
     },
     {
       "period": "8/24–8/30",
-      "views": 388760,
+      "views": 625404,
       "complete": false
     }
   ],
