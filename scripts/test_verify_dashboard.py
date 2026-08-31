@@ -26,7 +26,12 @@ class DashboardGuardTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.html, cls.path = _load_dashboard_html()
-        contract_path = Path(__file__).resolve().parents[1] / "data" / "owned_youtube_window_contract.json"
+        contract_override = os.environ.get("MBD_OWNED_YOUTUBE_CONTRACT")
+        contract_path = (
+            Path(contract_override)
+            if contract_override
+            else Path(__file__).resolve().parents[1] / "data" / "owned_youtube_window_contract.json"
+        )
         cls.owned_youtube_contract = json.loads(contract_path.read_text(encoding="utf-8"))
         # manifest built_at 기준으로 fresh/stale now 파생 (아티팩트 실제 날짜와 무관하게 안정)
         _, manifest = vd.extract_manifest(cls.html)
@@ -75,16 +80,23 @@ class DashboardGuardTest(unittest.TestCase):
                        "호버하면 PGM/프로모션 하위 금액",
                        "(첨부)"):
             self.assertNotIn(marker, self.html)
-        # [2026-08-09] 영업 구조 KPI가 공개 DOM에도 유지되는지 검증한다.
-        self.assertIn('data-yt-main-average="8"', self.html)
+        # [2026-08-31] 현재월 유튜브 메인도 DuckDB 원천과 동기화되어야 한다.
+        main = self.owned_youtube_contract["main_surface"]
+        month = main["month"]
+        self.assertIn(f'data-yt-main-average="{month}"', self.html)
         self.assertIn('전체 평균 조회수', self.html)
-        self.assertIn('data-yt-subscriber-card="8"', self.html)
-        self.assertIn('data-yt-publish-card="8"', self.html)
-        self.assertIn('data-yt-watch-duration-card="8"', self.html)
-        self.assertIn('SF 5건 · LF 2건', self.html)
+        self.assertIn(f'data-yt-subscriber-card="{month}"', self.html)
+        self.assertIn(f'data-yt-publish-card="{month}"', self.html)
+        self.assertIn(f'data-yt-watch-duration-card="{month}"', self.html)
+        self.assertIn(f'data-yt-main-source-publish-count="{main["publish_count"]}"', self.html)
+        self.assertIn(f'data-yt-main-source-latest-publish-date="{main["latest_publish_date"]}"', self.html)
+        self.assertIn(f'data-yt-main-source-snapshot-date="{main["snapshot_date"]}"', self.html)
+        self.assertIn('data-yt-main-quality-basis="analytics-d7"', self.html)
+        self.assertIn(f'D+7 완료 {main["d7_completed"]}/{main["publish_count"]}건', self.html)
+        self.assertIn(f'{month}월 발행</div><div class="qn num">{main["publish_count"]}건', self.html)
         self.assertIn('평균 시청지속시간', self.html)
-        self.assertIn('2:50', self.html)
-        self.assertIn('08-09 기준 · 조회수 1,126,735', self.html)
+        self.assertIn('Analytics 지속시간 미적재', self.html)
+        self.assertNotIn('08-09 기준 · 조회수 1,126,735', self.html)
         self.assertIn('data-live-quality-mom-main="8"', self.html)
         self.assertIn('data-live-quality-mom="8-overall"', self.html)
         self.assertIn('data-live-quality-mom="8-signature"', self.html)
@@ -93,13 +105,10 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('8월 목표 1.00억 대비', self.html)
         self.assertNotIn('6,246만', self.html)
         self.assertNotIn('8월 목표 1.00억 대비 62.5%', self.html)
-        self.assertIn('data-yt-quality-mom-main="8"', self.html)
-        self.assertIn('MoM ▼ 36.8%', self.html)
-        self.assertIn('MoM ▲ 0.3%', self.html)
-        self.assertIn('MoM ▲ 33.9%', self.html)
-        self.assertIn('MoM ▼ 79.2%', self.html)
+        self.assertIn(f'data-yt-quality-mom-main="{month}"', self.html)
+        self.assertRegex(self.html, rf'data-yt-quality-mom-main="{month}">MoM (?:▲|▼|—|0\.0%)')
         self.assertIn('data-quality-trend="live-8"', self.html)
-        self.assertIn('data-quality-trend="youtube-8"', self.html)
+        self.assertIn(f'data-quality-trend="youtube-{month}"', self.html)
         self.assertIn('data-quality-trend-kind="live-package-average"', self.html)
         self.assertIn('data-quality-trend-kind="yt-format-average"', self.html)
         self.assertIn('평균치는 누적하지 않음', self.html)
@@ -307,6 +316,109 @@ class DashboardGuardTest(unittest.TestCase):
         bad = self.html.replace('data-yt-main-average=', 'data-yt-main-removed=')
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("missing youtube quality-card marker" in error for error in errors), errors)
+
+    def test_youtube_main_source_marker_removal_fails(self):
+        bad = self.html.replace('data-yt-main-source-publish-count=',
+                                'data-yt-main-source-publish-count-removed=', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("youtube main source" in error for error in errors), errors)
+
+    def test_youtube_main_publish_count_tamper_fails(self):
+        match = re.search(r'data-yt-main-source-publish-count="(\d+)"', self.html)
+        self.assertIsNotNone(match)
+        original = int(match.group(1))
+        bad = self.html.replace(
+            f'data-yt-main-source-publish-count="{original}"',
+            f'data-yt-main-source-publish-count="{original + 1}"',
+            1,
+        )
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("youtube main publish count" in error for error in errors), errors)
+
+    def test_youtube_main_latest_week_removal_fails(self):
+        main = self.owned_youtube_contract["main_surface"]
+        month = main["month"]
+        latest_week = int(main["elapsed_weeks"])
+        bad = self.html.replace(f'data-week-group="{month}-{latest_week}"',
+                                f'data-week-group-removed="{month}-{latest_week}"', 2)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("youtube main elapsed weeks" in error for error in errors), errors)
+
+    def test_youtube_main_elapsed_week_marker_removal_fails(self):
+        bad = self.html.replace('data-yt-main-source-elapsed-weeks=',
+                                'data-yt-main-source-elapsed-weeks-removed=', 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("youtube main source elapsed weeks" in error for error in errors), errors)
+
+    def test_daily_wrapper_uses_dynamic_youtube_public_readback(self):
+        wrapper_path = Path("/Users/sb.lee/.hermes/scripts/mbd_h2_pages_live_daily_refresh.sh")
+        if not wrapper_path.exists():
+            self.skipTest("local cron wrapper is not present in CI")
+        wrapper = wrapper_path.read_text(encoding="utf-8")
+        refresh_call = "scripts/refresh_owned_youtube_window_from_duckdb.py --quiet"
+        guard_call = "scripts/verify_dashboard.py index.html --require-fresh"
+        self.assertIn(refresh_call, wrapper)
+        self.assertIn(guard_call, wrapper)
+        self.assertLess(wrapper.index(refresh_call), wrapper.index(guard_call))
+        self.assertIn("owned_youtube_window_contract.json", wrapper)
+        self.assertIn("main_surface", wrapper)
+        self.assertIn("default_month", wrapper)
+        self.assertIn("data-yt-main-source-average-views", wrapper)
+        self.assertIn("data-yt-main-source-subscriber-count", wrapper)
+        self.assertIn("data-yt-main-source-d7-completed", wrapper)
+        self.assertIn("source_as_of", wrapper)
+        self.assertIn("source_payload_sha256", wrapper)
+        self.assertNotIn("def m8_segment", wrapper)
+        self.assertNotIn("#m8", wrapper)
+
+    def test_youtube_main_average_value_tamper_fails(self):
+        main = self.owned_youtube_contract["main_surface"]
+        original = f'<div class="qv num">{int(main["average_views"]):,}</div>'
+        tampered = f'<div class="qv num">{int(main["average_views"]) + 1:,}</div>'
+        bad = self.html.replace(original, tampered, 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("youtube main average views mismatch" in error for error in errors), errors)
+
+    def test_youtube_main_subscriber_value_tamper_fails(self):
+        main = self.owned_youtube_contract["main_surface"]
+        original = f'<div class="qn num">{int(main["subscriber_count"]):,}</div>'
+        tampered = f'<div class="qn num">{int(main["subscriber_count"]) + 1:,}</div>'
+        bad = self.html.replace(original, tampered, 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("youtube main subscriber count mismatch" in error for error in errors), errors)
+
+    def test_youtube_main_format_average_tamper_fails(self):
+        main = self.owned_youtube_contract["main_surface"]
+        month = int(main["month"])
+        original = f'{int(main["lf_average_views"]):,}'
+        pattern = re.compile(
+            rf'(data-yt-lf-average-card="{month}".*?<div class="qn num">){re.escape(original)}(</div>)',
+            re.S,
+        )
+        bad, replaced = pattern.subn(
+            lambda match: f'{match.group(1)}{int(main["lf_average_views"]) + 1:,}{match.group(2)}',
+            self.html,
+            count=1,
+        )
+        self.assertEqual(replaced, 1)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("youtube main LF average views mismatch" in error for error in errors), errors)
+
+    def test_youtube_main_publish_split_tamper_fails(self):
+        main = self.owned_youtube_contract["main_surface"]
+        original = f'SF {main["sf_publish_count"]}건 · LF {main["lf_publish_count"]}건'
+        tampered = f'SF {int(main["sf_publish_count"]) + 1}건 · LF {main["lf_publish_count"]}건'
+        bad = self.html.replace(original, tampered)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("youtube main publish split mismatch" in error for error in errors), errors)
+
+    def test_youtube_main_d7_completion_tamper_fails(self):
+        main = self.owned_youtube_contract["main_surface"]
+        original = f'D+7 완료 {main["d7_completed"]}/{main["publish_count"]}건'
+        tampered = f'D+7 완료 {int(main["d7_completed"]) + 1}/{main["publish_count"]}건'
+        bad = self.html.replace(original, tampered)
+        errors = vd.verify(bad, self.now, require_fresh=False)
+        self.assertTrue(any("youtube main D+7 completion mismatch" in error for error in errors), errors)
 
     def test_quality_card_mom_marker_removal_fails(self):
         bad = self.html.replace('data-live-quality-mom-main="8"', 'data-live-quality-mom-main-removed="8"', 1)

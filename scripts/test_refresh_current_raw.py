@@ -1,4 +1,5 @@
 import datetime as dt
+import hashlib
 import json
 import re
 import sys
@@ -213,6 +214,8 @@ class CurrentRawRefreshTest(unittest.TestCase):
     def test_owned_refresh_advances_only_owned_and_youtube_timestamps(self):
         old = "2026-08-09T09:00:00+09:00"
         built = "2026-08-24T10:00:00+09:00"
+        yt_source = "2026-08-24T08:30:00+09:00"
+        owned_source = "2026-08-24T08:45:00+09:00"
         manifest = {
             "built_at_kst": old,
             "source_snapshot_as_of": {
@@ -228,15 +231,337 @@ class CurrentRawRefreshTest(unittest.TestCase):
             + json.dumps(manifest)
             + "</script>"
         )
-        updated = owned_refresh.update_manifest_sources(html, built)
+        updated = owned_refresh.update_manifest_sources(
+            html,
+            built,
+            payload={"main_surface": {"publish_count": 24}},
+            source_as_of={"yt_quality": yt_source, "owned_media": owned_source},
+            default_month=8,
+        )
         raw = updated.split('id="mbd-public-guard">', 1)[1].split("</script>", 1)[0]
         result = json.loads(raw)
         self.assertEqual(result["built_at_kst"], built)
-        self.assertEqual(result["source_snapshot_as_of"]["yt_quality"], built)
-        self.assertEqual(result["source_snapshot_as_of"]["owned_media"], built)
+        self.assertEqual(result["default_month"], 8)
+        self.assertEqual(result["source_snapshot_as_of"]["yt_quality"], yt_source)
+        self.assertEqual(result["source_snapshot_as_of"]["owned_media"], owned_source)
         self.assertEqual(result["source_snapshot_as_of"]["revenue_mirror"], old)
         self.assertEqual(result["source_snapshot_as_of"]["live_quality"], old)
         self.assertEqual(result["source_snapshot_as_of"]["okr_targets"], old)
+
+    def test_owned_refresh_binds_manifest_hash_to_youtube_payload(self):
+        old = "2026-08-01T00:00:00+09:00"
+        manifest = {
+            "source_payload_sha256": "0" * 64,
+            "source_snapshot_as_of": {
+                "revenue_mirror": old,
+                "live_quality": old,
+                "yt_quality": old,
+                "okr_targets": old,
+                "owned_media": old,
+            },
+        }
+        html = (
+            '<script type="application/json" id="mbd-public-guard">'
+            + json.dumps(manifest)
+            + "</script>"
+        )
+        payload = {"main_surface": {"publish_count": 24, "average_views": 52646}}
+        updated = owned_refresh.update_manifest_sources(
+            html,
+            "2026-08-31T13:00:00+09:00",
+            payload=payload,
+            source_as_of={"yt_quality": old, "owned_media": old},
+        )
+        raw = updated.split('id="mbd-public-guard">', 1)[1].split("</script>", 1)[0]
+        result = json.loads(raw)
+        expected = hashlib.sha256(
+            json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode()
+        ).hexdigest()
+        self.assertEqual(result["source_payload_sha256"], expected)
+
+    def test_youtube_main_ledger_renders_all_elapsed_calendar_weeks(self):
+        rows = [
+            {
+                "publish_date": dt.date(2026, 8, 3),
+                "video_id": "AAAAAAAAAAA",
+                "form": "LF",
+                "title": "첫 콘텐츠",
+                "url": "https://www.youtube.com/watch?v=AAAAAAAAAAA",
+                "views_total": 1000,
+                "d7_views": 700,
+                "pis": 70,
+                "d7_complete": True,
+            },
+            {
+                "publish_date": dt.date(2026, 8, 17),
+                "video_id": "BBBBBBBBBBB",
+                "form": "SF",
+                "title": "지난주 콘텐츠",
+                "url": "https://www.youtube.com/watch?v=BBBBBBBBBBB",
+                "views_total": 2000,
+                "d7_views": 1500,
+                "pis": 80,
+                "d7_complete": True,
+            },
+            {
+                "publish_date": dt.date(2026, 8, 24),
+                "video_id": "CCCCCCCCCCC",
+                "form": "LF",
+                "title": "이번주 콘텐츠",
+                "url": "https://www.youtube.com/watch?v=CCCCCCCCCCC",
+                "views_total": 3000,
+                "d7_views": None,
+                "pis": None,
+                "d7_complete": False,
+            },
+        ]
+
+        rendered = owned_refresh.render_main_ledger(
+            year=2026,
+            month=8,
+            as_of=dt.date(2026, 8, 30),
+            rows=rows,
+            snapshot_date=dt.date(2026, 8, 30),
+        )
+
+        for index, span in ((1, "8/1–8/7"), (2, "8/8–8/14"),
+                            (3, "8/15–8/21"), (4, "8/22–8/28"),
+                            (5, "8/29–8/31")):
+            self.assertIn(f'data-week-group="8-{index}"', rendered)
+            self.assertIn(span, rendered)
+        self.assertIn("지난주 콘텐츠", rendered)
+        self.assertIn("이번주 콘텐츠", rendered)
+        self.assertIn("D+7 수집중", rendered)
+        self.assertIn('data-yt-main-source-publish-count="3"', rendered)
+        self.assertIn('data-yt-main-source-latest-publish-date="2026-08-24"', rendered)
+        self.assertIn('data-yt-main-source-snapshot-date="2026-08-30"', rendered)
+
+    def test_youtube_empty_new_month_keeps_elapsed_week_and_source_snapshot(self):
+        rendered = owned_refresh.render_main_ledger(
+            year=2026,
+            month=9,
+            as_of=dt.date(2026, 9, 1),
+            rows=[],
+            snapshot_date=dt.date(2026, 8, 31),
+        )
+
+        self.assertIn('data-week-group="9-1"', rendered)
+        self.assertIn("9/1–9/7", rendered)
+        self.assertIn("이 주차 발행 없음", rendered)
+        self.assertIn('data-yt-main-source-publish-count="0"', rendered)
+        self.assertIn('data-yt-main-source-latest-publish-date="none"', rendered)
+        self.assertIn('data-yt-main-source-snapshot-date="2026-08-31"', rendered)
+        self.assertIn('data-yt-main-source-elapsed-weeks="1"', rendered)
+
+    def test_fetch_main_content_uses_global_snapshot_when_current_month_is_empty(self):
+        path = Path(self.tmp.name) / "youtube_empty.duckdb"
+        con = duckdb.connect(str(path))
+        con.execute('''
+            create table dim_video(
+                video_id varchar, url varchar, title varchar, publish_date date,
+                form varchar, is_active boolean
+            )
+        ''')
+        con.execute('''
+            create table fact_analytics_d7(
+                video_id varchar, fetched_at timestamp, d7_complete boolean,
+                metric_end_date date, view_count bigint, like_count bigint,
+                comment_count bigint, share_count bigint
+            )
+        ''')
+        con.execute('''
+            create table latest_snapshot_fixture(
+                video_id varchar, cumulative_view_count bigint, snapshot_date date
+            )
+        ''')
+        con.execute("create view v_latest_snapshot as select * from latest_snapshot_fixture")
+        con.execute("create table fact_snapshot(snapshot_date date)")
+        con.execute("insert into fact_snapshot values ('2026-08-31')")
+
+        rows, snapshot_date = owned_refresh.fetch_main_content(
+            con, dt.date(2026, 9, 1), dt.date(2026, 9, 1)
+        )
+        con.close()
+
+        self.assertEqual(rows, [])
+        self.assertEqual(snapshot_date, dt.date(2026, 8, 31))
+
+    def test_quality_series_uses_prior_december_for_january_mom(self):
+        path = Path(self.tmp.name) / "youtube_year_boundary.duckdb"
+        con = duckdb.connect(str(path))
+        con.execute('''
+            create table dim_video(
+                video_id varchar, publish_date date, form varchar, is_active boolean
+            )
+        ''')
+        con.executemany(
+            "insert into dim_video values (?, ?, ?, true)",
+            [("DECEMBER01", "2026-12-20", "LF"), ("JANUARY0001", "2027-01-02", "SF")],
+        )
+        con.execute('''
+            create table fact_analytics_d7(
+                video_id varchar, fetched_at timestamp, d7_complete boolean,
+                metric_end_date date, view_count bigint
+            )
+        ''')
+        con.executemany(
+            "insert into fact_analytics_d7 values (?, ?, true, ?, ?)",
+            [
+                ("DECEMBER01", "2026-12-28 00:00:00", "2026-12-26", 100),
+                ("JANUARY0001", "2027-01-10 00:00:00", "2027-01-08", 200),
+            ],
+        )
+        con.execute('''
+            create table v_channel_daily_subscribers(
+                snapshot_date date, subscriber_count bigint, captured_at timestamp
+            )
+        ''')
+        con.executemany(
+            "insert into v_channel_daily_subscribers values (?, ?, ?)",
+            [
+                ("2026-12-31", 800000, "2026-12-31 23:00:00"),
+                ("2027-01-10", 801000, "2027-01-10 23:00:00"),
+            ],
+        )
+
+        series = owned_refresh.fetch_quality_series(con, 2027, 1)
+        con.close()
+
+        self.assertEqual(series[0]["overall"], 100)
+        self.assertEqual(series[0]["LF"], 100)
+        self.assertEqual(series[0]["subscriber"], 800000)
+        self.assertEqual(series[1]["overall"], 200)
+        self.assertEqual(series[1]["SF"], 200)
+        rendered = owned_refresh.render_main_quality(
+            '<span>1월 목표 100 대비</span>', 1, series
+        )
+        self.assertIn("MoM ▲ 100.0%", rendered)
+
+    def test_quality_series_excludes_future_scheduled_publications(self):
+        path = Path(self.tmp.name) / "youtube_future_schedule.duckdb"
+        con = duckdb.connect(str(path))
+        con.execute('''
+            create table dim_video(
+                video_id varchar, publish_date date, form varchar, is_active boolean
+            )
+        ''')
+        con.executemany(
+            "insert into dim_video values (?, ?, ?, true)",
+            [("PUBLISHED01", "2026-08-10", "LF"), ("SCHEDULED01", "2026-08-20", "SF")],
+        )
+        con.execute('''
+            create table fact_analytics_d7(
+                video_id varchar, fetched_at timestamp, d7_complete boolean,
+                metric_end_date date, view_count bigint
+            )
+        ''')
+        con.executemany(
+            "insert into fact_analytics_d7 values (?, ?, true, ?, ?)",
+            [
+                ("PUBLISHED01", "2026-08-15 00:00:00", "2026-08-15", 100),
+                ("SCHEDULED01", "2026-08-27 00:00:00", "2026-08-26", 200),
+            ],
+        )
+        con.execute('''
+            create table v_channel_daily_subscribers(
+                snapshot_date date, subscriber_count bigint, captured_at timestamp
+            )
+        ''')
+        con.execute("insert into v_channel_daily_subscribers values ('2026-08-15', 800000, '2026-08-15 23:00:00')")
+
+        series = owned_refresh.fetch_quality_series(
+            con, 2026, 8, as_of=dt.date(2026, 8, 15)
+        )
+        con.close()
+
+        self.assertEqual(series[8]["published"], 1)
+        self.assertEqual(series[8]["LF_count"], 1)
+        self.assertEqual(series[8]["SF_count"], 0)
+        self.assertEqual(series[8]["completed"], 1)
+
+    def test_youtube_main_surfaces_update_current_month_and_pass_parity(self):
+        html = owned_refresh.DEFAULT_HTML.read_text(encoding="utf-8")
+        rows = [
+            {
+                "publish_date": dt.date(2026, 8, 17),
+                "video_id": "BBBBBBBBBBB",
+                "form": "SF",
+                "title": "지난주 콘텐츠",
+                "url": "https://www.youtube.com/watch?v=BBBBBBBBBBB",
+                "views_total": 2000,
+                "d7_views": 1500,
+                "pis": 80,
+                "d7_complete": True,
+            },
+            {
+                "publish_date": dt.date(2026, 8, 24),
+                "video_id": "CCCCCCCCCCC",
+                "form": "LF",
+                "title": "이번주 콘텐츠",
+                "url": "https://www.youtube.com/watch?v=CCCCCCCCCCC",
+                "views_total": 3000,
+                "d7_views": None,
+                "pis": None,
+                "d7_complete": False,
+            },
+        ]
+        series = {
+            7: {
+                "published": 4, "LF_count": 2, "SF_count": 2,
+                "completed": 4, "overall": 1000, "LF": 1500, "SF": 500,
+                "subscriber": 800000, "subscriber_date": dt.date(2026, 7, 31),
+            },
+            8: {
+                "published": 2, "LF_count": 1, "SF_count": 1,
+                "completed": 1, "overall": 1500, "LF": 0, "SF": 1500,
+                "subscriber": 803000, "subscriber_date": dt.date(2026, 8, 30),
+            },
+        }
+
+        updated = owned_refresh.update_main_youtube_surfaces(
+            html,
+            year=2026,
+            month=8,
+            as_of=dt.date(2026, 8, 30),
+            snapshot_date=dt.date(2026, 8, 30),
+            rows=rows,
+            quality_series=series,
+        )
+        start8, end8 = owned_refresh.month_block_bounds(updated, 8)
+        august = updated[start8:end8]
+        start9, end9 = owned_refresh.month_block_bounds(updated, 9)
+        september = updated[start9:end9]
+
+        self.assertIn("지난주 콘텐츠", august)
+        self.assertIn("이번주 콘텐츠", august)
+        self.assertIn('data-yt-main-source-publish-count="2"', august)
+        self.assertIn('data-yt-main-source-latest-publish-date="2026-08-24"', august)
+        self.assertIn('data-yt-main-quality-basis="analytics-d7"', august)
+        self.assertIn("D+7 완료 1/2건", august)
+        self.assertIn("8월 발행</div><div class=\"qn num\">2건", august)
+        self.assertIn("SF 1건 · LF 1건", august)
+        self.assertIn("Analytics 지속시간 미적재", august)
+        self.assertNotIn("08-09 기준 · 조회수 1,126,735", august)
+        self.assertNotIn("지난주 콘텐츠", september)
+        owned_refresh.assert_main_parity(
+            updated,
+            month=8,
+            expected_published=2,
+            expected_latest_publish_date=dt.date(2026, 8, 24),
+            expected_snapshot_date=dt.date(2026, 8, 30),
+            expected_elapsed_weeks=5,
+        )
+        bad = updated.replace('data-yt-main-source-publish-count="2"',
+                              'data-yt-main-source-publish-count="1"', 1)
+        with self.assertRaisesRegex(RuntimeError, "publish count"):
+            owned_refresh.assert_main_parity(
+                bad,
+                month=8,
+                expected_published=2,
+                expected_latest_publish_date=dt.date(2026, 8, 24),
+                expected_snapshot_date=dt.date(2026, 8, 30),
+                expected_elapsed_weeks=5,
+            )
 
     def test_current_month_raw_surfaces_are_reconciled(self):
         html_path = Path(__file__).resolve().parents[1] / "index.html"

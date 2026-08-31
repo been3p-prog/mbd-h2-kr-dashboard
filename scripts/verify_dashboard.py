@@ -203,6 +203,174 @@ def _check_manifest(html: str, now: dt.datetime, require_fresh: bool, errors: li
                               f"the {FRESHNESS_SLA_HOURS}h freshness SLA")
 
 
+def _check_youtube_main(html: str, errors: list) -> None:
+    """현재월 메인 YouTube ledger/quality가 한 원천 계약으로 갱신됐는지 검증."""
+    try:
+        _, manifest = extract_manifest(html)
+    except (AssertionError, ValueError, TypeError, json.JSONDecodeError):
+        return
+    month = manifest.get("default_month")
+    if not isinstance(month, int) or not 1 <= month <= 12:
+        return
+    marker = f'<div class="mvr mv" data-m="{month}"'
+    try:
+        start = html.index(marker)
+        if month < 12:
+            end = html.index(f'<div class="mvr mv" data-m="{month + 1}"', start)
+        else:
+            end = html.index('<section id="youtubeWindow"', start)
+        block = html[start:end]
+        quality_start = block.index('<div class="card quality-card yt-quality">')
+        yt_block = block[quality_start:]
+    except ValueError:
+        errors.append(f"youtube main source block for month {month} is missing")
+        return
+
+    attrs = {
+        "publish count": "data-yt-main-source-publish-count",
+        "latest publish date": "data-yt-main-source-latest-publish-date",
+        "snapshot date": "data-yt-main-source-snapshot-date",
+        "elapsed weeks": "data-yt-main-source-elapsed-weeks",
+    }
+    values: dict[str, str] = {}
+    for label, attr in attrs.items():
+        match = re.search(rf'{attr}="([^"]+)"', yt_block)
+        if not match:
+            errors.append(f"youtube main source {label} marker is missing")
+        else:
+            values[label] = match.group(1)
+    if 'data-yt-main-quality-basis="analytics-d7"' not in yt_block:
+        errors.append("youtube main source quality basis analytics-d7 is missing")
+    if f'data-yt-quality-mom-main="{month}"' not in yt_block:
+        errors.append(f"youtube main source current-month quality MoM marker {month} is missing")
+    if f'data-quality-trend="youtube-{month}"' not in yt_block or "D+7 Analytics" not in yt_block:
+        errors.append(f"youtube main source current-month D+7 trend {month} is missing")
+
+    quality_attrs = {
+        "average views": "data-yt-main-source-average-views",
+        "LF average views": "data-yt-main-source-lf-average-views",
+        "SF average views": "data-yt-main-source-sf-average-views",
+        "subscriber count": "data-yt-main-source-subscriber-count",
+        "D+7 completed": "data-yt-main-source-d7-completed",
+    }
+    quality_values: dict[str, str] = {}
+    for label, attr in quality_attrs.items():
+        match = re.search(rf'{attr}="([^"]+)"', yt_block)
+        if not match:
+            errors.append(f"youtube main source {label} marker is missing")
+        else:
+            quality_values[label] = match.group(1)
+
+    expected_count = None
+    try:
+        expected_count = int(values.get("publish count", ""))
+    except ValueError:
+        errors.append(f"youtube main publish count is invalid: {values.get('publish count')!r}")
+    rendered_count = yt_block.count('data-content-link="youtube"')
+    if expected_count is not None and rendered_count != expected_count:
+        errors.append(
+            f"youtube main publish count mismatch: marker={expected_count}, rendered={rendered_count}"
+        )
+
+    def display_number(value: str | None) -> str:
+        if value in (None, "none", "0"):
+            return "—"
+        try:
+            return f"{int(value):,}"
+        except ValueError:
+            return "invalid"
+
+    average_match = re.search(
+        rf'data-yt-main-average="{month}"><div class="qk2">전체 평균 조회수</div>\s*'
+        r'<div class="qv num">([^<]+)</div>',
+        yt_block,
+    )
+    expected_average = display_number(quality_values.get("average views"))
+    actual_average = average_match.group(1) if average_match else None
+    if actual_average != expected_average:
+        errors.append(
+            f"youtube main average views mismatch: marker={expected_average!r}, rendered={actual_average!r}"
+        )
+
+    subscriber_match = re.search(
+        rf'data-yt-subscriber-card="{month}".*?<div class="qn num">([^<]+)</div>',
+        yt_block,
+        re.S,
+    )
+    expected_subscriber = display_number(quality_values.get("subscriber count"))
+    actual_subscriber = subscriber_match.group(1) if subscriber_match else None
+    if actual_subscriber != expected_subscriber:
+        errors.append(
+            "youtube main subscriber count mismatch: "
+            f"marker={expected_subscriber!r}, rendered={actual_subscriber!r}"
+        )
+
+    for form, label in (("lf", "LF average views"), ("sf", "SF average views")):
+        match = re.search(
+            rf'data-yt-{form}-average-card="{month}".*?<div class="qn num">([^<]+)</div>',
+            yt_block,
+            re.S,
+        )
+        expected_value = display_number(quality_values.get(label))
+        actual_value = match.group(1) if match else None
+        if actual_value != expected_value:
+            errors.append(
+                f"youtube main {label} mismatch: marker={expected_value!r}, rendered={actual_value!r}"
+            )
+
+    rendered_forms = re.findall(
+        r'data-content-link="youtube".*?</a><small[^>]*>(LF|SF)[^<]*</small>',
+        yt_block,
+        re.S,
+    )
+    expected_split = f"SF {rendered_forms.count('SF')}건 · LF {rendered_forms.count('LF')}건"
+    if len(rendered_forms) != rendered_count or expected_split not in yt_block:
+        errors.append(f"youtube main publish split mismatch: expected={expected_split!r}")
+
+    completed_value = quality_values.get("D+7 completed")
+    expected_d7 = (
+        f"D+7 완료 {completed_value}/{expected_count}건"
+        if completed_value is not None and expected_count is not None else None
+    )
+    if not expected_d7 or expected_d7 not in yt_block:
+        errors.append(f"youtube main D+7 completion mismatch: expected={expected_d7!r}")
+
+    latest_value = values.get("latest publish date")
+    rendered_dates = [
+        dt.date.fromisoformat(value)
+        for value in re.findall(r'<time class="activity-date" datetime="(\d{4}-\d{2}-\d{2})">', yt_block)
+    ]
+    rendered_latest = max(rendered_dates).isoformat() if rendered_dates else "none"
+    if latest_value is not None and latest_value != rendered_latest:
+        errors.append(
+            f"youtube main latest publish date mismatch: marker={latest_value!r}, rendered={rendered_latest!r}"
+        )
+
+    snapshot_value = values.get("snapshot date")
+    try:
+        snapshot_date = dt.date.fromisoformat(snapshot_value) if snapshot_value and snapshot_value != "none" else None
+    except ValueError:
+        snapshot_date = None
+        errors.append(f"youtube main snapshot date is invalid: {snapshot_value!r}")
+    try:
+        elapsed_weeks = int(values.get("elapsed weeks", ""))
+    except (TypeError, ValueError):
+        elapsed_weeks = None
+        errors.append(f"youtube main elapsed weeks is invalid: {values.get('elapsed weeks')!r}")
+    if elapsed_weeks is not None:
+        if not 1 <= elapsed_weeks <= 5:
+            errors.append(f"youtube main elapsed weeks {elapsed_weeks} is outside 1..5")
+        expected_weeks = set(range(1, elapsed_weeks + 1))
+        rendered_weeks = {
+            int(value)
+            for value in re.findall(rf'data-week-group="{month}-(\d+)"', yt_block)
+        }
+        if rendered_weeks != expected_weeks:
+            errors.append(
+                f"youtube main elapsed weeks mismatch: rendered={sorted(rendered_weeks)}, expected={sorted(expected_weeks)}"
+            )
+
+
 def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     """DOM-first LIVE 아티팩트 계약 검증. 정렬된 위반 리스트 반환([] = 통과)."""
     if not isinstance(html, str) or not html.strip():
@@ -217,6 +385,7 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
 
     # 2) compact manifest (정확히 1개 · allowlist · 상수 · raw 부재 · freshness)
     _check_manifest(html, now, require_fresh, errors)
+    _check_youtube_main(html, errors)
 
     # 3) LIVE 마커 정확히 1회 · STAGING/승인 전 비공개 부재
     for marker in LIVE_MARKERS:
@@ -301,8 +470,8 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    'data-yt-period="mtd"', 'data-owned-media-window="youtube"',
                    'data-yt-window-latest-date="', '온드미디어 상세탭',
                    '디폴트 금월 누적', '주차별 보기', 'YouTube Analytics 기준',
-                   'data-yt-close', 'data-yt-weekly-view="8"',
-                   'data-yt-week-summary="8"', '콘텐츠 D+N 참고',
+                   'data-yt-close', 'data-yt-weekly-view="',
+                   'data-yt-week-summary="', '콘텐츠 D+N 참고',
                    'function setYoutubeWindow(open)', '.yt-window{position:fixed;inset:16px;',
                    '@media (max-width:1180px){.yt-window{inset:14px'):
         if marker not in html:
@@ -389,27 +558,26 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
     if 'data-yt-channel-overview=' in html:
         errors.append("obsolete youtube left-subscriber overview present")
 
-    # [2026-08-25] 라이브 품질 카드는 일일 DuckDB refresh 대상이므로 특정 과거 수치가
-    # 아니라 1D 기준 marker와 MoM surface 존재를 검증한다. 유튜브는 아직 정적 snapshot marker 유지.
+    # [2026-08-31] 라이브 품질은 8월 기존 운영 기준을 유지하고, YouTube 현재월은
+    # _check_youtube_main에서 manifest.default_month 기반으로 동적 검증한다.
     for marker in ('.qcell .qmom{font-size:11px;font-weight:850',
                    'data-live-quality-mom-main="8"', 'data-live-quality-mom="8-overall"',
                    'data-live-quality-mom="8-signature"', 'data-live-quality-mom="8-smart"',
                    'data-live-quality-mom="8-essential"', '1D 평균 거래액',
                    '8월 목표 1.00억 대비',
-                   'data-yt-quality-mom-main="8"', 'MoM ▼ 36.8%', 'MoM ▲ 0.3%',
-                   'MoM ▲ 33.9%', 'MoM ▼ 79.2%'):
+                   'data-yt-quality-mom-main=', 'Analytics 지속시간 미적재'):
         if marker not in html:
             errors.append(f"missing quality-card MoM marker {marker!r}")
 
     # [2026-08-12] 품질 카드 하위 월별 추이는 평균을 누적하지 않고 square bar + 전체평균 선으로 고정한다.
     for marker in ('.quality-trend{margin-top:16px', '.qt-bar{rx:0;shape-rendering:crispEdges}',
-                   'data-quality-trend="live-8"', 'data-quality-trend="youtube-8"',
+                   'data-quality-trend="live-8"',
                    'data-quality-trend-kind="live-package-average"',
                    'data-quality-trend-kind="yt-format-average"',
                    '평균치는 누적하지 않음', 'square bar=패키지별 평균',
                    'square bar=LF/SF 평균', '검은선=전체 평균',
                    '시그니처 평균', '스마트 평균', '에센셜 평균',
-                   'LF 평균', 'SF 평균', '8월 LF n=2 · SF n=5'):
+                   'LF 평균', 'SF 평균', 'D+7 완료'):
         if marker not in html:
             errors.append(f"missing quality trend marker {marker!r}")
     live_trend_count = html.count('data-quality-trend="live-')
