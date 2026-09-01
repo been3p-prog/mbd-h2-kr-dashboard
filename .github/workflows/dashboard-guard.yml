@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install exact-viewport smoke dependency
-        run: python -m pip install playwright==1.55.0 duckdb==1.4.4
+        run: python -m pip install playwright==1.55.0 duckdb==1.4.4 pytz==2026.3.post1
       - name: Check current RAW aggregation and freshness isolation
         run: python -m unittest scripts/test_refresh_current_raw.py -v
       - name: Run dashboard regression tests
