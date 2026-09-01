@@ -8,6 +8,7 @@ RETRY_LIB="/Users/sb.lee/.hermes/scripts/lib/mbd_h2_pages_retry.sh"
 # [2026-08-28] Pin the MBD interpreter — Hermes gateway venv does not include duckdb.
 PY="/usr/bin/python3"
 YT_SNAPSHOT_CACHE="/tmp/mbd_h2_youtube_target_snapshot.duckdb"
+MBD_SNAPSHOT_CACHE="/tmp/mbd_h2_target_snapshot.duckdb"
 # [2026-08-28] Bound transient recovery; deterministic failures remain fail-fast.
 export MBD_H2_MAX_ATTEMPTS="${MBD_H2_MAX_ATTEMPTS:-3}"
 export MBD_H2_RETRY_SLEEP_SECONDS="${MBD_H2_RETRY_SLEEP_SECONDS:-30}"
@@ -70,14 +71,20 @@ CURRENT_STAGE="refresh_regression_tests"
 "$PY" -m unittest scripts/test_refresh_current_raw.py -v
 CURRENT_STAGE="dashboard_regression_tests"
 "$PY" -m unittest scripts/test_verify_dashboard.py -v
+"$PY" -m unittest scripts/test_finalize_month_review.py -v
 
 CURRENT_STAGE="fetch_target_youtube_snapshot"
 mbd_h2_run_with_retry "fetch_target_youtube_snapshot" "$LOG" \
   "$PY" scripts/fetch_target_youtube_snapshot.py --output "$YT_SNAPSHOT_CACHE" --quiet
+CURRENT_STAGE="fetch_target_mbd_snapshot"
+mbd_h2_run_with_retry "fetch_target_mbd_snapshot" "$LOG" \
+  "$PY" scripts/fetch_target_mbd_snapshot.py --output "$MBD_SNAPSHOT_CACHE" --quiet
 CURRENT_STAGE="refresh_live_daily"
-mbd_h2_run_with_retry "refresh_live_daily" "$LOG" "$PY" scripts/refresh_live_daily_from_duckdb.py --quiet
+mbd_h2_run_with_retry "refresh_live_daily" "$LOG" "$PY" \
+  scripts/refresh_live_daily_from_duckdb.py --quiet --duckdb "$MBD_SNAPSHOT_CACHE"
 CURRENT_STAGE="refresh_live_window"
-mbd_h2_run_with_retry "refresh_live_window" "$LOG" "$PY" scripts/refresh_live_window_from_duckdb.py --quiet
+mbd_h2_run_with_retry "refresh_live_window" "$LOG" "$PY" \
+  scripts/refresh_live_window_from_duckdb.py --quiet --duckdb "$MBD_SNAPSHOT_CACHE"
 CURRENT_STAGE="refresh_owned_youtube_window"
 mbd_h2_run_with_retry "refresh_owned_youtube_window" "$LOG" "$PY" \
   scripts/refresh_owned_youtube_window_from_duckdb.py --quiet --duckdb "$YT_SNAPSHOT_CACHE"

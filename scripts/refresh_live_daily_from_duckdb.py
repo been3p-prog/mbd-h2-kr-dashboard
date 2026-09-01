@@ -23,7 +23,7 @@ import duckdb
 KST = dt.timezone(dt.timedelta(hours=9))
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_HTML = ROOT / "index.html"
-DEFAULT_DUCKDB = Path("/Users/sb.lee/automations/mbd/mbd.duckdb")
+DEFAULT_DUCKDB = Path("/tmp/mbd_h2_target_snapshot.duckdb")
 TARGET_WON = 100_000_000
 CURRENT_REVENUE_TARGET_WON = 1_278_000_000
 
@@ -136,7 +136,8 @@ def fetch_live_rows(
             [start, upper_bound],
         ).fetchall()
         ingest = con.execute(
-            "select max(last_ingest_at) from meta.ingest_log where status='ok'"
+            "select max(last_ingest_at) from meta.ingest_log "
+            "where lower(trim(status)) in ('ok','success')"
         ).fetchone()[0]
     finally:
         con.close()
@@ -260,6 +261,7 @@ def update_manifest(
     payload: dict,
     *,
     touched_sources: set[str] | frozenset[str] = frozenset(),
+    default_month: int | None = None,
 ) -> str:
     manifest_re = re.compile(r'(<script type="application/json" id="mbd-public-guard">)(.*?)(</script>)', re.S)
     match = manifest_re.search(html)
@@ -267,6 +269,10 @@ def update_manifest(
         raise RuntimeError("mbd-public-guard manifest not found")
     manifest = json.loads(match.group(2))
     manifest["built_at_kst"] = built
+    if default_month is not None:
+        if not 1 <= default_month <= 12:
+            raise ValueError(f"default_month out of range: {default_month}")
+        manifest["default_month"] = default_month
     for key in touched_sources:
         if key not in manifest.get("source_snapshot_as_of", {}):
             raise RuntimeError(f"unknown manifest source timestamp {key}")
@@ -277,10 +283,60 @@ def update_manifest(
     return manifest_re.sub(lambda m: m.group(1) + new_raw + m.group(3), html, count=1)
 
 
-def _raw_team_row(value: int, target: int, range_label: str) -> str:
+def update_default_month_state(html: str, month: int) -> str:
+    if not 1 <= month <= 12:
+        raise ValueError(f"default month out of range: {month}")
+    select_re = re.compile(r'(<select id="msel">)(.*?)(</select>)', re.S)
+    select = select_re.search(html)
+    if not select:
+        raise RuntimeError("month selector not found")
+    target_count = 0
+
+    def update_option(match: re.Match) -> str:
+        nonlocal target_count
+        value = int(match.group(1))
+        label = match.group(2)
+        if " · " not in label:
+            raise RuntimeError(f"month selector label malformed: {label}")
+        prefix = label.rsplit(" · ", 1)[0]
+        phase = "확정" if value < month else "진행 중" if value == month else "부킹 진행"
+        if value == month:
+            target_count += 1
+        selected = " selected" if value == month else ""
+        return f'<option value="{value}"{selected}>{prefix} · {phase}</option>'
+
+    options = re.sub(
+        r'<option value="(\d+)"(?: selected)?>([^<]+)</option>',
+        update_option,
+        select.group(2),
+    )
+    if target_count != 1:
+        raise RuntimeError(f"month selector target count mismatch: month={month} count={target_count}")
+    updated = html[:select.start()] + select.group(1) + options + select.group(3) + html[select.end():]
+    updated, cursor_count = re.subn(r'\bvar CUR = \d+;', f'var CUR = {month};', updated)
+    if cursor_count != 1:
+        raise RuntimeError(f"month JS cursor count mismatch: {cursor_count}")
+
+    def update_phase(match: re.Match) -> str:
+        value = int(match.group(2))
+        phase = "closed" if value < month else "current" if value == month else "future"
+        return match.group(1) + phase + match.group(3)
+
+    updated, phase_count = re.subn(
+        r'(class="(?:mvk|mvs|mvr) mv" data-m="(\d+)" data-phase=")(?:closed|cur|current|future)(")',
+        update_phase,
+        updated,
+    )
+    if phase_count == 0:
+        raise RuntimeError("month phase surfaces not found")
+    return updated
+
+
+def _raw_team_row(value: int, target: int, range_label: str, *, team_key: str | None = None) -> str:
     progress = value / target * 100 if target else None
+    empty_attr = f' data-current-raw-team-empty="{team_key}"' if value == 0 and team_key else ""
     return (
-        f'<div class="r"><span>RAW 누적 · {range_label}</span><b>{fmt_won(value)} '
+        f'<div class="r"{empty_attr}><span>RAW 누적 · {range_label}</span><b>{fmt_won(value)} '
         f'<span class="mutpct">진척 {fmt_pct(progress)}</span></b></div>'
     )
 
@@ -311,22 +367,38 @@ def update_current_raw_surfaces(html: str, snapshot: dict) -> str:
         '<div class="tn">실발생 누적 — 미래 일정·취소·무상 제외</div>'
     )
     escaped_tip = html_lib.escape(tip, quote=True)
+
+    def top_card(icon: str) -> str:
+        empty_attr = ' data-current-raw-empty="true"' if clean_int(snapshot["total_won"]) == 0 else ""
+        return (
+            f'<div class="kpi" data-tip="{escaped_tip}"{empty_attr}>{icon}<div>\n'
+            f'          <div class="k">현재 RAW 누적 · {range_label}</div><div class="v num">{fmt_won(snapshot["total_won"])}</div>\n'
+            f'          <div class="s num"><span class="pill flat num">목표 진척 {fmt_pct(snapshot["progress_pct"])}</span></div></div></div>'
+        )
+
     top_pattern = re.compile(
-        r'<div class="kpi" data-tip="[^"]*RAW 누적[^"]*">'
+        r'<div class="kpi" data-tip="[^"]*(?:RAW 누적|확정 RAW)[^"]*"(?: data-current-raw-empty="true")?>'
         r'(?P<icon><div class="ic">.*?</div>)<div>\s*'
-        r'<div class="k">현재 RAW 누적[^<]*</div><div class="v num">[^<]*</div>\s*'
+        r'<div class="k">(?:현재 RAW 누적|확정 RAW)[^<]*</div><div class="v num">[^<]*</div>\s*'
         r'<div class="s num"><span class="pill flat num">목표 진척 [^<]*</span></div></div></div>',
         re.S,
     )
     match = top_pattern.search(segment)
-    if not match:
-        raise RuntimeError("current RAW KPI card not found")
-    top_card = (
-        f'<div class="kpi" data-tip="{escaped_tip}">{match.group("icon")}<div>\n'
-        f'          <div class="k">현재 RAW 누적 · {range_label}</div><div class="v num">{fmt_won(snapshot["total_won"])}</div>\n'
-        f'          <div class="s num"><span class="pill flat num">목표 진척 {fmt_pct(snapshot["progress_pct"])}</span></div></div></div>'
-    )
-    segment = top_pattern.sub(top_card, segment, count=1)
+    if match:
+        segment = top_pattern.sub(lambda m: top_card(m.group("icon")), segment, count=1)
+    else:
+        future_top_pattern = re.compile(
+            rf'<div class="kpi"(?: data-tip="[^"]*")?>(?P<icon><div class="ic">.*?</div>)<div>\s*'
+            rf'<div class="k">{month}월 부킹 총액<span class="phase">부킹 진행</span></div>.*?</div></div>',
+            re.S,
+        )
+        segment, count = future_top_pattern.subn(
+            lambda m: top_card(m.group("icon")),
+            segment,
+            count=1,
+        )
+        if count != 1:
+            raise RuntimeError("current RAW KPI card not found")
     html = html[:start] + segment + html[end:]
 
     team_start, team_end = _month_bounds(html, "mvr", month)
@@ -337,25 +409,38 @@ def update_current_raw_surfaces(html: str, snapshot: dict) -> str:
         ("라이브", "live_won", "live"),
     )
     for team, key, target_key in team_specs:
+        row_html = _raw_team_row(
+            snapshot[key], snapshot["team_targets_won"][target_key], range_label, team_key=target_key
+        )
         pattern = re.compile(
             rf'(<span class="nm">{team}</span>.*?<div class="rows num">.*?)'
-            r'<div class="r"><span>(?:LIVE )?RAW(?: 누적)? · [^<]+</span><b>.*?'
+            r'<div class="r"(?: data-current-raw-team-empty="[^"]+")?><span>(?:(?:LIVE )?RAW(?: 누적)?|확정 RAW) · [^<]+</span><b>.*?'
             r'<span class="mutpct">진척 [^<]+</span></b></div>',
             re.S,
         )
-        team_segment, count = pattern.subn(
-            lambda m: m.group(1) + _raw_team_row(
-                snapshot[key], snapshot["team_targets_won"][target_key], range_label
-            ),
-            team_segment,
-            count=1,
+        team_segment, count = pattern.subn(lambda m, row=row_html: m.group(1) + row, team_segment, count=1)
+        if count == 1:
+            continue
+        future_rows_pattern = re.compile(
+            rf'(<span class="nm">{team}</span>.*?<div class="rows num">)(?P<rows>.*?)(</div></div>)',
+            re.S,
         )
+
+        def insert_raw_row(match: re.Match, row=row_html) -> str:
+            rows = match.group("rows")
+            first_row_end = rows.find("</div>")
+            if first_row_end < 0:
+                raise RuntimeError(f"current RAW team row not found: {team}")
+            insert_at = first_row_end + len("</div>")
+            return match.group(1) + rows[:insert_at] + row + rows[insert_at:] + match.group(3)
+
+        team_segment, count = future_rows_pattern.subn(insert_raw_row, team_segment, count=1)
         if count != 1:
             raise RuntimeError(f"current RAW team row not found: {team}")
     html = html[:team_start] + team_segment + html[team_end:]
 
     html, chip_count = re.subn(
-        r'<span class="chip">(?:LIVE )?RAW [^<]+</span><span class="chip vi">FORECAST \d{4}-\d{2}</span>',
+        r'<span class="chip">(?:LIVE )?RAW [^<]+</span><span class="chip vi">(?:FORECAST|ACTUAL) \d{4}-\d{2}</span>',
         f'<span class="chip">RAW {range_label}</span><span class="chip vi">FORECAST {year:04d}-{month:02d}</span>',
         html,
         count=1,
@@ -398,7 +483,7 @@ def _empty_live_quality_qsplit(month: int) -> str:
         for key in TEAM_ORDER
     )
     return (
-        '<div class="qsplit"><div><div class="qk2">1D 평균 거래액</div>'
+        '<div class="qsplit" data-live-quality-empty="true"><div><div class="qk2">1D 평균 거래액</div>'
         '<div class="qv num">—</div>'
         f'<div class="qs"><span class="pill flat num big">{month}월 목표 1.00억 대비 —</span>'
         f'<span class="pill flat num big" data-live-quality-mom-main="{month}">MoM —</span></div>'
@@ -424,6 +509,14 @@ def update_live_quality(html: str, summary: dict, *, month: int) -> str:
         if seed_count != 1:
             raise RuntimeError(f"failed to initialize live quality surface for month {month}")
     overall = summary["overall"]
+    if overall["n"]:
+        segment = segment.replace(
+            '<div class="qsplit" data-live-quality-empty="true">',
+            '<div class="qsplit">',
+            1,
+        )
+    elif 'data-live-quality-empty="true"' not in segment:
+        segment = segment.replace('<div class="qsplit">', '<div class="qsplit" data-live-quality-empty="true">', 1)
     target_pct = (overall["avg"] or 0) / TARGET_WON * 100
     cls, _, mom_text = fmt_delta(overall["mom"])
     avg = fmt_won(overall["avg"] or 0)
@@ -500,7 +593,7 @@ def update_chips_footer_and_live_row(html: str, now: dt.datetime, summary: dict,
         raw_label = f"LIVE RAW {first.month}/1~{fmt_m_d(latest)}"
         range_label = f"{first.month}/1~{fmt_m_d(latest)}"
     html = re.sub(
-        r'<span class="chip">(?:LIVE )?RAW [^<]+</span><span class="chip vi">FORECAST \d{4}-\d{2}</span>',
+        r'<span class="chip">(?:LIVE )?RAW [^<]+</span><span class="chip vi">(?:FORECAST|ACTUAL) \d{4}-\d{2}</span>',
         f'<span class="chip">{raw_label}</span><span class="chip vi">FORECAST {now.year:04d}-{now.month:02d}</span>',
         html,
         count=1,
@@ -537,10 +630,9 @@ def refresh(html_path: Path, db_path: Path, quiet: bool = False) -> dict:
     prev_rows, _ = fetch_live_rows(db_path, prev_year, prev_month)
     summary = summarize(rows, prev_rows)
     revenue_snapshot = fetch_current_revenue_snapshot(db_path, now.date())
-    if not summary["overall"]["n"]:
-        raise RuntimeError("no positive current-month Live 1D rows found")
 
     html = html_path.read_text(encoding="utf-8")
+    html = update_default_month_state(html, month)
     html = update_live_quality(html, summary, month=month)
     html = update_live_activity_rows(html, rows, year=year, month=month)
     html = update_chips_footer_and_live_row(html, now, summary, ingest)
@@ -559,6 +651,7 @@ def refresh(html_path: Path, db_path: Path, quiet: bool = False) -> dict:
         now.isoformat(timespec="seconds"),
         payload,
         touched_sources={"revenue_mirror", "live_quality", "okr_targets"},
+        default_month=month,
     )
     before = html_path.read_text(encoding="utf-8")
     changed = before != html

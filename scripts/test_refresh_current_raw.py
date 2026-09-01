@@ -1,6 +1,7 @@
 import contextlib
 import datetime as dt
 import hashlib
+import importlib.util
 import io
 import json
 import re
@@ -17,7 +18,9 @@ import duckdb
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import refresh_live_daily_from_duckdb as refresh  # noqa: E402
+import refresh_live_window_from_duckdb as live_window_refresh  # noqa: E402
 import refresh_owned_youtube_window_from_duckdb as owned_refresh  # noqa: E402
+import verify_dashboard as vd  # noqa: E402
 import fetch_target_youtube_snapshot as target_snapshot  # noqa: E402
 
 
@@ -772,6 +775,41 @@ class CurrentRawRefreshTest(unittest.TestCase):
         self.assertIn("라이브&lt;/span&gt;&lt;b&gt;1.68억", month8)
         self.assertNotIn("현재 RAW 누적 · 8/1~8/9", month8)
 
+    def test_current_raw_hydrates_future_placeholder_month(self):
+        html = (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8")
+        html = owned_refresh.update_default_month_state(html, 9)
+        snapshot = {
+            "as_of": "2026-09-01",
+            "range_label": "9/1~9/1",
+            "ad_gen_won": 0,
+            "ad_int_won": 0,
+            "live_won": 0,
+            "target_won": 1_277_682_548,
+            "team_targets_won": {"ad_gen": 865_682_548, "ad_int": 200_000_000, "live": 212_000_000},
+            "total_won": 0,
+            "progress_pct": 0.0,
+        }
+
+        updated = refresh.update_current_raw_surfaces(html, snapshot)
+
+        month9_top = updated.split('class="mvk mv" data-m="9"', 1)[1].split(
+            'class="mvk mv" data-m="10"', 1
+        )[0]
+        month9_detail = updated.split('class="mvr mv" data-m="9"', 1)[1].split(
+            'class="mvr mv" data-m="10"', 1
+        )[0]
+        self.assertIn('data-phase="current"', month9_top)
+        self.assertIn('data-current-raw-empty="true"', month9_top)
+        self.assertIn("현재 RAW 누적 · 9/1~9/1", month9_top)
+        self.assertIn('<div class="v num">0</div>', month9_top)
+        self.assertIn("목표 진척 0.0%", month9_top)
+        self.assertIn("FORECAST 2026-09", updated)
+        self.assertNotIn("9월 부킹 총액<span class=\"phase\">부킹 진행</span>", month9_top)
+        self.assertEqual(month9_detail.count("RAW 누적 · 9/1~9/1"), 3)
+        for team_key in ("ad_gen", "ad_int", "live"):
+            self.assertIn(f'data-current-raw-team-empty="{team_key}"', month9_detail)
+        self.assertIn("진척 0.0%", month9_detail)
+
     def test_december_surface_update_does_not_require_month_13(self):
         html = (
             '<div><span class="chip">RAW 12/1~12/1</span>'
@@ -820,6 +858,153 @@ class CurrentRawRefreshTest(unittest.TestCase):
         self.assertIn('data-live-quality-mom="12-overall"', december)
         self.assertIn('<div class="qn num">1.23억</div>', december)
 
+    def test_zero_current_month_live_is_explicit_valid_state(self):
+        class FixedDateTime(dt.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls(2026, 9, 1, 12, 0, tzinfo=tz)
+
+        html_path = Path(self.tmp.name) / "index.html"
+        html_path.write_text(
+            (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        revenue = {
+            "as_of": "2026-09-01",
+            "range_label": "9/1~9/1",
+            "ad_gen_won": 0,
+            "ad_int_won": 0,
+            "live_won": 0,
+            "target_won": 1_277_682_548,
+            "team_targets_won": {"ad_gen": 865_682_548, "ad_int": 200_000_000, "live": 212_000_000},
+            "total_won": 0,
+            "progress_pct": 0.0,
+        }
+        with (
+            mock.patch.object(refresh.dt, "datetime", FixedDateTime),
+            mock.patch.object(refresh, "fetch_live_rows", side_effect=[([], "2026-09-01 00:01:00"), ([], None)]),
+            mock.patch.object(refresh, "fetch_current_revenue_snapshot", return_value=revenue),
+        ):
+            try:
+                result = refresh.refresh(html_path, Path("/tmp/fixture.duckdb"), quiet=True)
+            except RuntimeError as exc:
+                self.fail(f"zero current-month Live must render explicitly: {exc}")
+
+        rendered = html_path.read_text(encoding="utf-8")
+        self.assertEqual(result["overall_n"], 0)
+        self.assertIn('<option value="9" selected>2026년 9월 · 진행 중</option>', rendered)
+        self.assertRegex(rendered, r'class="mvk mv" data-m="9" data-phase="current"')
+        self.assertRegex(rendered, r'class="mvr mv" data-m="9" data-phase="current"')
+        self.assertIn('data-live-quality-empty="true"', rendered)
+        self.assertIn('data-live-quality-mom-main="9"', rendered)
+        self.assertIn("0방송 · 총 0", rendered)
+        self.assertIn('data-current-raw-empty="true"', rendered)
+        self.assertEqual(rendered.count('data-current-raw-team-empty='), 3)
+        self.assertIn("현재 RAW 누적 · 9/1~9/1", rendered)
+        self.assertIn("RAW 누적 · 9/1~9/1</span><b>0 ", rendered)
+
+    def test_current_month_refresh_candidate_preserves_closed_august_guard(self):
+        class FixedDateTime(dt.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls(2026, 9, 1, 12, 0, tzinfo=tz)
+
+        now = FixedDateTime.now(refresh.KST)
+        html_path = Path(self.tmp.name) / "index.html"
+        html_path.write_text(
+            (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        revenue = {
+            "as_of": "2026-09-01",
+            "range_label": "9/1~9/1",
+            "ad_gen_won": 0,
+            "ad_int_won": 0,
+            "live_won": 0,
+            "target_won": 1_278_000_000,
+            "team_targets_won": {"ad_gen": 868_200_000, "ad_int": 29_090_909, "live": 215_000_000},
+            "total_won": 0,
+            "progress_pct": 0.0,
+        }
+        with (
+            mock.patch.object(refresh.dt, "datetime", FixedDateTime),
+            mock.patch.object(refresh, "fetch_live_rows", side_effect=[([], "2026-09-01 00:01:00"), ([], None)]),
+            mock.patch.object(refresh, "fetch_current_revenue_snapshot", return_value=revenue),
+        ):
+            refresh.refresh(html_path, Path("/tmp/fixture.duckdb"), quiet=True)
+
+        # Emulate the wrapper's following owned-media refresh so verify() reaches
+        # the closed-August/current-month invariant instead of unrelated YouTube staleness.
+        candidate = html_path.read_text(encoding="utf-8")
+        quality_series = {
+            8: {
+                "published": 2,
+                "LF_count": 1,
+                "SF_count": 1,
+                "completed": 2,
+                "overall": 1000,
+                "LF": 1000,
+                "SF": 1000,
+                "subscriber": 800000,
+                "subscriber_date": dt.date(2026, 8, 31),
+            },
+            9: {
+                "published": 0,
+                "LF_count": 0,
+                "SF_count": 0,
+                "completed": 0,
+                "overall": 0,
+                "LF": 0,
+                "SF": 0,
+                "subscriber": 800000,
+                "subscriber_date": dt.date(2026, 8, 31),
+            },
+        }
+        candidate = owned_refresh.update_main_youtube_surfaces(
+            candidate,
+            year=2026,
+            month=9,
+            as_of=dt.date(2026, 9, 1),
+            snapshot_date=dt.date(2026, 8, 31),
+            rows=[],
+            quality_series=quality_series,
+        )
+        contract = {
+            "main_surface": {
+                "year": 2026,
+                "month": 9,
+                "publish_count": 0,
+                "lf_publish_count": 0,
+                "sf_publish_count": 0,
+                "latest_publish_date": None,
+                "snapshot_date": "2026-08-31",
+                "elapsed_weeks": 1,
+                "quality_basis": "analytics-d7",
+                "d7_completed": 0,
+                "average_views": 0,
+                "lf_average_views": 0,
+                "sf_average_views": 0,
+                "subscriber_count": 800000,
+                "previous_average_views": 1000,
+            }
+        }
+        candidate = owned_refresh.update_manifest_sources(
+            candidate,
+            now.isoformat(timespec="seconds"),
+            payload=contract,
+            source_as_of={
+                "yt_quality": now.isoformat(timespec="seconds"),
+                "owned_media": now.isoformat(timespec="seconds"),
+            },
+            default_month=9,
+        )
+        candidate = owned_refresh.update_default_month_state(candidate, 9)
+
+        self.assertIn('<option value="9" selected>2026년 9월 · 진행 중</option>', candidate)
+        self.assertIn("FORECAST 2026-09", candidate)
+        self.assertNotIn("ACTUAL 2026-08", candidate)
+        self.assertEqual(vd.verify(candidate, now + dt.timedelta(hours=1), require_fresh=True), [])
+
     def test_default_refresh_refuses_dirty_operator_worktree(self):
         result = SimpleNamespace(returncode=0, stdout=" M index.html\n", stderr="")
         with mock.patch.object(refresh.subprocess, "run", return_value=result):
@@ -828,6 +1013,140 @@ class CurrentRawRefreshTest(unittest.TestCase):
 
         with mock.patch.object(refresh.subprocess, "run", return_value=result):
             refresh.assert_safe_default_refresh(refresh.DEFAULT_HTML, allow_dirty=True)
+
+
+class TargetMbdSnapshotTest(unittest.TestCase):
+    def _module(self):
+        path = Path(__file__).with_name("fetch_target_mbd_snapshot.py")
+        self.assertTrue(path.is_file(), "target MBD snapshot fetcher is missing")
+        spec = importlib.util.spec_from_file_location("fetch_target_mbd_snapshot", path)
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def _fixture(self, path: Path, *, source_time: str) -> None:
+        con = duckdb.connect(str(path))
+        for schema in ("ad_gen", "ad_int", "live", "meta", "snapshot", "revenue"):
+            con.execute(f"create schema {schema}")
+        con.execute('''create table ad_gen.booking_pred(
+            "date" varchar, status varchar, ad_type varchar, party_type varchar, revenue varchar
+        )''')
+        con.execute("insert into ad_gen.booking_pred values ('2026-09-01','CONFIRMED','일반광고','3P','1')")
+        con.execute('''create table ad_int.contract(
+            "계약 시작일" varchar, "매출 귀속월" varchar, "미셀 매출액" varchar
+        )''')
+        con.execute("insert into ad_int.contract values ('2026. 9. 1','202609','1')")
+        con.execute('''create table live.raw_slots(
+            "온에어 일자" varchar, "브랜드명" varchar, "1P/3P" varchar,
+            "패키지" varchar, "PGM" varchar, "비고 (프로모션)" varchar,
+            "PD" varchar, "라이브 시청자 (비로그인 포함)" varchar,
+            "상품 클릭수" varchar, "라이브 구매자수" varchar,
+            "일 전체 GMV (라이브 브랜드 전체)" varchar, "라이브 1H GMV" varchar,
+            "방송별 데이터 GMV" varchar, "AF수취액" varchar, "비용" varchar, "마진액" varchar
+        )''')
+        con.execute("insert into live.raw_slots values ('2026-09-01','A','3P','스마트','일반','','Minnie','1','1','1','1','1','1','1','1','1')")
+        con.execute('''create table meta.targets(
+            team varchar, metric varchar, ym varchar, kind varchar, value_num double
+        )''')
+        con.executemany(
+            "insert into meta.targets values (?, '매출', '2026-09', 'target', 1)",
+            [(team,) for team in ("ad_gen", "ad_int", "live")],
+        )
+        con.execute("create table meta.ingest_log(team varchar, last_ingest_at timestamp, status varchar)")
+        con.executemany(
+            "insert into meta.ingest_log values (?, ?, 'OK')",
+            [(team, source_time) for team in ("ad_gen", "ad_int", "live")],
+        )
+        con.execute("create table snapshot.meta(captured_at timestamptz, source_mtime timestamptz)")
+        con.execute("insert into snapshot.meta values (?, ?)", [source_time + "+09:00", source_time + "+09:00"])
+        con.execute('''create table revenue.integrated_ssot(
+            revenue_month varchar, include_in_mbd_revenue boolean, revenue_team varchar,
+            team_attributed_revenue double, package_or_slot_type varchar,
+            source_date varchar, brand_name varchar
+        )''')
+        con.executemany(
+            "insert into revenue.integrated_ssot values ('2026-08', true, ?, 1, ?, '2026-08-31', ?)",
+            [
+                ("일반광고", "스토어홈배너", "일반광고"),
+                ("통합광고", "라이브", "통광마"),
+                ("라이브커머스", "시그니처", "라이브"),
+            ],
+        )
+        con.close()
+
+    def test_target_mbd_snapshot_validator_accepts_current_case_insensitive_ingest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, source_time="2026-09-01 00:01:00")
+            result = self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+        self.assertEqual(result["ingest_dates"], {
+            "ad_gen": "2026-09-01", "ad_int": "2026-09-01", "live": "2026-09-01"
+        })
+
+    def test_target_mbd_snapshot_validator_rejects_stale_ingest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, source_time="2026-08-29 00:01:00")
+            with self.assertRaisesRegex(RuntimeError, "stale target MBD source"):
+                self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+
+    def test_target_mbd_snapshot_validator_rejects_missing_closed_month_actuals(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, source_time="2026-09-01 00:01:00")
+            con = duckdb.connect(str(path))
+            con.execute("delete from revenue.integrated_ssot where revenue_team = '라이브커머스'")
+            con.close()
+            with self.assertRaisesRegex(RuntimeError, "missing completed-month actual teams"):
+                self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+
+    def test_live_renderers_default_never_points_to_retired_local_db(self):
+        expected = Path("/tmp/mbd_h2_target_snapshot.duckdb")
+        self.assertEqual(refresh.DEFAULT_DUCKDB, expected)
+        self.assertEqual(live_window_refresh.DEFAULT_DUCKDB, expected)
+
+    def test_target_mbd_cleanup_failure_fails_successful_fetch(self):
+        target_mbd = self._module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            key = root / "key"
+            key.touch()
+            source = root / "source.duckdb"
+            self._fixture(source, source_time="2026-09-01 00:01:00")
+
+            def fake_run(args, **kwargs):
+                if args[0] == "scp":
+                    shutil.copy2(source, args[-1])
+                    return SimpleNamespace(returncode=0)
+                if "/bin/rm" in args:
+                    return SimpleNamespace(returncode=1)
+                return SimpleNamespace(returncode=0)
+
+            with mock.patch.object(target_mbd.subprocess, "run", side_effect=fake_run):
+                with self.assertRaisesRegex(RuntimeError, "temp cleanup failed rc=1"):
+                    target_mbd.sync_snapshot(root / "out.duckdb", key=key)
+
+    def test_stale_target_mbd_transfer_keeps_last_good_output(self):
+        target_mbd = self._module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            key = root / "key"
+            key.touch()
+            output = root / "out.duckdb"
+            output.write_bytes(b"last-good")
+            stale = root / "stale.duckdb"
+            self._fixture(stale, source_time="2020-01-01 00:01:00")
+
+            def fake_run(args, **kwargs):
+                if args[0] == "scp":
+                    shutil.copy2(stale, args[-1])
+                return SimpleNamespace(returncode=0)
+
+            with mock.patch.object(target_mbd.subprocess, "run", side_effect=fake_run):
+                with self.assertRaisesRegex(RuntimeError, "stale target MBD source"):
+                    target_mbd.sync_snapshot(output, key=key)
+            self.assertEqual(output.read_bytes(), b"last-good")
 
 
 class TargetYoutubeSnapshotTest(unittest.TestCase):
@@ -949,7 +1268,7 @@ class TargetYoutubeSnapshotTest(unittest.TestCase):
             key = root / "key"
             key.touch()
             source = root / "source.duckdb"
-            self._fixture(source, dt.date(2026, 8, 31))
+            self._fixture(source, dt.datetime.now(target_snapshot.KST).date())
 
             def fake_run(args, **kwargs):
                 if args[0] == "scp":
@@ -959,7 +1278,11 @@ class TargetYoutubeSnapshotTest(unittest.TestCase):
                     return SimpleNamespace(returncode=1)
                 return SimpleNamespace(returncode=0)
 
-            with mock.patch.object(target_snapshot.subprocess, "run", side_effect=fake_run):
+            with mock.patch.object(
+                target_snapshot.subprocess, "run", side_effect=fake_run
+            ), mock.patch.object(
+                target_snapshot, "validate_snapshot", return_value={"fixture": True}
+            ):
                 with self.assertRaisesRegex(RuntimeError, "temp cleanup failed rc=1"):
                     target_snapshot.sync_snapshot(root / "out.duckdb", key=key)
 

@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_dashboard as vd  # noqa: E402
 import smoke_dashboard as sd  # noqa: E402
+import refresh_live_window_from_duckdb as live_window_refresh  # noqa: E402
 
 
 def _load_dashboard_html():
@@ -148,7 +149,7 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertNotIn('부킹건수 목표', self.html)
         self.assertIn('data-live-revenue-breakdown=', self.html)
         self.assertIn('data-live-package-mom=', self.html)
-        self.assertIn('MoM +33.3%', self.html)
+        self.assertIn('MoM ▲ 40.3%', self.html)
         self.assertIn('패키지 총액 = AF 패키지비', self.html)
         self.assertIn('진행건수 = 확정 편성건', self.html)
         self.assertEqual(self.html.count('data-live-progress-count='), 9)
@@ -186,7 +187,7 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertEqual(self.html.count('data-achievement-ring='), 34)
         self.assertIn('data-achievement-ring="달성"', self.html)
         self.assertIn('data-achievement-ring="채움"', self.html)
-        self.assertIn('<div class="team-main"><span class="nm">일반광고</span><div class="bigv num">8.68억</div></div><span class="achv up num" data-achievement-ring="달성" style="--p:100" role="img" aria-label="달성률 100.3%"><span class="achv-in"><b>100.3%</b><small>달성률</small>', self.html)
+        self.assertIn('<div class="team-main"><span class="nm">일반광고</span><div class="bigv num">8.68억</div></div><span class="achv up num" data-achievement-ring="달성" style="--p:100.0" role="img" aria-label="달성률 100.3%"><span class="achv-in"><b>100.3%</b><small>달성률</small>', self.html)
         self.assertIn('<div class="team-main"><span class="nm">통광마</span><div class="bigv num">2,909만</div></div><span class="achv dn num" data-achievement-ring="달성" style="--p:14.5" role="img" aria-label="달성률 14.5%"><span class="achv-in"><b>14.5%</b><small>달성률</small>', self.html)
         self.assertNotIn('<span class="pill up num">달성 ', self.html)
         self.assertNotIn('<span class="pill dn num">달성 ', self.html)
@@ -228,14 +229,21 @@ class DashboardGuardTest(unittest.TestCase):
                        '카드 거래액=1D 브랜드 일거래액', '월/주간 효율=방송별 데이터 GMV',
                        '방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`',
                        '금월 누적 성과가 디폴트', '미집계/0원 편성은 누적 성과에서 제외',
-                       '월 누적과 주간을 분리', 'data-live-week-group=',
+                       '월 누적과 주간을 분리',
                        'data-live-week-summary=', 'data-live-weekly-view=',
                        'function setLiveWindow(open)', '주차별 보기 · 방송별 성과',
-                       'RAW 수치 readback 전용', '가로 풀폭',
+                       '가로 풀폭',
                        '.live-window{position:fixed;inset:16px;',
                        '@media (max-width:1180px){.live-window{inset:14px'):
             self.assertIn(marker, self.html)
-        self.assertGreaterEqual(self.html.count('data-live-broadcast-card='), 1)
+        live_empty = 'data-live-content-empty="true"' in self.html
+        if live_empty:
+            self.assertEqual(self.html.count('data-live-broadcast-card='), 0)
+            self.assertNotIn('data-live-week-group=', self.html)
+        else:
+            self.assertIn('data-live-week-group=', self.html)
+            self.assertIn('RAW 수치 readback 전용', self.html)
+            self.assertGreaterEqual(self.html.count('data-live-broadcast-card='), 1)
         self.assertNotIn('data-live-weekly-analysis=', self.html)
         self.assertNotIn('원본 rows 302–308', self.html)
         self.assertNotIn('공식 회고 전문', self.html)
@@ -320,6 +328,29 @@ class DashboardGuardTest(unittest.TestCase):
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("missing live window marker" in error for error in errors), errors)
 
+    def test_live_window_zero_cards_are_valid_only_with_explicit_empty_state(self):
+        section, contract = live_window_refresh.render_section(
+            [],
+            self.now,
+            self.now.isoformat(),
+            Path("/tmp/validated-target-snapshot.duckdb"),
+        )
+        self.assertEqual(contract["source"]["completed_row_count"], 0)
+        self.assertIn('data-live-content-empty="true"', section)
+        self.assertNotIn("data-live-broadcast-card=", section)
+        candidate = live_window_refresh.replace_live_section(self.html, section)
+        errors = vd.verify(candidate, self.now, require_fresh=False)
+        self.assertFalse(any("live broadcast cards" in error for error in errors), errors)
+        self.assertFalse(any("missing live window marker 'data-live-week-group='" in error for error in errors), errors)
+
+        without_empty = candidate.replace(
+            'data-live-content-empty="true"',
+            'data-live-content-empty-removed="true"',
+            1,
+        )
+        errors = vd.verify(without_empty, self.now, require_fresh=False)
+        self.assertTrue(any("live broadcast cards" in error for error in errors), errors)
+
     def test_inline_live_weekly_analysis_reappearance_fails(self):
         bad = self.html.replace('<div class="content-ledger" data-content-ledger="live">',
                                 '<div class="content-ledger" data-content-ledger="live"><div data-live-weekly-analysis="8-1">원본 rows 302–308</div>', 1)
@@ -333,9 +364,9 @@ class DashboardGuardTest(unittest.TestCase):
         }
         self.assertEqual(len(gauge_tips), 12)
         august = gauge_tips[8]
-        self.assertIn('<span>일반광고</span><b><span class="tv"><span>8.68억</span><small class="up">MoM +7.9%</small>', august)
-        self.assertIn('<span>통광마</span><b><span class="tv"><span>2,909만</span><small class="dn">MoM -46.1%</small>', august)
-        self.assertIn('<span>라이브</span><b><span class="tv"><span>2.18억</span><small class="up">MoM +17.8%</small>', august)
+        self.assertIn('<span>일반광고</span><b><span class="tv"><span>8.68억</span><small class="up">MoM ▲ 7.9%</small>', august)
+        self.assertIn('<span>통광마</span><b><span class="tv"><span>2,909만</span><small class="dn">MoM ▼ 46.1%</small>', august)
+        self.assertIn('<span>라이브</span><b><span class="tv"><span>2.15억</span><small class="up">MoM ▲ 16.2%</small>', august)
         september = gauge_tips[9]
         self.assertIn('<small class="dn">MoM -32.5%</small>', september)
         self.assertIn('<small class="up">MoM +49.0%</small>', september)
@@ -397,12 +428,19 @@ class DashboardGuardTest(unittest.TestCase):
         wrapper_path = Path(__file__).resolve().parents[1] / "ops/mbd_h2_pages_live_daily_refresh.sh"
         wrapper = wrapper_path.read_text(encoding="utf-8")
         fetch_call = "scripts/fetch_target_youtube_snapshot.py"
+        live_fetch_call = "scripts/fetch_target_mbd_snapshot.py"
+        live_daily_call = 'scripts/refresh_live_daily_from_duckdb.py --quiet --duckdb "$MBD_SNAPSHOT_CACHE"'
+        live_window_call = 'scripts/refresh_live_window_from_duckdb.py --quiet --duckdb "$MBD_SNAPSHOT_CACHE"'
+        finalize_regression_call = '"$PY" -m unittest scripts/test_finalize_month_review.py -v'
         refresh_call = "scripts/refresh_owned_youtube_window_from_duckdb.py --quiet"
         guard_call = "scripts/verify_dashboard.py index.html --require-fresh"
         self.assertLess(wrapper.index(fetch_call), wrapper.index(refresh_call))
         self.assertIn(refresh_call, wrapper)
         self.assertIn(guard_call, wrapper)
         self.assertLess(wrapper.index(refresh_call), wrapper.index(guard_call))
+        self.assertIn(finalize_regression_call, wrapper)
+        self.assertLess(wrapper.index('scripts/test_verify_dashboard.py -v'), wrapper.index(finalize_regression_call))
+        self.assertLess(wrapper.index(finalize_regression_call), wrapper.index(fetch_call))
         self.assertIn("owned_youtube_window_contract.json", wrapper)
         self.assertIn("main_surface", wrapper)
         self.assertIn("default_month", wrapper)
@@ -412,6 +450,11 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("source_as_of", wrapper)
         self.assertIn("source_payload_sha256", wrapper)
         self.assertIn('YT_SNAPSHOT_CACHE="/tmp/mbd_h2_youtube_target_snapshot.duckdb"', wrapper)
+        self.assertIn('MBD_SNAPSHOT_CACHE="/tmp/mbd_h2_target_snapshot.duckdb"', wrapper)
+        self.assertLess(wrapper.index(live_fetch_call), wrapper.index(live_daily_call))
+        self.assertLess(wrapper.index(live_daily_call), wrapper.index(live_window_call))
+        self.assertIn(live_daily_call, wrapper)
+        self.assertIn(live_window_call, wrapper)
         self.assertIn('--duckdb "$YT_SNAPSHOT_CACHE"', wrapper)
         self.assertLess(
             wrapper.index('CURRENT_STAGE="dashboard_regression_tests"'),

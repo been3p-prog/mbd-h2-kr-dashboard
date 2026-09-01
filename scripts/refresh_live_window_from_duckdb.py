@@ -21,7 +21,7 @@ KST = dt.timezone(dt.timedelta(hours=9))
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_HTML = ROOT / "index.html"
 DEFAULT_CONTRACT = ROOT / "data" / "live_window_contract.json"
-DEFAULT_DUCKDB = Path("/Users/sb.lee/automations/mbd/mbd.duckdb")
+DEFAULT_DUCKDB = Path("/tmp/mbd_h2_target_snapshot.duckdb")
 PACKAGE_KEYS = ("시그니처", "스마트", "에센셜")
 
 
@@ -146,7 +146,8 @@ def fetch_rows(db_path: Path, year: int, month: int) -> tuple[list[dict], str | 
             [start, next_month],
         ).fetchall()
         ingest = con.execute(
-            "select max(last_ingest_at) from meta.ingest_log where status='ok'"
+            "select max(last_ingest_at) from meta.ingest_log "
+            "where lower(trim(status)) in ('ok','success')"
         ).fetchone()[0]
     finally:
         con.close()
@@ -334,7 +335,12 @@ def render_week_group(month: int, week: int, rows: list[dict], rank_by_1d: dict[
     return html, contracts, index
 
 
-def render_section(rows: list[dict], now: dt.datetime, ingest: str | None) -> tuple[str, dict]:
+def render_section(
+    rows: list[dict],
+    now: dt.datetime,
+    ingest: str | None,
+    db_path: Path = DEFAULT_DUCKDB,
+) -> tuple[str, dict]:
     completed = [r for r in rows if row_is_completed(r)]
     completed.sort(key=lambda r: (r["date"], r["brand"]))
     summary = summarize(completed)
@@ -370,6 +376,13 @@ def render_section(rows: list[dict], now: dt.datetime, ingest: str | None) -> tu
         f'<div class="step"><b>{month}월 {w}주차</b><small>{esc(fmt_range(rs))} · 완료 {len(rs)}건 · 1D {esc(fmt_won(summarize(rs)["gmv_1d"]))} · 방당 {esc(fmt_won(summarize(rs)["avg_broadcast_gmv"]))}</small></div>'
         for w, rs in sorted(weeks.items())
     )
+    weekly_content = "".join(week_html)
+    if not completed:
+        weekly_content = (
+            '<div class="live-content-empty" data-live-content-empty="true">'
+            '<b>금월 완료 방송 없음</b><small>완료·GMV 집계 대상 방송이 생기면 주차별 카드가 표시됩니다.</small>'
+            '</div>'
+        )
     latest_range = fmt_range_value(summary)
     ingest_note = ingest or now.isoformat(timespec="seconds")
     title = "금월 누적 성과가 디폴트,<br>주차별로 쪼개서 확인"
@@ -415,7 +428,7 @@ def render_section(rows: list[dict], now: dt.datetime, ingest: str | None) -> tu
     </div>
     <div class="live-panel live-broadcast-panel" aria-label="주차별 방송 성과">
       <div class="live-broadcast-head"><div><h3>주차별 보기 · 방송별 성과</h3><small>데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.</small></div><small>시청 · 클릭률 · 구매 · 1D 거래액을 한 장에서 비교</small></div>
-      <div class="live-weekly-accordion" data-live-weekly-view="{month}">{''.join(week_html)}</div>
+      <div class="live-weekly-accordion" data-live-weekly-view="{month}">{weekly_content}</div>
     </div>
     <div class="live-source"><b>basis</b> 방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)` · 월/주간 효율=`방송별 데이터 GMV` · 1H 실시간 성과=`라이브 1H GMV` · generic GMV 표기 금지 · source DuckDB live.raw_slots · ingest {esc(ingest_note)}</div>
   </div>
@@ -424,7 +437,7 @@ def render_section(rows: list[dict], now: dt.datetime, ingest: str | None) -> tu
     contract = {
         "contract_id": f"mbd-live-window-{now.year}-{month:02d}-mtd-v2",
         "source": {
-            "duckdb": str(DEFAULT_DUCKDB),
+            "duckdb": str(db_path),
             "schema_table": "live.raw_slots",
             "period": f"{now.year}-{month:02d}-01~{latest}",
             "latest_completed_date": str(latest),
@@ -450,6 +463,7 @@ def render_section(rows: list[dict], now: dt.datetime, ingest: str | None) -> tu
             "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
             "월/주간 효율=`방송별 데이터 GMV`",
             "generic GMV 표기 금지",
+            *(('data-live-content-empty="true"',) if not completed else ()),
         ],
         "forbidden_in_live_window": [
             "aria-label=\"8월 1주차 라이브 성과 요약\"",
@@ -484,7 +498,7 @@ def replace_live_section(html: str, section: str) -> str:
 def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = False) -> dict:
     now = dt.datetime.now(KST)
     rows, ingest = fetch_rows(db_path, now.year, now.month)
-    section, contract = render_section(rows, now, ingest)
+    section, contract = render_section(rows, now, ingest, db_path)
     html = html_path.read_text(encoding="utf-8")
     updated = replace_live_section(html, section)
     html_changed = updated != html

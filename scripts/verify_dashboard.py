@@ -113,6 +113,26 @@ def youtube_week_state_ok(month_surface: str, youtube_window: str, month: int, e
     )
 
 
+def _month_surface(html: str, group: str, month: int) -> str | None:
+    marker = re.compile(rf'class="{re.escape(group)} mv" data-m="(\d+)"')
+    matches = list(marker.finditer(html))
+    for index, match in enumerate(matches):
+        if int(match.group(1)) == month:
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(html)
+            return html[match.start():end]
+    return None
+
+
+def _gauge_surface(html: str, month: int) -> str | None:
+    marker = re.compile(r'class="g [^"]*" data-m="(\d+)"')
+    matches = list(marker.finditer(html))
+    for index, match in enumerate(matches):
+        if int(match.group(1)) == month:
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(html)
+            return html[match.start():end]
+    return None
+
+
 def _parse_iso(value):
     if not isinstance(value, str) or not value.strip():
         return None
@@ -460,16 +480,26 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    '카드 거래액=1D 브랜드 일거래액', '월/주간 효율=방송별 데이터 GMV',
                    '방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`', '금월 누적 성과가 디폴트',
                    '미집계/0원 편성은 누적 성과에서 제외', '월 누적과 주간을 분리',
-                   'data-live-week-group=', 'data-live-week-summary=', 'data-live-weekly-view=',
+                   'data-live-week-summary=', 'data-live-weekly-view=',
                    'function setLiveWindow(open)', '주차별 보기 · 방송별 성과',
-                   'RAW 수치 readback 전용', '가로 풀폭',
+                   '가로 풀폭',
                    '.live-window{position:fixed;inset:16px;',
                    '@media (max-width:1180px){.live-window{inset:14px'):
         if marker not in html:
             errors.append(f"missing live window marker {marker!r}")
     live_card_count = html.count('data-live-broadcast-card=')
-    if live_card_count < 1:
-        errors.append(f"live broadcast cards {live_card_count} < 1")
+    live_empty = 'data-live-content-empty="true"' in html
+    if live_empty:
+        if live_card_count:
+            errors.append(f"live empty state conflicts with {live_card_count} broadcast cards")
+        if 'data-live-week-group=' in html:
+            errors.append("live empty state conflicts with populated week groups")
+    else:
+        for marker in ('data-live-week-group=', 'RAW 수치 readback 전용'):
+            if marker not in html:
+                errors.append(f"missing live window marker {marker!r}")
+        if live_card_count < 1:
+            errors.append(f"live broadcast cards {live_card_count} < 1")
     for stale in ('aria-label="8월 1주차 라이브 성과 요약"',
                   '총액은 회복됐지만,<br>방송당 효율 회복으로 보긴 어려움',
                   'data-live-broadcast-card="frosch"',
@@ -554,11 +584,59 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    '아래 빨강/초록 = 목표 대비 억원'):
         if marker in html:
             errors.append(f"obsolete green-up/red-down marker present: {marker!r}")
-    for marker in ('<span>일반광고</span><b><span class="tv"><span>8.68억</span><small class="up">MoM +7.9%</small>',
-                   '<span>통광마</span><b><span class="tv"><span>2,909만</span><small class="dn">MoM -46.1%</small>',
-                   '<span>라이브</span><b><span class="tv"><span>2.18억</span><small class="up">MoM +17.8%</small>'):
-        if marker not in decoded_html:
-            errors.append(f"missing monthly-flow tooltip MoM marker {marker!r}")
+    # [2026-09-01] 8월 마감 리뷰는 canonical RAW 확정치로 고정한다.
+    # Daily refresh may select the current month and move the global chip to
+    # FORECAST YYYY-MM; August actuals are guarded on month-8 closed surfaces.
+    august_top = _month_surface(html, "mvk", 8)
+    august_detail = _month_surface(html, "mvr", 8)
+    august_chart = _gauge_surface(html, 8)
+    if not re.search(r'<option value="8"(?: selected)?>2026년 8월 · 확정</option>', html):
+        errors.append('missing August review actual marker \'<option value="8">2026년 8월 · 확정</option>\'')
+    if august_top is None:
+        errors.append("missing August review actual surface 'mvk data-m=8'")
+    else:
+        decoded_august_top = html_lib.unescape(august_top)
+        for marker in ('<span>일반광고</span><b><span class="tv"><span>8.68억</span><small class="up">MoM ▲ 7.9%</small>',
+                       '<span>통광마</span><b><span class="tv"><span>2,909만</span><small class="dn">MoM ▼ 46.1%</small>',
+                       '<span>라이브</span><b><span class="tv"><span>2.15억</span><small class="up">MoM ▲ 16.2%</small>'):
+            if marker not in decoded_august_top:
+                errors.append(f"missing monthly-flow tooltip MoM marker {marker!r}")
+        for marker in ('class="mvk mv" data-m="8" data-phase="closed"',
+                       '<div class="k">8월 확정 총액<span class="phase">확정</span></div>',
+                       '<div class="v num">11.1억</div>',
+                       '확정 RAW · 8/1~8/31',
+                       '<div class="v num">11.12억</div>',
+                       '목표 진척 87.1%',
+                       '<div class="k">월 목표</div><div class="v num">12.8억</div>',
+                       '<div class="k">확정 GAP</div>',
+                       '-1.65억'):
+            if marker not in august_top:
+                errors.append(f"missing August review actual marker {marker!r}")
+    if august_detail is None:
+        errors.append("missing August review actual surface 'mvr data-m=8'")
+    else:
+        for marker in ('class="mvr mv" data-m="8" data-phase="closed"',
+                       '<span class="nm">일반광고</span><div class="bigv num">8.68억</div>',
+                       '<span class="nm">통광마</span><div class="bigv num">2,909만</div>',
+                       '<span class="nm">라이브</span><div class="bigv num">2.15억</div>',
+                       '확정 RAW · 8/1~8/31</span><b>8.68억 <span class="mutpct">진척 100.3%</span>',
+                       '확정 RAW · 8/1~8/31</span><b>2,909만 <span class="mutpct">진척 14.5%</span>',
+                       '확정 RAW · 8/1~8/31</span><b>2.15억 <span class="mutpct">진척 101.4%</span>'):
+            if marker not in august_detail:
+                errors.append(f"missing August review actual marker {marker!r}")
+    if august_chart is None:
+        errors.append("missing August review actual surface 'g data-m=8'")
+    else:
+        decoded_august_chart = html_lib.unescape(august_chart)
+        for marker in ('class="g closed" data-m="8"', '<div class="lab num">11.1</div>',
+                       '<div class="glab num neg">−1.7</div>', '8월 · 확정', '확정 합계', '12.8억'):
+            if marker not in decoded_august_chart:
+                errors.append(f"missing August review actual marker {marker!r}")
+    if "FORECAST 2026-08" in html:
+        errors.append("closed August badge must never be FORECAST 2026-08")
+    for marker in ('8월 마감예상액', '8월 · 진행 중'):
+        if marker in html:
+            errors.append(f"stale August forecast marker present: {marker!r}")
     for marker in ('class="week-counts"', 'class="activity-state', 'data-content-status=',
                    '<small>누적조회수</small>'):
         if marker in html:
