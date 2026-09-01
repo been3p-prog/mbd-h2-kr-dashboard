@@ -1,7 +1,11 @@
+import contextlib
 import datetime as dt
 import hashlib
+import io
 import json
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,6 +18,7 @@ import duckdb
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import refresh_live_daily_from_duckdb as refresh  # noqa: E402
 import refresh_owned_youtube_window_from_duckdb as owned_refresh  # noqa: E402
+import fetch_target_youtube_snapshot as target_snapshot  # noqa: E402
 
 
 class CurrentRawRefreshTest(unittest.TestCase):
@@ -353,6 +358,37 @@ class CurrentRawRefreshTest(unittest.TestCase):
         self.assertIn('data-yt-main-source-snapshot-date="2026-08-31"', rendered)
         self.assertIn('data-yt-main-source-elapsed-weeks="1"', rendered)
 
+    def test_default_month_state_updates_selector_labels_and_js_cursor(self):
+        html = (
+            '<select id="msel">'
+            '<option value="8" selected>2026년 8월 · 진행 중</option>'
+            '<option value="9">2026년 9월 · 부킹 진행</option>'
+            '<option value="10">2026년 10월 · 부킹 진행</option>'
+            '</select><script>var CUR = 8;</script>'
+            '<div class="mvk mv" data-m="8" data-phase="current"></div>'
+            '<div class="mvr mv" data-m="9" data-phase="future"></div>'
+            '<div class="mvs mv" data-m="10" data-phase="future"></div>'
+        )
+
+        updated = owned_refresh.update_default_month_state(html, 9)
+
+        self.assertIn('<option value="8">2026년 8월 · 확정</option>', updated)
+        self.assertIn('<option value="9" selected>2026년 9월 · 진행 중</option>', updated)
+        self.assertIn('<option value="10">2026년 10월 · 부킹 진행</option>', updated)
+        self.assertIn('var CUR = 9;', updated)
+        self.assertIn('class="mvk mv" data-m="8" data-phase="closed"', updated)
+        self.assertIn('class="mvr mv" data-m="9" data-phase="current"', updated)
+        self.assertIn('class="mvs mv" data-m="10" data-phase="future"', updated)
+
+    def test_default_month_state_updates_real_cur_phase_aliases(self):
+        html = (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8")
+        updated = owned_refresh.update_default_month_state(html, 9)
+
+        self.assertNotIn('data-phase="cur"', updated)
+        for class_name in ("mvk", "mvs", "mvr"):
+            self.assertRegex(updated, rf'class="{class_name} mv" data-m="8" data-phase="closed"')
+            self.assertRegex(updated, rf'class="{class_name} mv" data-m="9" data-phase="current"')
+
     def test_fetch_main_content_uses_global_snapshot_when_current_month_is_empty(self):
         path = Path(self.tmp.name) / "youtube_empty.duckdb"
         con = duckdb.connect(str(path))
@@ -385,6 +421,100 @@ class CurrentRawRefreshTest(unittest.TestCase):
 
         self.assertEqual(rows, [])
         self.assertEqual(snapshot_date, dt.date(2026, 8, 31))
+
+    def test_fetch_month_synthesizes_immediate_next_month_while_waiting_for_analytics(self):
+        path = Path(self.tmp.name) / "youtube_month_rollover.duckdb"
+        con = duckdb.connect(str(path))
+        con.execute('''
+            create table v_youtube_monthly_analytics(
+                period_start date, period_end date,
+                metric_start_date date, metric_end_date date,
+                period_complete boolean,
+                channel_view_count bigint, channel_like_count bigint,
+                channel_comment_count bigint, channel_share_count bigint,
+                channel_engagement_count bigint,
+                new_published_view_count bigint, prior_published_view_count bigint,
+                unknown_publish_view_count bigint,
+                fetched_at timestamp, raw_status varchar
+            )
+        ''')
+        con.execute('''
+            insert into v_youtube_monthly_analytics values (
+                '2026-08-01', '2026-08-31', '2026-08-01', '2026-08-31', true,
+                100, 10, 2, 1, 13, 60, 40, 0,
+                '2026-09-01 00:45:00', 'ok'
+            )
+        ''')
+
+        month = owned_refresh.fetch_month(con, 2026, 9)
+        con.close()
+
+        self.assertEqual(month["period_start"], dt.date(2026, 9, 1))
+        self.assertEqual(month["period_end"], dt.date(2026, 9, 30))
+        self.assertEqual(month["metric_start_date"], dt.date(2026, 9, 1))
+        self.assertEqual(month["metric_end_date"], dt.date(2026, 9, 1))
+        self.assertFalse(month["period_complete"])
+        self.assertEqual(month["views"], 0)
+        self.assertEqual(month["engagement"], 0)
+        self.assertEqual(month["raw_status"], "awaiting_current_month_analytics")
+        self.assertEqual(month["fetched_at"], dt.datetime(2026, 9, 1, 0, 45))
+
+    def test_fetch_month_does_not_hide_a_multi_month_gap(self):
+        path = Path(self.tmp.name) / "youtube_month_gap.duckdb"
+        con = duckdb.connect(str(path))
+        con.execute('''
+            create table v_youtube_monthly_analytics(
+                period_start date, period_end date,
+                metric_start_date date, metric_end_date date,
+                period_complete boolean,
+                channel_view_count bigint, channel_like_count bigint,
+                channel_comment_count bigint, channel_share_count bigint,
+                channel_engagement_count bigint,
+                new_published_view_count bigint, prior_published_view_count bigint,
+                unknown_publish_view_count bigint,
+                fetched_at timestamp, raw_status varchar
+            )
+        ''')
+        con.execute('''
+            insert into v_youtube_monthly_analytics values (
+                '2026-08-01', '2026-08-31', '2026-08-01', '2026-08-31', true,
+                100, 10, 2, 1, 13, 60, 40, 0,
+                '2026-09-01 00:45:00', 'ok'
+            )
+        ''')
+
+        with self.assertRaisesRegex(RuntimeError, "monthly YouTube analytics row not found"):
+            owned_refresh.fetch_month(con, 2026, 10)
+        con.close()
+
+    def test_quality_series_carries_latest_subscriber_into_empty_new_month(self):
+        path = Path(self.tmp.name) / "youtube_subscriber_rollover.duckdb"
+        con = duckdb.connect(str(path))
+        con.execute('''
+            create table dim_video(
+                video_id varchar, publish_date date, form varchar, is_active boolean
+            )
+        ''')
+        con.execute('''
+            create table fact_analytics_d7(
+                video_id varchar, fetched_at timestamp, d7_complete boolean,
+                metric_end_date date, view_count bigint
+            )
+        ''')
+        con.execute('''
+            create table v_channel_daily_subscribers(
+                snapshot_date date, subscriber_count bigint, captured_at timestamp
+            )
+        ''')
+        con.execute("insert into v_channel_daily_subscribers values ('2026-08-31', 803000, '2026-08-31 23:55:00')")
+
+        series = owned_refresh.fetch_quality_series(
+            con, 2026, 9, as_of=dt.date(2026, 9, 1)
+        )
+        con.close()
+
+        self.assertEqual(series[9]["subscriber"], 803000)
+        self.assertEqual(series[9]["subscriber_date"], dt.date(2026, 8, 31))
 
     def test_quality_series_uses_prior_december_for_january_mom(self):
         path = Path(self.tmp.name) / "youtube_year_boundary.duckdb"
@@ -563,6 +693,65 @@ class CurrentRawRefreshTest(unittest.TestCase):
                 expected_elapsed_weeks=5,
             )
 
+    def test_youtube_contract_records_actual_duckdb_path(self):
+        month = {
+            "period_start": dt.date(2026, 8, 1),
+            "period_end": dt.date(2026, 8, 31),
+            "metric_start_date": dt.date(2026, 8, 1),
+            "metric_end_date": dt.date(2026, 8, 30),
+            "period_complete": False,
+            "views": 100,
+            "new_views": 60,
+            "prior_views": 40,
+            "engagement": 10,
+            "likes": 7,
+            "comments": 2,
+            "shares": 1,
+            "unknown_views": 0,
+            "fetched_at": dt.datetime(2026, 8, 31, 10, 0),
+            "raw_status": "ok",
+        }
+        source = Path("/tmp/target-youtube.duckdb")
+        _, contract = owned_refresh.render_section(
+            month, [], {"total": 1, "LF": 1, "SF": 0}, [],
+            dt.datetime(2026, 8, 31, 12, 0), db_path=source,
+        )
+        self.assertEqual(contract["source"]["duckdb"], str(source))
+
+    def test_youtube_detail_marks_empty_dplusn_content_as_a_valid_state(self):
+        month = {
+            "period_start": dt.date(2026, 9, 1),
+            "period_end": dt.date(2026, 9, 30),
+            "metric_start_date": dt.date(2026, 9, 1),
+            "metric_end_date": dt.date(2026, 9, 1),
+            "period_complete": False,
+            "views": 0,
+            "new_views": 0,
+            "prior_views": 0,
+            "engagement": 0,
+            "likes": 0,
+            "comments": 0,
+            "shares": 0,
+            "unknown_views": 0,
+            "fetched_at": dt.datetime(2026, 9, 1, 0, 45),
+            "raw_status": "awaiting_current_month_analytics",
+        }
+
+        section, _ = owned_refresh.render_section(
+            month, [], {"total": 0}, [], dt.datetime(2026, 9, 1, 10, 0)
+        )
+
+        self.assertIn('data-yt-content-empty="true"', section)
+        self.assertIn("D+N 완료 콘텐츠 없음", section)
+        self.assertIn('data-yt-weekly-empty="true"', section)
+        self.assertIn("주간 Analytics 집계 대기 중", section)
+
+    def test_youtube_renderer_default_never_points_to_retired_local_db(self):
+        self.assertEqual(
+            owned_refresh.DEFAULT_YT_DB,
+            Path("/tmp/mbd_h2_youtube_target_snapshot.duckdb"),
+        )
+
     def test_current_month_raw_surfaces_are_reconciled(self):
         html_path = Path(__file__).resolve().parents[1] / "index.html"
         html = html_path.read_text(encoding="utf-8")
@@ -639,6 +828,180 @@ class CurrentRawRefreshTest(unittest.TestCase):
 
         with mock.patch.object(refresh.subprocess, "run", return_value=result):
             refresh.assert_safe_default_refresh(refresh.DEFAULT_HTML, allow_dirty=True)
+
+
+class TargetYoutubeSnapshotTest(unittest.TestCase):
+    def _fixture(self, path: Path, snapshot_date: dt.date) -> None:
+        con = duckdb.connect(str(path))
+        fresh_at = dt.datetime(2026, 8, 31, 23, 58)
+        con.execute("create table fact_snapshot(snapshot_date date, captured_at timestamp, video_id varchar)")
+        con.execute("insert into fact_snapshot values (?, ?, 'video-1')", [snapshot_date, fresh_at])
+        con.execute("create table dim_video(video_id varchar, publish_date date, is_active boolean, form varchar, title varchar, url varchar)")
+        con.execute("insert into dim_video values ('video-1', '2026-08-29', true, 'LF', 'title', 'https://youtu.be/video-1')")
+        con.execute("create table fact_channel_snapshot(snapshot_date date, captured_at timestamp, subscriber_count bigint)")
+        con.execute("insert into fact_channel_snapshot values (?, ?, 803000)", [snapshot_date, fresh_at])
+        con.execute("create table v_channel_daily_subscribers(snapshot_date date, captured_at timestamp, subscriber_count bigint, raw_status varchar)")
+        con.execute("insert into v_channel_daily_subscribers values (?, ?, 803000, 'ok')", [snapshot_date, fresh_at])
+        con.execute("create table v_latest_snapshot(video_id varchar, cumulative_view_count bigint, snapshot_date date)")
+        con.execute("insert into v_latest_snapshot values ('video-1', 100, ?)", [snapshot_date])
+        con.execute("""create table fact_analytics_d7(
+            video_id varchar, d7_complete boolean, fetched_at timestamp,
+            metric_end_date date, view_count bigint, like_count bigint,
+            comment_count bigint, share_count bigint, watch_seconds bigint,
+            avg_view_duration_seconds double
+        )""")
+        con.execute("insert into fact_analytics_d7 values ('video-1', true, ?, ?, 100, 1, 1, 1, 1000, 10)", [fresh_at, snapshot_date])
+        con.execute("""create table v_public_dplusn_video(
+            d_plus_n integer, video_id varchar, publish_date date, form varchar,
+            ip varchar, title varchar, url varchar, views bigint, complete boolean
+        )""")
+        con.execute("insert into v_public_dplusn_video values (7, 'video-1', '2026-08-29', 'LF', 'ALL', 'title', 'https://youtu.be/video-1', 100, true)")
+        for name in ("v_youtube_monthly_analytics", "v_youtube_weekly_analytics"):
+            con.execute("""create table """ + name + """(
+                period_start date, period_end date, metric_start_date date,
+                metric_end_date date, period_complete boolean,
+                channel_view_count bigint, channel_like_count bigint,
+                channel_comment_count bigint, channel_share_count bigint,
+                channel_engagement_count bigint, new_published_view_count bigint,
+                prior_published_view_count bigint, unknown_publish_view_count bigint,
+                fetched_at timestamp, raw_status varchar
+            )""")
+            con.execute("insert into " + name + " values ('2026-08-01', '2026-08-31', '2026-08-01', ?, true, 100, 1, 1, 1, 3, 60, 40, 0, ?, 'ok')", [snapshot_date, fresh_at])
+        con.close()
+
+    def test_target_snapshot_validator_accepts_previous_day_snapshot(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, dt.date(2026, 8, 31))
+            result = target_snapshot.validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+            self.assertEqual(result["snapshot_date"], "2026-08-31")
+            self.assertEqual(result["latest_publish_date"], "2026-08-29")
+
+    def test_target_snapshot_validator_rejects_stale_snapshot(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, dt.date(2026, 8, 29))
+            with self.assertRaisesRegex(RuntimeError, "stale target YouTube snapshot"):
+                target_snapshot.validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+
+    def test_target_snapshot_validator_rejects_missing_required_columns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, dt.date(2026, 8, 31))
+            con = duckdb.connect(str(path))
+            con.execute("alter table fact_analytics_d7 drop column d7_complete")
+            con.close()
+            with self.assertRaisesRegex(RuntimeError, "missing columns"):
+                target_snapshot.validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+
+    def test_target_snapshot_validator_rejects_empty_required_relation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, dt.date(2026, 8, 31))
+            con = duckdb.connect(str(path))
+            con.execute("delete from v_youtube_monthly_analytics")
+            con.close()
+            with self.assertRaisesRegex(RuntimeError, "empty relation"):
+                target_snapshot.validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+
+    def test_target_snapshot_validator_rejects_stale_analytics_component(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, dt.date(2026, 8, 31))
+            con = duckdb.connect(str(path))
+            con.execute("update v_youtube_monthly_analytics set fetched_at='2026-08-29 23:58:00'")
+            con.close()
+            with self.assertRaisesRegex(RuntimeError, "stale target YouTube source"):
+                target_snapshot.validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+
+    def test_remote_snapshot_copy_rejects_unsafe_paths_before_sql(self):
+        proc = subprocess.run(
+            [sys.executable, "-", "/tmp/unsafe'path.duckdb", "/tmp/out.duckdb"],
+            input=target_snapshot.REMOTE_COPY_SCRIPT,
+            text=True,
+            capture_output=True,
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("unsafe DuckDB path", proc.stderr)
+
+    def test_copy_failure_is_not_masked_by_cleanup_timeout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            key = root / "key"
+            key.touch()
+            with mock.patch.object(
+                target_snapshot.subprocess,
+                "run",
+                side_effect=[
+                    SimpleNamespace(returncode=1),
+                    subprocess.TimeoutExpired("ssh", 30),
+                ],
+            ):
+                warning = io.StringIO()
+                with contextlib.redirect_stderr(warning):
+                    with self.assertRaisesRegex(RuntimeError, "snapshot copy failed"):
+                        target_snapshot.sync_snapshot(root / "out.duckdb", key=key)
+                self.assertIn("temp cleanup failed", warning.getvalue())
+
+    def test_cleanup_nonzero_returncode_fails_successful_fetch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            key = root / "key"
+            key.touch()
+            source = root / "source.duckdb"
+            self._fixture(source, dt.date(2026, 8, 31))
+
+            def fake_run(args, **kwargs):
+                if args[0] == "scp":
+                    shutil.copy2(source, args[-1])
+                    return SimpleNamespace(returncode=0)
+                if "/bin/rm" in args:
+                    return SimpleNamespace(returncode=1)
+                return SimpleNamespace(returncode=0)
+
+            with mock.patch.object(target_snapshot.subprocess, "run", side_effect=fake_run):
+                with self.assertRaisesRegex(RuntimeError, "temp cleanup failed rc=1"):
+                    target_snapshot.sync_snapshot(root / "out.duckdb", key=key)
+
+    def test_transfer_failure_keeps_last_good_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            key = root / "key"
+            key.touch()
+            output = root / "out.duckdb"
+            output.write_bytes(b"last-good")
+            with mock.patch.object(
+                target_snapshot.subprocess,
+                "run",
+                side_effect=[
+                    SimpleNamespace(returncode=0),
+                    SimpleNamespace(returncode=1),
+                    SimpleNamespace(returncode=0),
+                ],
+            ):
+                with self.assertRaisesRegex(RuntimeError, "snapshot transfer failed"):
+                    target_snapshot.sync_snapshot(output, key=key)
+            self.assertEqual(output.read_bytes(), b"last-good")
+
+    def test_stale_transfer_keeps_last_good_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            key = root / "key"
+            key.touch()
+            output = root / "out.duckdb"
+            output.write_bytes(b"last-good")
+            stale = root / "stale.duckdb"
+            self._fixture(stale, dt.date(2020, 1, 1))
+
+            def fake_run(args, **kwargs):
+                if args[0] == "scp":
+                    shutil.copy2(stale, args[-1])
+                return SimpleNamespace(returncode=0)
+
+            with mock.patch.object(target_snapshot.subprocess, "run", side_effect=fake_run):
+                with self.assertRaisesRegex(RuntimeError, "stale target YouTube snapshot"):
+                    target_snapshot.sync_snapshot(output, key=key)
+            self.assertEqual(output.read_bytes(), b"last-good")
 
 
 if __name__ == "__main__":

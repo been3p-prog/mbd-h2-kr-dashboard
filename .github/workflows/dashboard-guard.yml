@@ -31,6 +31,8 @@ jobs:
         run: python -m unittest scripts/test_refresh_current_raw.py -v
       - name: Run dashboard regression tests
         run: python -m unittest scripts/test_verify_dashboard.py -v
+      - name: Check daily refresh wrapper syntax
+        run: bash -n ops/mbd_h2_pages_live_daily_refresh.sh
       - name: Check scope, selected-period rendering, and RAW semantics
         run: python scripts/verify_dashboard.py index.html
       - name: Render the dashboard in headless Chrome

@@ -22,7 +22,7 @@ KST = dt.timezone(dt.timedelta(hours=9))
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_HTML = ROOT / "index.html"
 DEFAULT_CONTRACT = ROOT / "data" / "owned_youtube_window_contract.json"
-DEFAULT_YT_DB = Path("/Users/sb.lee/automations/youtube-view-snapshot/youtube_views.duckdb")
+DEFAULT_YT_DB = Path("/tmp/mbd_h2_youtube_target_snapshot.duckdb")
 
 
 def esc(value) -> str:
@@ -69,6 +69,7 @@ def metric(label: str, value: str, em: str) -> str:
 
 
 def fetch_month(con: duckdb.DuckDBPyConnection, year: int, month: int) -> dict:
+    requested_start = dt.date(year, month, 1)
     row = con.execute(
         """
         select period_start, period_end, metric_start_date, metric_end_date,
@@ -81,9 +82,40 @@ def fetch_month(con: duckdb.DuckDBPyConnection, year: int, month: int) -> dict:
         order by fetched_at desc
         limit 1
         """,
-        [dt.date(year, month, 1)],
+        [requested_start],
     ).fetchone()
     if not row:
+        previous = con.execute(
+            """
+            select period_start, fetched_at
+            from v_youtube_monthly_analytics
+            where period_start < ?
+            order by period_start desc, fetched_at desc
+            limit 1
+            """,
+            [requested_start],
+        ).fetchone()
+        if previous:
+            previous_start = ensure_date(previous[0])
+            next_start = (previous_start.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
+            if next_start == requested_start:
+                return {
+                    "period_start": requested_start,
+                    "period_end": _month_end(year, month),
+                    "metric_start_date": requested_start,
+                    "metric_end_date": requested_start,
+                    "period_complete": False,
+                    "views": 0,
+                    "likes": 0,
+                    "comments": 0,
+                    "shares": 0,
+                    "engagement": 0,
+                    "new_views": 0,
+                    "prior_views": 0,
+                    "unknown_views": 0,
+                    "fetched_at": previous[1],
+                    "raw_status": "awaiting_current_month_analytics",
+                }
         raise RuntimeError(f"monthly YouTube analytics row not found for {year}-{month:02d}")
     keys = [
         "period_start", "period_end", "metric_start_date", "metric_end_date",
@@ -307,6 +339,11 @@ def fetch_quality_series(
         rec = series[series_key(row_year, month)]
         rec["subscriber"] = int(subscriber) if subscriber is not None else None
         rec["subscriber_date"] = ensure_date(snapshot_date) if snapshot_date else None
+    current = series[through_month]
+    if as_of is not None and current["subscriber"] is None and subscriber_rows:
+        _, _, subscriber, snapshot_date = max(subscriber_rows, key=lambda row: row[3])
+        current["subscriber"] = int(subscriber) if subscriber is not None else None
+        current["subscriber_date"] = ensure_date(snapshot_date) if snapshot_date else None
     for rec in series.values():
         rec["overall"] = round(rec["view_sum"] / rec["completed"]) if rec["completed"] else 0
         for form in ("LF", "SF"):
@@ -632,12 +669,24 @@ def render_content_card(item: dict) -> str:
         </article>'''
 
 
-def render_section(month: dict, weeks: list[dict], publish_counts: dict, top_content: list[dict], now: dt.datetime) -> tuple[str, dict]:
+def render_section(
+    month: dict,
+    weeks: list[dict],
+    publish_counts: dict,
+    top_content: list[dict],
+    now: dt.datetime,
+    *,
+    db_path: Path = DEFAULT_YT_DB,
+) -> tuple[str, dict]:
     m = month["period_start"].month
     metric_range = fmt_range(month["metric_start_date"], month["metric_end_date"])
     status = "확정" if month["period_complete"] else "진행 중"
     content_cards = "".join(render_content_card(item) for item in top_content)
+    if not content_cards:
+        content_cards = '<div class="yt-empty" data-yt-content-empty="true">D+N 완료 콘텐츠 없음</div>'
     week_blocks = "".join(render_week(row, i + 1) for i, row in enumerate(weeks))
+    if not week_blocks:
+        week_blocks = '<div class="yt-empty" data-yt-weekly-empty="true">주간 Analytics 집계 대기 중</div>'
     section = f'''<section id="youtubeWindow" class="yt-window" data-yt-window="weekly-detail" data-yt-period="mtd" data-owned-media-window="youtube" data-yt-window-latest-date="{esc(str(month['metric_end_date']))}" role="dialog" aria-modal="false" aria-labelledby="youtubeWindowTitle" aria-hidden="true">
   <div class="yt-window-bar">
     <div class="yt-window-title"><b id="youtubeWindowTitle">온드미디어 상세탭</b><small>디폴트 금월 누적 · 주차별 보기 · YouTube Analytics 기준</small></div>
@@ -688,7 +737,7 @@ def render_section(month: dict, weeks: list[dict], publish_counts: dict, top_con
     contract = {
         "contract_id": f"owned-youtube-window-{month['period_start'].year}-{m:02d}-mtd-v1",
         "source": {
-            "duckdb": str(DEFAULT_YT_DB),
+            "duckdb": str(db_path),
             "monthly_period": f"{month['metric_start_date']}~{month['metric_end_date']}",
             "period_complete": bool(month["period_complete"]),
             "raw_status": month["raw_status"],
@@ -760,6 +809,55 @@ def update_manifest_sources(
     return manifest_re.sub(lambda m: m.group(1) + raw + m.group(3), html, count=1)
 
 
+def update_default_month_state(html: str, month: int) -> str:
+    if not 1 <= month <= 12:
+        raise ValueError(f"default month out of range: {month}")
+    select_re = re.compile(r'(<select id="msel">)(.*?)(</select>)', re.S)
+    select = select_re.search(html)
+    if not select:
+        raise RuntimeError("month selector not found")
+    target_count = 0
+
+    def update_option(match: re.Match) -> str:
+        nonlocal target_count
+        value = int(match.group(1))
+        label = match.group(2)
+        if " · " not in label:
+            raise RuntimeError(f"month selector label malformed: {label}")
+        prefix = label.rsplit(" · ", 1)[0]
+        phase = "확정" if value < month else "진행 중" if value == month else "부킹 진행"
+        if value == month:
+            target_count += 1
+        selected = " selected" if value == month else ""
+        return f'<option value="{value}"{selected}>{prefix} · {phase}</option>'
+
+    options = re.sub(
+        r'<option value="(\d+)"(?: selected)?>([^<]+)</option>',
+        update_option,
+        select.group(2),
+    )
+    if target_count != 1:
+        raise RuntimeError(f"month selector target count mismatch: month={month} count={target_count}")
+    updated = html[:select.start()] + select.group(1) + options + select.group(3) + html[select.end():]
+    updated, cursor_count = re.subn(r'\bvar CUR = \d+;', f'var CUR = {month};', updated)
+    if cursor_count != 1:
+        raise RuntimeError(f"month JS cursor count mismatch: {cursor_count}")
+
+    def update_phase(match: re.Match) -> str:
+        value = int(match.group(2))
+        phase = "closed" if value < month else "current" if value == month else "future"
+        return match.group(1) + phase + match.group(3)
+
+    updated, phase_count = re.subn(
+        r'(class="(?:mvk|mvs|mvr) mv" data-m="(\d+)" data-phase=")(?:closed|cur|current|future)(")',
+        update_phase,
+        updated,
+    )
+    if phase_count == 0:
+        raise RuntimeError("month phase surfaces not found")
+    return updated
+
+
 def _source_iso(value: dt.datetime | None) -> str:
     if value is None:
         raise RuntimeError("YouTube source timestamp is missing")
@@ -797,7 +895,9 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         raise RuntimeError(
             f"YouTube current-month source mismatch: publish_counts={publish_counts.get('total', 0)} rows={len(main_rows)}"
         )
-    section, contract = render_section(month, weeks, publish_counts, top_content, now)
+    section, contract = render_section(
+        month, weeks, publish_counts, top_content, now, db_path=db_path
+    )
     contract["source"]["source_as_of"] = source_as_of
     latest_publish = max((row["publish_date"] for row in main_rows), default=None)
     elapsed_weeks = max(1, math.ceil(now.day / 7))
@@ -853,6 +953,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         source_as_of=source_as_of,
         default_month=now.month,
     )
+    updated = update_default_month_state(updated, now.month)
     html_changed = updated != html
     contract_text = json.dumps(contract, ensure_ascii=False, indent=2, default=str) + "\n"
     old_contract = contract_path.read_text(encoding="utf-8") if contract_path.exists() else ""

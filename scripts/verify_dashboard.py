@@ -99,6 +99,20 @@ def extract_manifest(html: str):
     return raw, json.loads(raw)
 
 
+def youtube_week_state_ok(month_surface: str, youtube_window: str, month: int, elapsed: int) -> bool:
+    ledger_marker = '<div class="content-ledger" data-content-ledger="youtube">'
+    ledger_start = month_surface.find(ledger_marker)
+    if ledger_start >= 0:
+        month_surface = month_surface[ledger_start:]
+    rendered = {
+        int(value)
+        for value in re.findall(rf'data-week-group="{month}-(\d+)"', month_surface)
+    }
+    return rendered == set(range(1, elapsed + 1)) or (
+        not rendered and 'data-yt-weekly-empty="true"' in youtube_window
+    )
+
+
 def _parse_iso(value):
     if not isinstance(value, str) or not value.strip():
         return None
@@ -477,7 +491,7 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
         if marker not in html:
             errors.append(f"missing youtube window marker {marker!r}")
     yt_card_count = html.count('data-yt-weekly-card=')
-    if yt_card_count < 1:
+    if yt_card_count < 1 and 'data-yt-content-empty="true"' not in html:
         errors.append(f"youtube content cards {yt_card_count} < 1")
     for stale in ('유튜브 주간 리포팅 창', '좌측 유튜브 탭 전용 UI',
                   'LF 비포애프터가 주간 성장 대부분', '동일 D+N × LF/SF × IP',

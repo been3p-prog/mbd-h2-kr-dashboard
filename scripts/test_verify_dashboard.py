@@ -39,6 +39,23 @@ class DashboardGuardTest(unittest.TestCase):
         cls.now = built + dt.timedelta(hours=1)       # 모든 스탬프 48h 이내
         cls.stale_now = built + dt.timedelta(hours=100)  # 48h SLA 초과
 
+    def _current_month_block(self, html=None):
+        html = self.html if html is None else html
+        month = int(self.owned_youtube_contract["main_surface"]["month"])
+        start = html.index(f'class="mvr mv" data-m="{month}"')
+        end_marker = (
+            f'class="mvr mv" data-m="{month + 1}"'
+            if month < 12 else '<section id="youtubeWindow"'
+        )
+        return html, start, html.index(end_marker, start)
+
+    def _replace_current_month(self, old, new, count=1):
+        html, start, end = self._current_month_block()
+        block = html[start:end]
+        changed = block.replace(old, new, count)
+        self.assertNotEqual(changed, block, f"current-month mutation target missing: {old}")
+        return html[:start] + changed + html[end:]
+
     # ── 승인 골격 GREEN ─────────────────────────────────────────────
     def test_live_candidate_is_clean(self):
         self.assertEqual(vd.verify(self.html, self.now), [],
@@ -89,7 +106,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn(f'data-yt-publish-card="{month}"', self.html)
         self.assertIn(f'data-yt-watch-duration-card="{month}"', self.html)
         self.assertIn(f'data-yt-main-source-publish-count="{main["publish_count"]}"', self.html)
-        self.assertIn(f'data-yt-main-source-latest-publish-date="{main["latest_publish_date"]}"', self.html)
+        latest_publish = main["latest_publish_date"] or "none"
+        self.assertIn(f'data-yt-main-source-latest-publish-date="{latest_publish}"', self.html)
         self.assertIn(f'data-yt-main-source-snapshot-date="{main["snapshot_date"]}"', self.html)
         self.assertIn('data-yt-main-quality-basis="analytics-d7"', self.html)
         self.assertIn(f'D+7 완료 {main["d7_completed"]}/{main["publish_count"]}건', self.html)
@@ -235,16 +253,17 @@ class DashboardGuardTest(unittest.TestCase):
         source = contract["source"]
         hero = {item["label"]: item for item in contract["hero_kpis"]}
         latest = source["monthly_period"].split("~", 1)[1]
+        month = int(contract["main_surface"]["month"])
         for marker in ('data-yt-launch', 'aria-controls="youtubeWindow"',
                        'id="youtubeWindow"', 'data-yt-window="weekly-detail"',
                        'data-yt-period="mtd"', 'data-owned-media-window="youtube"',
                        f'data-yt-window-latest-date="{latest}"', '온드미디어 상세탭',
                        '디폴트 금월 누적', '주차별 보기', 'YouTube Analytics 기준',
-                       '8월 금월 누적', hero['조회수']['em'],
+                       f'{month}월 금월 누적', hero['조회수']['em'],
                        f"YouTube 조회수 {hero['조회수']['value']}",
                        f"발행</small><b>{hero['발행']['value']}</b><em>{hero['발행']['em']}",
                        '당월/당주 발행 기여', '기발행 기여',
-                       'data-yt-week-summary="8"', 'data-yt-weekly-view="8"',
+                       f'data-yt-week-summary="{month}"', f'data-yt-weekly-view="{month}"',
                        '콘텐츠 D+N 참고', 'public D+N snapshot',
                        'function setYoutubeWindow(open)', 'data-yt-close',
                        '.yt-window{position:fixed;inset:16px;',
@@ -252,7 +271,10 @@ class DashboardGuardTest(unittest.TestCase):
             self.assertIn(marker, self.html)
         for marker in contract["required_copy"]:
             self.assertIn(marker, self.html)
-        self.assertGreaterEqual(self.html.count('data-yt-weekly-card='), 1)
+        self.assertTrue(
+            self.html.count('data-yt-weekly-card=') >= 1
+            or 'data-yt-content-empty="true"' in self.html
+        )
         for stale in ('유튜브 주간 리포팅 창', '좌측 유튜브 탭 전용 UI',
                       'LF 비포애프터가 주간 성장 대부분', '동일 D+N × LF/SF × IP',
                       'public snapshot 기준 2026-08-11 23:57 KST',
@@ -275,6 +297,23 @@ class DashboardGuardTest(unittest.TestCase):
                                 '<div class="content-ledger" data-content-ledger="youtube"><div data-yt-weekly-analysis-raw="8-1">youtube_views.duckdb fact_public_dplusn_video</div>', 1)
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("obsolete inline/raw youtube analysis marker" in error for error in errors), errors)
+
+    def test_youtube_zero_content_cards_require_explicit_empty_state(self):
+        without_cards = self.html.replace(
+            "data-yt-weekly-card=", "data-yt-weekly-card-removed="
+        ).replace(
+            'data-yt-content-empty="true"', 'data-yt-content-empty-removed="true"'
+        )
+        errors = vd.verify(without_cards, self.now, require_fresh=False)
+        self.assertTrue(any("youtube content cards" in error for error in errors), errors)
+
+        explicit_empty = without_cards.replace(
+            '<div class="yt-card-grid num">',
+            '<div class="yt-card-grid num"><div data-yt-content-empty="true">D+N 완료 콘텐츠 없음</div>',
+            1,
+        )
+        errors = vd.verify(explicit_empty, self.now, require_fresh=False)
+        self.assertFalse(any("youtube content cards" in error for error in errors), errors)
 
     def test_live_window_marker_removal_fails(self):
         bad = self.html.replace('data-live-window="weekly-performance"', 'data-live-window="removed"', 1)
@@ -318,19 +357,21 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertTrue(any("missing youtube quality-card marker" in error for error in errors), errors)
 
     def test_youtube_main_source_marker_removal_fails(self):
-        bad = self.html.replace('data-yt-main-source-publish-count=',
-                                'data-yt-main-source-publish-count-removed=', 1)
+        bad = self._replace_current_month(
+            'data-yt-main-source-publish-count=',
+            'data-yt-main-source-publish-count-removed=',
+        )
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("youtube main source" in error for error in errors), errors)
 
     def test_youtube_main_publish_count_tamper_fails(self):
-        match = re.search(r'data-yt-main-source-publish-count="(\d+)"', self.html)
+        html, start, end = self._current_month_block()
+        match = re.search(r'data-yt-main-source-publish-count="(\d+)"', html[start:end])
         self.assertIsNotNone(match)
         original = int(match.group(1))
-        bad = self.html.replace(
+        bad = self._replace_current_month(
             f'data-yt-main-source-publish-count="{original}"',
             f'data-yt-main-source-publish-count="{original + 1}"',
-            1,
         )
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("youtube main publish count" in error for error in errors), errors)
@@ -345,18 +386,20 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertTrue(any("youtube main elapsed weeks" in error for error in errors), errors)
 
     def test_youtube_main_elapsed_week_marker_removal_fails(self):
-        bad = self.html.replace('data-yt-main-source-elapsed-weeks=',
-                                'data-yt-main-source-elapsed-weeks-removed=', 1)
+        bad = self._replace_current_month(
+            'data-yt-main-source-elapsed-weeks=',
+            'data-yt-main-source-elapsed-weeks-removed=',
+        )
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("youtube main source elapsed weeks" in error for error in errors), errors)
 
-    def test_daily_wrapper_uses_dynamic_youtube_public_readback(self):
-        wrapper_path = Path("/Users/sb.lee/.hermes/scripts/mbd_h2_pages_live_daily_refresh.sh")
-        if not wrapper_path.exists():
-            self.skipTest("local cron wrapper is not present in CI")
+    def test_daily_wrapper_uses_target_snapshot_and_dynamic_public_readback(self):
+        wrapper_path = Path(__file__).resolve().parents[1] / "ops/mbd_h2_pages_live_daily_refresh.sh"
         wrapper = wrapper_path.read_text(encoding="utf-8")
+        fetch_call = "scripts/fetch_target_youtube_snapshot.py"
         refresh_call = "scripts/refresh_owned_youtube_window_from_duckdb.py --quiet"
         guard_call = "scripts/verify_dashboard.py index.html --require-fresh"
+        self.assertLess(wrapper.index(fetch_call), wrapper.index(refresh_call))
         self.assertIn(refresh_call, wrapper)
         self.assertIn(guard_call, wrapper)
         self.assertLess(wrapper.index(refresh_call), wrapper.index(guard_call))
@@ -368,14 +411,45 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("data-yt-main-source-d7-completed", wrapper)
         self.assertIn("source_as_of", wrapper)
         self.assertIn("source_payload_sha256", wrapper)
+        self.assertIn('YT_SNAPSHOT_CACHE="/tmp/mbd_h2_youtube_target_snapshot.duckdb"', wrapper)
+        self.assertIn('--duckdb "$YT_SNAPSHOT_CACHE"', wrapper)
+        self.assertLess(
+            wrapper.index('CURRENT_STAGE="dashboard_regression_tests"'),
+            wrapper.index('CURRENT_STAGE="refresh_owned_youtube_window"'),
+        )
         self.assertNotIn("def m8_segment", wrapper)
         self.assertNotIn("#m8", wrapper)
+        self.assertIn(
+            "youtube_week_state_ok(public_month, public_yt_window, month, elapsed)",
+            wrapper,
+        )
+
+    def test_youtube_week_state_accepts_only_explicit_window_empty_state(self):
+        self.assertTrue(vd.youtube_week_state_ok('', 'data-yt-weekly-empty="true"', 9, 1))
+        self.assertFalse(vd.youtube_week_state_ok('data-yt-weekly-empty="true"', '', 9, 1))
+        self.assertFalse(vd.youtube_week_state_ok('', '', 9, 1))
+        self.assertTrue(vd.youtube_week_state_ok('data-week-group="9-1"', '', 9, 1))
+
+    def test_youtube_week_state_ignores_live_week_groups_before_youtube_ledger(self):
+        live_groups = "".join(
+            f'<details data-week-group="9-{week}"></details>' for week in range(1, 6)
+        )
+        youtube_ledger = (
+            '<div class="content-ledger" data-content-ledger="youtube">'
+            '<details data-week-group="9-1"></details></div>'
+        )
+        self.assertTrue(vd.youtube_week_state_ok(live_groups + youtube_ledger, '', 9, 1))
+
+    def test_ci_checks_repo_owned_daily_wrapper_syntax(self):
+        workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "dashboard-guard.yml").read_text(encoding="utf-8")
+        self.assertIn("bash -n ops/mbd_h2_pages_live_daily_refresh.sh", workflow)
 
     def test_youtube_main_average_value_tamper_fails(self):
         main = self.owned_youtube_contract["main_surface"]
-        original = f'<div class="qv num">{int(main["average_views"]):,}</div>'
-        tampered = f'<div class="qv num">{int(main["average_views"]) + 1:,}</div>'
-        bad = self.html.replace(original, tampered, 1)
+        value = int(main["average_views"])
+        original = f'<div class="qv num">{value:,}</div>' if value else '<div class="qv num">—</div>'
+        tampered = '<div class="qv num">1</div>' if value == 0 else f'<div class="qv num">{value + 1:,}</div>'
+        bad = self._replace_current_month(original, tampered)
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("youtube main average views mismatch" in error for error in errors), errors)
 
@@ -383,24 +457,26 @@ class DashboardGuardTest(unittest.TestCase):
         main = self.owned_youtube_contract["main_surface"]
         original = f'<div class="qn num">{int(main["subscriber_count"]):,}</div>'
         tampered = f'<div class="qn num">{int(main["subscriber_count"]) + 1:,}</div>'
-        bad = self.html.replace(original, tampered, 1)
+        bad = self._replace_current_month(original, tampered)
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("youtube main subscriber count mismatch" in error for error in errors), errors)
 
     def test_youtube_main_format_average_tamper_fails(self):
         main = self.owned_youtube_contract["main_surface"]
         month = int(main["month"])
-        original = f'{int(main["lf_average_views"]):,}'
+        html, start, end = self._current_month_block()
+        block = html[start:end]
         pattern = re.compile(
-            rf'(data-yt-lf-average-card="{month}".*?<div class="qn num">){re.escape(original)}(</div>)',
+            rf'(data-yt-lf-average-card="{month}".*?<div class="qn num">)([^<]+)(</div>)',
             re.S,
         )
-        bad, replaced = pattern.subn(
-            lambda match: f'{match.group(1)}{int(main["lf_average_views"]) + 1:,}{match.group(2)}',
-            self.html,
+        changed, replaced = pattern.subn(
+            lambda match: f'{match.group(1)}tampered{match.group(3)}',
+            block,
             count=1,
         )
         self.assertEqual(replaced, 1)
+        bad = html[:start] + changed + html[end:]
         errors = vd.verify(bad, self.now, require_fresh=False)
         self.assertTrue(any("youtube main LF average views mismatch" in error for error in errors), errors)
 
@@ -692,6 +768,14 @@ class SmokeViewportPolicyTest(unittest.TestCase):
     def test_exact_mobile_width_with_lower_contract_is_accepted(self):
         errors = sd._check_viewport(
             self._result(390), 390, 844, "mobile", switch_expected=None)
+        self.assertEqual(errors, [])
+
+    def test_explicit_empty_youtube_window_is_accepted_without_cards(self):
+        result = self._result(390)
+        result["youtubeWindow"]["cardCount"] = 0
+        result["youtubeWindow"]["empty"] = True
+        errors = sd._check_viewport(
+            result, 390, 844, "mobile", switch_expected=None)
         self.assertEqual(errors, [])
 
     def test_missing_lower_card_evidence_fails(self):
