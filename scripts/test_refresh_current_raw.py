@@ -1123,7 +1123,11 @@ class TargetMbdSnapshotTest(unittest.TestCase):
                     return SimpleNamespace(returncode=1)
                 return SimpleNamespace(returncode=0)
 
-            with mock.patch.object(target_mbd.subprocess, "run", side_effect=fake_run):
+            with mock.patch.object(
+                target_mbd.subprocess, "run", side_effect=fake_run
+            ), mock.patch.object(
+                target_mbd, "validate_snapshot", return_value={"fixture": True}
+            ):
                 with self.assertRaisesRegex(RuntimeError, "temp cleanup failed rc=1"):
                     target_mbd.sync_snapshot(root / "out.duckdb", key=key)
 
