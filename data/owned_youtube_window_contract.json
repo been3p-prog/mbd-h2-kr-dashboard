@@ -1,13 +1,13 @@
 {
-  "contract_id": "owned-youtube-window-2026-08-mtd-v1",
+  "contract_id": "owned-youtube-window-2026-09-mtd-v1",
   "source": {
-    "duckdb": "/Users/sb.lee/automations/youtube-view-snapshot/youtube_views.duckdb",
-    "monthly_period": "2026-08-01~2026-08-30",
+    "duckdb": "/tmp/mbd_h2_youtube_target_snapshot.duckdb",
+    "monthly_period": "2026-09-01~2026-09-01",
     "period_complete": false,
     "raw_status": "ok",
     "source_as_of": {
-      "yt_quality": "2026-08-31T14:12:24+09:00",
-      "owned_media": "2026-08-31T14:12:22+09:00"
+      "yt_quality": "2026-09-02T16:05:08+09:00",
+      "owned_media": "2026-09-02T16:05:07+09:00"
     }
   },
   "required_copy": [
@@ -17,7 +17,7 @@
     "YouTube Analytics 기준",
     "data-yt-period=\"mtd\"",
     "data-owned-media-window=\"youtube\"",
-    "8월 금월 누적",
+    "9월 금월 누적",
     "월 누적과 주차별을 분리",
     "당월 발행 vs 기발행 분리",
     "콘텐츠 D+N 참고",
@@ -32,90 +32,63 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "431만",
-      "em": "8/1–8/30"
+      "value": "0",
+      "em": "9/1–9/1"
     },
     {
       "label": "발행",
-      "value": "24건",
-      "em": "LF 6 · SF 18"
+      "value": "1건",
+      "em": "LF 0 · SF 1"
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "140만",
+      "value": "0",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "277만",
+      "value": "0",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "43,887",
+      "value": "0",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "32,403",
-      "em": "댓글 1,252"
+      "value": "0",
+      "em": "댓글 0"
     },
     {
       "label": "공유",
-      "value": "10,232",
-      "em": "미매칭 14만"
+      "value": "0",
+      "em": "미매칭 0"
     }
   ],
   "weekly_rows": [
     {
-      "period": "7/27–8/2",
-      "views": 746147,
-      "complete": true
-    },
-    {
-      "period": "8/3–8/9",
-      "views": 1386025,
-      "complete": true
-    },
-    {
-      "period": "8/10–8/16",
-      "views": 1088081,
-      "complete": true
-    },
-    {
-      "period": "8/17–8/23",
-      "views": 857460,
-      "complete": true
-    },
-    {
-      "period": "8/24–8/30",
-      "views": 802422,
-      "complete": true
+      "period": "8/31–9/6",
+      "views": 0,
+      "complete": false
     }
   ],
-  "content_cards": [
-    "NFd8lN83gWw",
-    "VpP_AYE1EBg",
-    "3efWOUWyOgM",
-    "hBVJCDFxzcE",
-    "ZJDxxqDtvr4",
-    "Ev4OPukqJUc"
-  ],
+  "content_cards": [],
   "main_surface": {
     "year": 2026,
-    "month": 8,
-    "publish_count": 24,
-    "lf_publish_count": 6,
-    "sf_publish_count": 18,
-    "latest_publish_date": "2026-08-29",
-    "snapshot_date": "2026-08-31",
-    "elapsed_weeks": 5,
+    "month": 9,
+    "publish_count": 1,
+    "lf_publish_count": 0,
+    "sf_publish_count": 1,
+    "latest_publish_date": "2026-09-01",
+    "snapshot_date": "2026-09-02",
+    "elapsed_weeks": 1,
     "quality_basis": "analytics-d7",
-    "d7_completed": 19,
-    "average_views": 52646,
-    "lf_average_views": 118696,
-    "sf_average_views": 29056,
+    "d7_completed": 0,
+    "average_views": 0,
+    "lf_average_views": 0,
+    "sf_average_views": 0,
     "subscriber_count": 803000,
-    "previous_average_views": 69000
+    "previous_average_views": 51033
   }
 }
