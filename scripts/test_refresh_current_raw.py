@@ -814,10 +814,10 @@ class CurrentRawRefreshTest(unittest.TestCase):
         html = (
             '<div><span class="chip">RAW 12/1~12/1</span>'
             '<span class="chip vi">FORECAST 2026-11</span></div>'
-            '<div class="mvk mv" data-m="12"><div class="kpi" data-tip="RAW 누적 old">'
-            '<div class="ic">icon</div><div><div class="k">현재 RAW 누적 · old</div>'
-            '<div class="v num">0</div><div class="s num"><span class="pill flat num">목표 진척 0%</span>'
-            '</div></div></div></div>'
+            '<div class="mvk mv" data-m="12"><div class="kpis"><div class="kpi">'
+            '<div class="ic">icon</div><div><div class="k">12월 부킹 총액<span class="phase">부킹 진행</span></div>'
+            '<div class="v num">0</div><div class="s num">전월 대비 <span class="pill flat num">부킹 비교 —</span>'
+            '</div></div></div><div class="kpi" data-layout-sentinel="true"><div>keep</div></div></div></div>'
             '<div class="mvr mv" data-m="12">'
             '<span class="nm">일반광고</span><div class="rows num"><div class="r"><span>RAW 누적 · old</span>'
             '<b>0 <span class="mutpct">진척 0%</span></b></div></div>'
@@ -836,9 +836,12 @@ class CurrentRawRefreshTest(unittest.TestCase):
             "progress_pct": 50.0,
             "team_targets_won": {"ad_gen": 200_000_000, "ad_int": 40_000_000, "live": 60_000_000},
         }
+        div_counts_before = (html.count("<div"), html.count("</div>"))
         updated = refresh.update_current_raw_surfaces(html, snapshot)
         self.assertIn("현재 RAW 누적 · 12/1~12/24", updated)
         self.assertIn("FORECAST 2026-12", updated)
+        self.assertIn('data-layout-sentinel="true"', updated)
+        self.assertEqual((updated.count("<div"), updated.count("</div>")), div_counts_before)
 
     def test_december_live_quality_updates_december_not_august(self):
         html = refresh.DEFAULT_HTML.read_text(encoding="utf-8")

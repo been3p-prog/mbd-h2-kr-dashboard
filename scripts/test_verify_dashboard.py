@@ -773,6 +773,12 @@ class SmokeViewportPolicyTest(unittest.TestCase):
                 "futureRootCount": 9,
                 "futureForbiddenCount": 0,
             },
+            "layout": {
+                "hasMain": True,
+                "monthRootCount": 36,
+                "monthRootsOutsideMain": 0,
+                "currentKpiCount": 4,
+            },
             "liveWindow": {
                 "hasLaunch": True,
                 "hasWindow": True,
@@ -826,6 +832,18 @@ class SmokeViewportPolicyTest(unittest.TestCase):
         result.pop("lower")
         errors = sd._check_viewport(result, 390, 844, "mobile", switch_expected=None)
         self.assertTrue(any("lower-card" in e for e in errors))
+
+    def test_month_roots_outside_main_fail(self):
+        result = self._result(1440)
+        result["layout"]["monthRootsOutsideMain"] = 27
+        errors = sd._check_viewport(result, 1440, 900, "desktop", switch_expected=None)
+        self.assertTrue(any("outside main" in e for e in errors))
+
+    def test_current_kpi_structure_collapse_fails(self):
+        result = self._result(1440)
+        result["layout"]["currentKpiCount"] = 1
+        errors = sd._check_viewport(result, 1440, 900, "desktop", switch_expected=None)
+        self.assertTrue(any("KPI direct-child count" in e for e in errors))
 
     def test_live_window_not_full_width_fails(self):
         result = self._result(1440)

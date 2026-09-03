@@ -389,7 +389,9 @@ def update_current_raw_surfaces(html: str, snapshot: dict) -> str:
     else:
         future_top_pattern = re.compile(
             rf'<div class="kpi"(?: data-tip="[^"]*")?>(?P<icon><div class="ic">.*?</div>)<div>\s*'
-            rf'<div class="k">{month}월 부킹 총액<span class="phase">부킹 진행</span></div>.*?</div></div>',
+            rf'<div class="k">{month}월 부킹 총액<span class="phase">부킹 진행</span></div>\s*'
+            r'<div class="v num">[^<]*</div>\s*'
+            r'<div class="s num">.*?</div>\s*</div>\s*</div>',
             re.S,
         )
         segment, count = future_top_pattern.subn(

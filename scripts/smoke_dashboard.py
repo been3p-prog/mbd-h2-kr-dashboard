@@ -105,6 +105,12 @@ def _probe_script(target_month: int) -> str:
         "qualityCards:rest?rest.querySelectorAll('.quality-card').length:0,"
         "rawRowTables:document.querySelectorAll('.livetbl,.raw-row-table').length,"
         "futureRootCount:futureRoots.length,futureForbiddenCount:futureForbidden};"
+        "var main=document.querySelector('main');"
+        "var monthRoots=document.querySelectorAll('.mvk,.mvs,.mvr');"
+        "var currentKpis=document.querySelector('.mvk[data-phase=\"current\"] > .kpis');"
+        "out.layout={hasMain:!!main,monthRootCount:monthRoots.length,"
+        "monthRootsOutsideMain:Array.prototype.filter.call(monthRoots,function(x){return !main||!main.contains(x);}).length,"
+        "currentKpiCount:currentKpis?currentKpis.querySelectorAll(':scope > .kpi').length:0};"
         "out.errors=(window.__smoke_errors||[]).slice(0,20);"
         "}catch(e){out.fatal=String(e)+' | '+((e&&e.stack)||'');}"
         "var d=document.createElement('div');d.id='smoke-result';d.textContent=JSON.stringify(out);"
@@ -211,6 +217,18 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
             errors.append(
                 f"{tag}: future forbidden gap/achievement/decline/miss labels="
                 f"{lower.get('futureForbiddenCount')} != 0")
+    layout = result.get("layout")
+    if not isinstance(layout, dict):
+        errors.append(f"{tag}: layout ownership evidence missing")
+    else:
+        if layout.get("hasMain") is not True:
+            errors.append(f"{tag}: dashboard main root missing")
+        if layout.get("monthRootsOutsideMain") != 0:
+            errors.append(
+                f"{tag}: month roots outside main={layout.get('monthRootsOutsideMain')} != 0")
+        if layout.get("currentKpiCount") != 4:
+            errors.append(
+                f"{tag}: current KPI direct-child count={layout.get('currentKpiCount')} != 4")
     if switch_expected:
         if result.get("optionCount") != 12:
             errors.append(f"{tag}: month selector has {result.get('optionCount')} options (expected 12)")
@@ -336,7 +354,8 @@ def main() -> int:
         f"mobile:{observed_widths.get('mobile')}; "
         "source_links=present; lower_cards=green; live_window=green; "
         "live_window_full_width=green; youtube_window=green; "
-        "youtube_window_full_width=green; future_negative_control=green"
+        "youtube_window_full_width=green; future_negative_control=green; "
+        "layout_ownership=green"
     )
     return 0
 
