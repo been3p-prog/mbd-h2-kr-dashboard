@@ -3,9 +3,9 @@
   "source": {
     "duckdb": "/tmp/mbd_h2_target_snapshot.duckdb",
     "schema_table": "live.raw_slots",
-    "period": "2026-09-01~None",
-    "latest_completed_date": "None",
-    "completed_row_count": 0,
+    "period": "2026-09-01~2026-09-01",
+    "latest_completed_date": "2026-09-01",
+    "completed_row_count": 1,
     "sheet_rows": []
   },
   "rules": {
@@ -34,13 +34,12 @@
     "data-live-period=\"mtd\"",
     "data-live-window-latest-date=",
     "9월 금월 누적",
-    "완료 0건",
+    "완료 1건",
     "미집계/0원 편성은 누적 성과에서 제외",
     "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
     "월/주간 효율=`방송별 데이터 GMV`",
-    "generic GMV 표기 금지",
-    "data-live-content-empty=\"true\""
+    "generic GMV 표기 금지"
   ],
   "forbidden_in_live_window": [
     "aria-label=\"8월 1주차 라이브 성과 요약\"",
@@ -55,52 +54,73 @@
   "hero_kpis": [
     {
       "label": "진행",
-      "value": "0건",
-      "em": "확인중 완료"
+      "value": "1건",
+      "em": "9/1–9/1 완료"
     },
     {
       "label": "1D 거래액",
-      "value": "0",
+      "value": "9,451만",
       "em": "브랜드 일거래액 누적"
     },
     {
       "label": "방송별 GMV",
-      "value": "0",
+      "value": "5,318만",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "0",
+      "value": "5,318만",
       "em": "방송별 GMV 평균"
     },
     {
       "label": "시청",
-      "value": "0",
-      "em": "평균 0"
+      "value": "5,252",
+      "em": "평균 5,252"
     },
     {
       "label": "클릭률",
-      "value": "—",
-      "em": "클릭 0"
+      "value": "52.3%",
+      "em": "클릭 2,747"
     },
     {
       "label": "구매",
-      "value": "0",
-      "em": "구매율 —"
+      "value": "78",
+      "em": "구매율 1.49%"
     },
     {
       "label": "AF/마진",
-      "value": "0",
-      "em": "마진 0"
+      "value": "700만",
+      "em": "마진 560만"
     }
   ],
   "required_narrative": [
     "월 누적과 주간을 분리",
     "상단은 금월 누적, 아래는 주차별 완료 방송",
-    "최신 완료일 확인중까지 갱신",
+    "최신 완료일 9/1까지 갱신",
     "카드 거래액은 1D 브랜드 일거래액",
     "월/주간 효율은 방송별 데이터 GMV"
   ],
-  "package_lens": [],
-  "broadcast_cards": {}
+  "package_lens": [
+    {
+      "label": "스마트",
+      "value": "시청 100.0% / 방송별 GMV 100.0% · 1건"
+    }
+  ],
+  "broadcast_cards": {
+    "mtd-20260901-01": {
+      "brand": "폴인퍼니",
+      "meta": "9/1 · Jeff · 스마트 · 일반",
+      "metrics": {
+        "시청": "5,252",
+        "클릭률": "52.3%",
+        "구매": "78",
+        "거래액": "1D 9,451만"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 94505200,
+        "방송별 데이터 GMV": 53183900,
+        "라이브 1H GMV": 50765100
+      }
+    }
+  }
 }
