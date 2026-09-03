@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/Users/sb.lee/automations/mbd-h2-kr-dashboard"
-LOG_DIR="/Users/sb.lee/automations/mbd-h2-kr-dashboard/logs"
+ROOT="${MBD_H2_ROOT:-/Users/sb.lee/automations/mbd-h2-kr-dashboard}"
+LOG_DIR="${MBD_H2_LOG_DIR:-$ROOT/logs}"
 LOCK_DIR="/tmp/mbd_h2_pages_live_daily_refresh.lock"
-RETRY_LIB="/Users/sb.lee/.hermes/scripts/lib/mbd_h2_pages_retry.sh"
+RETRY_LIB="${MBD_H2_RETRY_LIB:-$ROOT/ops/mbd_h2_pages_retry.sh}"
 # [2026-08-28] Pin the MBD interpreter — Hermes gateway venv does not include duckdb.
-PY="/usr/bin/python3"
+PY="${MBD_H2_PYTHON:-/usr/bin/python3}"
 YT_SNAPSHOT_CACHE="/tmp/mbd_h2_youtube_target_snapshot.duckdb"
 MBD_SNAPSHOT_CACHE="/tmp/mbd_h2_target_snapshot.duckdb"
 # [2026-08-28] Bound transient recovery; deterministic failures remain fail-fast.
@@ -20,7 +20,7 @@ if [[ ! -r "$RETRY_LIB" ]]; then
   echo "ERROR: MBD H2 retry library not found: $RETRY_LIB"
   exit 1
 fi
-# shellcheck source=/Users/sb.lee/.hermes/scripts/lib/mbd_h2_pages_retry.sh
+# shellcheck source=ops/mbd_h2_pages_retry.sh
 source "$RETRY_LIB"
 
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
@@ -105,7 +105,7 @@ if git diff --quiet -- index.html data/live_window_contract.json data/owned_yout
 fi
 
 CURRENT_STAGE="github_auth_context"
-gh auth switch -u been3p-prog >/dev/null 2>&1 || true
+gh auth switch -u been3p-prog >/dev/null 2>&1
 
 CURRENT_STAGE="git_commit"
 git add index.html data/live_window_contract.json data/owned_youtube_window_contract.json scripts/verify_dashboard.py scripts/test_verify_dashboard.py scripts/smoke_dashboard.py scripts/refresh_live_daily_from_duckdb.py scripts/refresh_live_window_from_duckdb.py scripts/refresh_owned_youtube_window_from_duckdb.py
@@ -236,7 +236,12 @@ checks={
   'yt_window_latest': bool(expected_yt_latest) and f'data-yt-window-latest-date="{expected_yt_latest}"' in public_yt_window,
 }
 if not all(checks.values()):
-    print('ERROR: public readback failed', checks, {
+    marker = (
+        'MBD_H2_PAGES_STALE_PUBLIC_READBACK'
+        if not checks['public_bytes_match_committed']
+        else 'ERROR: public readback contract failed'
+    )
+    print(marker, checks, {
         'month': month,
         'main_surface': main,
         'expected_chip': expected_chip,

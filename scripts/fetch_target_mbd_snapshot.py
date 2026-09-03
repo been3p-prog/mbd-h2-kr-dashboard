@@ -13,6 +13,8 @@ from pathlib import Path
 
 import duckdb
 
+from snapshot_transport import describe_transport_exception, describe_transport_failure
+
 KST = dt.timezone(dt.timedelta(hours=9))
 DEFAULT_OUTPUT = Path("/tmp/mbd_h2_target_snapshot.duckdb")
 DEFAULT_HOST = "cnc-media@192.168.7.238"
@@ -201,33 +203,43 @@ def sync_snapshot(
     remote_db: str = DEFAULT_REMOTE_DB,
 ) -> dict:
     if not key.is_file():
-        raise RuntimeError(f"target SSH key missing: {key}")
+        raise RuntimeError("target SSH key missing")
     output.parent.mkdir(parents=True, exist_ok=True)
     remote_copy = f"/tmp/mbd_h2_target_snapshot_{uuid.uuid4().hex}.duckdb"
     partial = output.with_name(f"{output.name}.{uuid.uuid4().hex}.partial")
     ssh = _ssh_args(key, host)
     primary_error: BaseException | None = None
     try:
-        copied = subprocess.run(
-            ssh + [remote_python, "-", remote_db, remote_copy],
-            input=REMOTE_COPY_SCRIPT,
-            text=True,
-            capture_output=True,
-            timeout=180,
-        )
+        try:
+            copied = subprocess.run(
+                ssh + [remote_python, "-", remote_db, remote_copy],
+                input=REMOTE_COPY_SCRIPT,
+                text=True,
+                capture_output=True,
+                timeout=180,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            detail = describe_transport_exception(exc)
+            raise RuntimeError(f"target MBD snapshot copy failed: {detail}") from None
         if copied.returncode != 0:
-            raise RuntimeError(f"target MBD snapshot copy failed rc={copied.returncode}")
-        fetched = subprocess.run(
-            [
-                "scp", "-q", "-i", str(key), "-o", "BatchMode=yes",
-                "-o", "IdentitiesOnly=yes", f"{host}:{remote_copy}", str(partial),
-            ],
-            text=True,
-            capture_output=True,
-            timeout=180,
-        )
+            detail = describe_transport_failure(copied.returncode, getattr(copied, "stderr", None))
+            raise RuntimeError(f"target MBD snapshot copy failed: {detail}")
+        try:
+            fetched = subprocess.run(
+                [
+                    "scp", "-q", "-i", str(key), "-o", "BatchMode=yes",
+                    "-o", "IdentitiesOnly=yes", f"{host}:{remote_copy}", str(partial),
+                ],
+                text=True,
+                capture_output=True,
+                timeout=180,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            detail = describe_transport_exception(exc)
+            raise RuntimeError(f"target MBD snapshot transfer failed: {detail}") from None
         if fetched.returncode != 0:
-            raise RuntimeError(f"target MBD snapshot transfer failed rc={fetched.returncode}")
+            detail = describe_transport_failure(fetched.returncode, getattr(fetched, "stderr", None))
+            raise RuntimeError(f"target MBD snapshot transfer failed: {detail}")
         result = validate_snapshot(partial)
         os.replace(partial, output)
         result["output"] = str(output)
@@ -245,12 +257,15 @@ def sync_snapshot(
                 timeout=30,
             )
             if cleaned.returncode != 0:
+                cleanup_stderr = getattr(cleaned, "stderr", None)
+                if cleanup_stderr:
+                    detail = describe_transport_failure(cleaned.returncode, cleanup_stderr)
+                    raise RuntimeError(f"target MBD temp cleanup failed: {detail}")
                 raise RuntimeError(f"target MBD temp cleanup failed rc={cleaned.returncode}")
         except (OSError, subprocess.SubprocessError) as exc:
             if primary_error is None:
-                raise RuntimeError(
-                    f"target MBD temp cleanup failed: {type(exc).__name__}"
-                ) from exc
+                detail = describe_transport_exception(exc)
+                raise RuntimeError(f"target MBD temp cleanup failed: {detail}") from None
             print(
                 f"WARNING: target MBD temp cleanup failed: {type(exc).__name__}",
                 file=sys.stderr,

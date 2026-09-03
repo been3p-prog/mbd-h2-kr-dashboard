@@ -485,7 +485,10 @@ class DashboardGuardTest(unittest.TestCase):
 
     def test_ci_checks_repo_owned_daily_wrapper_syntax(self):
         workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "dashboard-guard.yml").read_text(encoding="utf-8")
+        self.assertIn("python -m unittest scripts/test_ops_runtime.py -v", workflow)
         self.assertIn("bash -n ops/mbd_h2_pages_live_daily_refresh.sh", workflow)
+        self.assertIn("bash -n ops/mbd_h2_pages_cron_runner.sh", workflow)
+        self.assertIn("bash -n ops/mbd_h2_pages_retry.sh", workflow)
 
     def test_youtube_main_average_value_tamper_fails(self):
         main = self.owned_youtube_contract["main_surface"]

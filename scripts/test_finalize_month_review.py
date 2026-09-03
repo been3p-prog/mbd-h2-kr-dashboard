@@ -164,14 +164,22 @@ class FinalizeMonthReviewTest(unittest.TestCase):
         self.assertEqual(actual["live_package_revenue"]["시그니처"], 101_000_000)
 
     def test_finalized_august_passes_the_release_guard(self):
-        built = dt.datetime(2026, 9, 1, 18, 30, tzinfo=dt.timezone(dt.timedelta(hours=9)))
+        _, base_manifest = extract_manifest(self.html)
+        built = max(
+            dt.datetime.fromisoformat(value)
+            for value in base_manifest["source_snapshot_as_of"].values()
+        ) + dt.timedelta(hours=1)
         result = finalize_month_review(self.html, self.current, self.previous, built_at=built)
         _, manifest = extract_manifest(result)
         now = dt.datetime.fromisoformat(manifest["built_at_kst"]) + dt.timedelta(hours=1)
         self.assertEqual(verify(result, now, require_fresh=True), [])
 
     def test_release_guard_rejects_forecast_badge_on_closed_august(self):
-        built = dt.datetime(2026, 9, 1, 18, 30, tzinfo=dt.timezone(dt.timedelta(hours=9)))
+        _, base_manifest = extract_manifest(self.html)
+        built = max(
+            dt.datetime.fromisoformat(value)
+            for value in base_manifest["source_snapshot_as_of"].values()
+        ) + dt.timedelta(hours=1)
         result = finalize_month_review(self.html, self.current, self.previous, built_at=built)
         mutated = result.replace("ACTUAL 2026-08", "FORECAST 2026-08", 1)
         _, manifest = extract_manifest(mutated)
