@@ -1,7 +1,7 @@
 {
   "contract_id": "owned-youtube-window-2026-09-mtd-v1",
   "source": {
-    "duckdb": "/tmp/mbd-h2-pages-youtube-source-snapshot.duckdb",
+    "duckdb": "/tmp/mbd_h2_youtube_target_snapshot.duckdb",
     "monthly_period": "2026-09-01~2026-09-04",
     "period_complete": false,
     "raw_status": "ok",
@@ -37,8 +37,8 @@
     },
     {
       "label": "발행",
-      "value": "11건",
-      "em": "LF 1 · SF 10"
+      "value": "12건",
+      "em": "LF 1 · SF 11"
     },
     {
       "label": "당월/당주 발행 기여",
@@ -77,10 +77,10 @@
   "main_surface": {
     "year": 2026,
     "month": 9,
-    "publish_count": 11,
+    "publish_count": 12,
     "lf_publish_count": 1,
-    "sf_publish_count": 10,
-    "latest_publish_date": "2026-09-06",
+    "sf_publish_count": 11,
+    "latest_publish_date": "2026-09-07",
     "snapshot_date": "2026-09-07",
     "elapsed_weeks": 1,
     "quality_basis": "analytics-d7",
