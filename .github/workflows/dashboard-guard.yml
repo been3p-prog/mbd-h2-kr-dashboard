@@ -44,9 +44,11 @@ jobs:
         run: python scripts/smoke_dashboard.py index.html
       - name: Verify Live-window numeric/data-basis contract
         run: python scripts/verify_live_window_contract.py index.html
-      - name: Enforce the 48-hour freshness SLA on scheduled probes
+      - name: Enforce source-aware freshness on scheduled probes
         if: github.event_name == 'schedule'
-        run: python scripts/verify_dashboard.py index.html --require-fresh
+        run: >-
+          python scripts/verify_dashboard.py index.html --require-fresh
+          --allow-stale-source yt_quality --allow-stale-source owned_media
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

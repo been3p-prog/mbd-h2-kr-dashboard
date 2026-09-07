@@ -716,6 +716,36 @@ class DashboardGuardTest(unittest.TestCase):
             raw, json.dumps(manifest, ensure_ascii=False, separators=(",", ":")), 1)
         self.assertTrue(any("source_status" in e for e in vd.verify(bad, self.now)))
 
+    def test_allowed_stale_source_requires_explicit_visible_marker(self):
+        raw, manifest = vd.extract_manifest(self.html)
+        stale_at = (self.now - dt.timedelta(hours=72)).isoformat()
+        manifest["source_status"]["yt_quality"] = "stale"
+        manifest["source_snapshot_as_of"]["yt_quality"] = stale_at
+        bad = self.html.replace(
+            raw, json.dumps(manifest, ensure_ascii=False, separators=(",", ":")), 1)
+        marker = (
+            '<span class="chip warn" data-stale-source="yt_quality">'
+            '유튜브 성과 원천 지연 · 마지막 확인 08-04 13:00</span>'
+        )
+        bad = bad.replace('<div class="chips num">', '<div class="chips num">' + marker, 1)
+        self.assertEqual(
+            vd.verify(
+                bad,
+                self.now,
+                require_fresh=True,
+                allow_stale_sources={"yt_quality"},
+            ),
+            [],
+        )
+        self.assertTrue(any(
+            "source_status.yt_quality" in e
+            for e in vd.verify(bad, self.now, require_fresh=True)
+        ))
+
+    def test_top_owned_reference_card_is_absent(self):
+        self.assertNotIn("온드미디어 · 참고", self.html)
+        self.assertNotIn("3팀 스코프 밖 · 스택 최상단", self.html)
+
     def test_manifest_missing_source_timestamp_key_fails(self):
         raw, manifest = vd.extract_manifest(self.html)
         del manifest["source_snapshot_as_of"]["owned_media"]
@@ -780,7 +810,7 @@ class SmokeViewportPolicyTest(unittest.TestCase):
                 "hasMain": True,
                 "monthRootCount": 36,
                 "monthRootsOutsideMain": 0,
-                "currentKpiCount": 4,
+                "currentKpiCount": 3,
             },
             "liveWindow": {
                 "hasLaunch": True,

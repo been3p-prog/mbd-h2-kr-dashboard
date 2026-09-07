@@ -142,7 +142,14 @@ def _parse_iso(value):
         return None
 
 
-def _check_manifest(html: str, now: dt.datetime, require_fresh: bool, errors: list) -> None:
+def _check_manifest(
+    html: str,
+    now: dt.datetime,
+    require_fresh: bool,
+    errors: list,
+    *,
+    allow_stale_sources: frozenset[str],
+) -> None:
     """정확히 1개 · allowlist · 상수 계약 · raw/자격증명 부재 · 타임스탬프 tz-aware(+SLA)."""
     blocks = MANIFEST_RE.findall(html)
     if not blocks:
@@ -207,8 +214,20 @@ def _check_manifest(html: str, now: dt.datetime, require_fresh: bool, errors: li
             errors.append(
                 f"manifest source_status keys {sorted(statuses)} != {sorted(MANIFEST_STATUS_KEYS)}")
         for key in MANIFEST_STATUS_KEYS:
-            if statuses.get(key) != "current":
-                errors.append(f"manifest source_status.{key} {statuses.get(key)!r} != 'current'")
+            status = statuses.get(key)
+            marker_count = html.count(f'data-stale-source="{key}"')
+            if status == "current":
+                if marker_count:
+                    errors.append(f"manifest source_status.{key} is current but has stale marker")
+            elif status == "stale" and key in allow_stale_sources:
+                if marker_count != 1:
+                    errors.append(
+                        f"manifest source_status.{key} is stale but visible marker count is {marker_count}"
+                    )
+            else:
+                errors.append(
+                    f"manifest source_status.{key} {status!r} is not allowed"
+                )
 
     # 타임스탬프: 항상 tz-aware · require_fresh 시 48h 이내
     stamps = {"built_at_kst": manifest.get("built_at_kst")}
@@ -232,7 +251,13 @@ def _check_manifest(html: str, now: dt.datetime, require_fresh: bool, errors: li
             age_hours = (now - parsed).total_seconds() / 3600
             if age_hours < -MAX_FUTURE_SKEW_HOURS:
                 errors.append(f"future snapshot: {label} is {-age_hours:.1f}h ahead of verifier time")
-            elif require_fresh and age_hours > FRESHNESS_SLA_HOURS:
+            source_key = label.split(".", 1)[1] if label.startswith("source_snapshot_as_of.") else None
+            allowed_stale = (
+                source_key in allow_stale_sources
+                and isinstance(statuses, dict)
+                and statuses.get(source_key) == "stale"
+            )
+            if require_fresh and age_hours > FRESHNESS_SLA_HOURS and not allowed_stale:
                 errors.append(f"stale snapshot: {label} {age_hours:.1f}h exceeds "
                               f"the {FRESHNESS_SLA_HOURS}h freshness SLA")
 
@@ -405,7 +430,13 @@ def _check_youtube_main(html: str, errors: list) -> None:
             )
 
 
-def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
+def verify(
+    html: str,
+    now: dt.datetime,
+    *,
+    require_fresh: bool = False,
+    allow_stale_sources: set[str] | frozenset[str] = frozenset(),
+) -> list:
     """DOM-first LIVE 아티팩트 계약 검증. 정렬된 위반 리스트 반환([] = 통과)."""
     if not isinstance(html, str) or not html.strip():
         return ["html: empty or not a string"]
@@ -418,7 +449,17 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
             errors.append(f"legacy embedded payload reappeared: {marker}")
 
     # 2) compact manifest (정확히 1개 · allowlist · 상수 · raw 부재 · freshness)
-    _check_manifest(html, now, require_fresh, errors)
+    allowed_stale = frozenset(allow_stale_sources)
+    unknown_stale = sorted(allowed_stale - set(MANIFEST_STATUS_KEYS))
+    if unknown_stale:
+        errors.append(f"unknown allowed stale sources: {unknown_stale}")
+    _check_manifest(
+        html,
+        now,
+        require_fresh,
+        errors,
+        allow_stale_sources=allowed_stale,
+    )
     _check_youtube_main(html, errors)
 
     # 3) LIVE 마커 정확히 1회 · STAGING/승인 전 비공개 부재
@@ -443,6 +484,9 @@ def verify(html: str, now: dt.datetime, *, require_fresh: bool = False) -> list:
                    "REPORT_DATA", "localStorage"):
         if marker in html:
             errors.append(f"redundant monthly report flow present: {marker!r}")
+    for marker in ("온드미디어 · 참고", "3팀 스코프 밖 · 스택 최상단"):
+        if marker in html:
+            errors.append(f"legacy top owned-media reference present: {marker!r}")
     # [2026-08-09] 팝업/표가 이미 제공하는 구성과 provenance 장문은 카드 본문에 재노출하지 않는다.
     for marker in ('<div class="cause"><b>유입 구성</b>',
                    '<div class="cause" data-live-revenue-breakdown=',
@@ -775,12 +819,24 @@ def main() -> int:
     parser.add_argument("--now", help="ISO timestamp for deterministic checks")
     parser.add_argument("--require-fresh", action="store_true",
                         help="Fail when any manifest timestamp is older than 48 hours")
+    parser.add_argument(
+        "--allow-stale-source",
+        action="append",
+        choices=MANIFEST_STATUS_KEYS,
+        default=[],
+        help="Allow one visibly marked stale source while keeping other freshness checks strict",
+    )
     args = parser.parse_args()
     now = dt.datetime.fromisoformat(args.now) if args.now else dt.datetime.now(KST)
     if now.tzinfo is None:
         now = now.replace(tzinfo=KST)
     html = Path(args.html).read_text(encoding="utf-8")
-    errors = verify(html, now, require_fresh=args.require_fresh)
+    errors = verify(
+        html,
+        now,
+        require_fresh=args.require_fresh,
+        allow_stale_sources=set(args.allow_stale_source),
+    )
     if errors:
         print("DASHBOARD_GUARD=RED")
         for error in errors:

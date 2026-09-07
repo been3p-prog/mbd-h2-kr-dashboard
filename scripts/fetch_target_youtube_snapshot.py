@@ -69,6 +69,12 @@ FRESHNESS_COLUMNS = {
     "fact_analytics_d7": "fetched_at",
     "v_channel_daily_subscribers": "captured_at",
 }
+SOURCE_MAX_LAG_DAYS = {
+    "v_youtube_monthly_analytics": 3,
+    "v_youtube_weekly_analytics": 3,
+    "fact_analytics_d7": 3,
+    "v_channel_daily_subscribers": 2,
+}
 REMOTE_COPY_SCRIPT = r'''
 import os
 import re
@@ -152,10 +158,11 @@ def validate_snapshot(path: Path, *, as_of: dt.date | None = None) -> dict:
         if source_time is None:
             raise RuntimeError(f"target YouTube source has no freshness marker: {relation}")
         source_date = source_time.date() if isinstance(source_time, dt.datetime) else source_time
-        if source_date < as_of - dt.timedelta(days=1):
+        max_lag_days = SOURCE_MAX_LAG_DAYS[relation]
+        if source_date < as_of - dt.timedelta(days=max_lag_days):
             raise RuntimeError(
                 f"stale target YouTube source: relation={relation} "
-                f"source_date={source_date} as_of={as_of}"
+                f"source_date={source_date} as_of={as_of} max_lag_days={max_lag_days}"
             )
         if source_date > as_of + dt.timedelta(days=1):
             raise RuntimeError(

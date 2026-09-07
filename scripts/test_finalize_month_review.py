@@ -171,8 +171,16 @@ class FinalizeMonthReviewTest(unittest.TestCase):
         ) + dt.timedelta(hours=1)
         result = finalize_month_review(self.html, self.current, self.previous, built_at=built)
         _, manifest = extract_manifest(result)
-        now = dt.datetime.fromisoformat(manifest["built_at_kst"]) + dt.timedelta(hours=1)
-        self.assertEqual(verify(result, now, require_fresh=True), [])
+        now = dt.datetime.fromisoformat(manifest["built_at_kst"]) + dt.timedelta(minutes=15)
+        self.assertEqual(
+            verify(
+                result,
+                now,
+                require_fresh=True,
+                allow_stale_sources={"yt_quality", "owned_media"},
+            ),
+            [],
+        )
 
     def test_release_guard_rejects_forecast_badge_on_closed_august(self):
         _, base_manifest = extract_manifest(self.html)

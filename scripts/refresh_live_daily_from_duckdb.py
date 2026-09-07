@@ -26,6 +26,13 @@ DEFAULT_HTML = ROOT / "index.html"
 DEFAULT_DUCKDB = Path("/tmp/mbd_h2_target_snapshot.duckdb")
 TARGET_WON = 100_000_000
 CURRENT_REVENUE_TARGET_WON = 1_278_000_000
+FRESHNESS_SLA_HOURS = 48
+SOURCE_STATUS_LABELS = {
+    "live_quality": "라이브 성과",
+    "yt_quality": "유튜브 성과",
+    "okr_targets": "OKR 목표",
+    "owned_media": "온드미디어",
+}
 
 TEAM_ORDER = ["overall", "signature", "smart", "essential"]
 PACKAGE_LABELS = {
@@ -106,6 +113,13 @@ def fetch_live_rows(
     *,
     end_date: dt.date | None = None,
 ) -> tuple[list[dict], str | None]:
+    """Return completed positive-GMV Live performance rows.
+
+    Revenue attribution remains strict 3P in ``fetch_current_revenue_snapshot``.
+    Performance visibility intentionally does not depend on ``1P/3P`` because
+    that revenue-classification field can be blank after a broadcast even when
+    its viewer and GMV measurements are complete.
+    """
     con = duckdb.connect(str(db_path), read_only=True)
     try:
         start = dt.date(year, month, 1)
@@ -126,7 +140,6 @@ def fetch_live_rows(
             from live.raw_slots
             where TRY_CAST("온에어 일자" as date) >= ?
               and TRY_CAST("온에어 일자" as date) < ?
-              and trim(coalesce("1P/3P", '')) = '3P'
               and not regexp_matches(
                     lower(concat_ws(' ', coalesce("패키지", ''), coalesce("PGM", ''), coalesce("비고 (프로모션)", ''))),
                     '무상|무료|free|취소|cancel'
@@ -143,7 +156,7 @@ def fetch_live_rows(
         con.close()
     out = []
     for d, brand, pkg, pgm, viewers, gmv_1d, gmv_1h in rows:
-        out.append({
+        row = {
             "date": d,
             "brand": brand or "",
             "package": pkg or "",
@@ -152,7 +165,9 @@ def fetch_live_rows(
             "viewers": clean_int(viewers),
             "gmv_1d": clean_int(gmv_1d),
             "gmv_1h": clean_int(gmv_1h),
-        })
+        }
+        if row["gmv_1d"] > 0:
+            out.append(row)
     return out, str(ingest) if ingest else None
 
 
@@ -262,6 +277,8 @@ def update_manifest(
     *,
     touched_sources: set[str] | frozenset[str] = frozenset(),
     default_month: int | None = None,
+    update_payload_hash: bool = True,
+    force_stale_sources: set[str] | frozenset[str] = frozenset(),
 ) -> str:
     manifest_re = re.compile(r'(<script type="application/json" id="mbd-public-guard">)(.*?)(</script>)', re.S)
     match = manifest_re.search(html)
@@ -277,10 +294,104 @@ def update_manifest(
         if key not in manifest.get("source_snapshot_as_of", {}):
             raise RuntimeError(f"unknown manifest source timestamp {key}")
         manifest["source_snapshot_as_of"][key] = built
-    payload_bytes = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode()
-    manifest["source_payload_sha256"] = hashlib.sha256(payload_bytes).hexdigest()
+    if force_stale_sources and not isinstance(manifest.get("source_status"), dict):
+        manifest["source_status"] = {key: "current" for key in SOURCE_STATUS_LABELS}
+    _reconcile_source_statuses(manifest, built)
+    unknown_forced = set(force_stale_sources) - set(SOURCE_STATUS_LABELS)
+    if unknown_forced:
+        raise RuntimeError(f"unknown forced stale source: {sorted(unknown_forced)}")
+    for key in force_stale_sources:
+        manifest["source_status"][key] = "stale"
+    if update_payload_hash:
+        payload_bytes = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode()
+        manifest["source_payload_sha256"] = hashlib.sha256(payload_bytes).hexdigest()
     new_raw = json.dumps(manifest, ensure_ascii=False, separators=(",", ":"))
-    return manifest_re.sub(lambda m: m.group(1) + new_raw + m.group(3), html, count=1)
+    updated = manifest_re.sub(lambda m: m.group(1) + new_raw + m.group(3), html, count=1)
+    return sync_stale_source_markers(updated, manifest)
+
+
+def _reconcile_source_statuses(manifest: dict, built: str) -> None:
+    statuses = manifest.get("source_status")
+    timestamps = manifest.get("source_snapshot_as_of")
+    if not isinstance(statuses, dict) or not isinstance(timestamps, dict):
+        return
+    built_at = dt.datetime.fromisoformat(built)
+    for key in SOURCE_STATUS_LABELS:
+        raw = timestamps.get(key)
+        try:
+            source_at = dt.datetime.fromisoformat(raw) if isinstance(raw, str) else None
+        except ValueError:
+            source_at = None
+        if source_at is None or source_at.tzinfo is None:
+            statuses[key] = "stale"
+            continue
+        age_hours = (built_at - source_at).total_seconds() / 3600
+        statuses[key] = "stale" if age_hours > FRESHNESS_SLA_HOURS else "current"
+
+
+def sync_stale_source_markers(html: str, manifest: dict) -> str:
+    html = re.sub(
+        r'<span class="chip warn" data-stale-source="[^"]+">.*?</span>',
+        "",
+        html,
+        flags=re.S,
+    )
+    statuses = manifest.get("source_status")
+    timestamps = manifest.get("source_snapshot_as_of")
+    if not isinstance(statuses, dict) or not isinstance(timestamps, dict):
+        return html
+    markers = []
+    for key, label in SOURCE_STATUS_LABELS.items():
+        if statuses.get(key) != "stale":
+            continue
+        raw = timestamps.get(key)
+        try:
+            source_at = dt.datetime.fromisoformat(raw).astimezone(KST) if isinstance(raw, str) else None
+        except ValueError:
+            source_at = None
+        stamp = source_at.strftime("%m-%d %H:%M") if source_at else "확인 불가"
+        markers.append(
+            f'<span class="chip warn" data-stale-source="{key}">{label} 원천 지연 · 마지막 확인 {stamp}</span>'
+        )
+    if not markers:
+        return html
+    chips = re.compile(r'(<div class="chips num">.*?)(</div>)', re.S)
+    updated, count = chips.subn(lambda match: match.group(1) + "".join(markers) + match.group(2), html, count=1)
+    if count != 1:
+        raise RuntimeError("header chips container not found for stale-source disclosure")
+    return updated
+
+
+def remove_owned_media_reference_cards(html: str) -> str:
+    """Remove legacy owned-media reference KPIs from all month headlines."""
+    card = re.compile(
+        r'<div class="kpi"><div class="ic">(?:(?!</div>).)*</div><div>\s*'
+        r'<div class="k">온드미디어 · 참고</div><div class="v num">.*?</div>\s*'
+        r'<div class="s">(?:<span class="pill flat">)?3팀 스코프 밖 · 스택 최상단'
+        r'(?:</span>)?</div></div></div>',
+        re.S,
+    )
+    updated = card.sub("", html)
+
+    updated = updated.replace(
+        "grid-template-columns:repeat(4,minmax(0,1fr))",
+        "grid-template-columns:repeat(3,minmax(0,1fr))",
+        1,
+    )
+    updated = updated.replace(
+        "grid-template-columns:repeat(4,1fr)",
+        "grid-template-columns:repeat(3,1fr)",
+        1,
+    )
+    if ".chip.warn{" not in updated:
+        updated = updated.replace(
+            ".chip.vi{color:var(--violet)}",
+            ".chip.vi{color:var(--violet)}\n.chip.warn{color:#B45309;background:#FFFBEB;border-color:#FDE68A}",
+            1,
+        )
+    if "온드미디어 · 참고" in updated or "3팀 스코프 밖 · 스택 최상단" in updated:
+        raise RuntimeError("legacy owned-media reference KPI removal was incomplete")
+    return updated
 
 
 def update_default_month_state(html: str, month: int) -> str:
@@ -555,10 +666,20 @@ def update_live_activity_rows(
         '<span class="metric-cell"><b>—</b></span></div>'
     )
 
+    def source_meta(data: dict) -> str:
+        package_key = str(data.get("package_key") or data.get("team") or "").lower()
+        package = PACKAGE_LABELS.get(
+            package_key,
+            str(data.get("package") or data.get("team") or "패키지 미분류"),
+        )
+        pgm = str(data.get("pgm") or "").strip()
+        return " · ".join(part for part in (package, pgm, "실적 원천") if part)
+
     def repl(match: re.Match) -> str:
         row = match.group(0)
         date = match.group("date")
-        brand = re.sub(r'<.*?>', '', match.group("brand_html")).strip()
+        brand_html = match.group("brand_link") or match.group("brand_text")
+        brand = html_lib.unescape(re.sub(r'<.*?>', '', brand_html)).strip()
         data = by_key.get((date, brand))
         if not data:
             return re.sub(
@@ -573,16 +694,71 @@ def update_live_activity_rows(
             f'<span class="metric-cell"><b>{fmt_won(data["gmv_1d"])}</b></span>'
             f'<span class="metric-cell"><b>{fmt_won(data["gmv_1h"]) if data["gmv_1h"] else "—"}</b></span></div>'
         )
-        return re.sub(r'<div class="activity-metric metric-trio num">.*?</div>', metrics, row, count=1, flags=re.S)
+        rendered = re.sub(r'<div class="activity-metric metric-trio num">.*?</div>', metrics, row, count=1, flags=re.S)
+        if "실적 원천" in rendered:
+            rendered = re.sub(
+                r'<small class="activity-inline-meta">.*?실적 원천</small>',
+                f'<small class="activity-inline-meta">{html_lib.escape(source_meta(data))}</small>',
+                rendered,
+                count=1,
+            )
+        return rendered
 
     period_prefix = re.escape(f"{year:04d}-{month:02d}")
     pattern = re.compile(
         rf'<div class="activity-row">\s*<time class="activity-date" datetime="(?P<date>{period_prefix}-\d{{2}})">.*?</time>.*?'
-        r'<a class="content-link" data-content-link="live"[^>]*>(?P<brand_html>.*?)<span aria-hidden="true">↗</span></a>.*?'
+        r'(?:<a class="content-link" data-content-link="live"[^>]*>(?P<brand_link>.*?)<span aria-hidden="true">↗</span></a>'
+        r'|<b class="content-title">(?P<brand_text>.*?)</b>).*?'
         r'<div class="activity-metric metric-trio num">.*?</div></div>',
         re.S,
     )
-    return pattern.sub(repl, html)
+    updated = pattern.sub(repl, html)
+    existing_keys: set[tuple[str, str]] = set()
+    for match in pattern.finditer(updated):
+        brand_html = match.group("brand_link") or match.group("brand_text")
+        brand = html_lib.unescape(re.sub(r'<.*?>', '', brand_html)).strip()
+        existing_keys.add((match.group("date"), brand))
+
+    for data in rows:
+        key = (data["date"].isoformat(), data["brand"])
+        if key in existing_keys or not (data["gmv_1d"] > 0 or data["viewers"] > 0 or data["gmv_1h"] > 0):
+            continue
+        week = (data["date"].day - 1) // 7 + 1
+        activity = (
+            '<div class="activity-row">'
+            f'<time class="activity-date" datetime="{data["date"].isoformat()}">{fmt_m_d(data["date"])}</time>'
+            '<div class="activity-main activity-main-inline"><span class="activity-title-line">'
+            f'<b class="content-title">{html_lib.escape(data["brand"])}</b>'
+            f'<small class="activity-inline-meta">{html_lib.escape(source_meta(data))}</small></span></div>'
+            '<div class="activity-metric metric-trio num">'
+            f'<span class="metric-cell"><b>{data["viewers"]:,}</b></span>'
+            f'<span class="metric-cell"><b>{fmt_won(data["gmv_1d"])}</b></span>'
+            f'<span class="metric-cell"><b>{fmt_won(data["gmv_1h"]) if data["gmv_1h"] else "—"}</b></span>'
+            '</div></div>'
+        )
+        week_pattern = re.compile(
+            rf'(<details class="week-group" data-week-group="{month}-{week}"[^>]*>.*?<div class="week-items">)'
+            r'(?P<body>.*?)(</div></details>)',
+            re.S,
+        )
+
+        def insert_activity(match: re.Match, *, activity=activity, row_date=key[0]) -> str:
+            body = match.group("body")
+            insert_at = len(body)
+            for existing in re.finditer(
+                r'<div class="activity-row">\s*<time class="activity-date" datetime="(?P<date>\d{4}-\d{2}-\d{2})">',
+                body,
+            ):
+                if existing.group("date") > row_date:
+                    insert_at = existing.start()
+                    break
+            return match.group(1) + body[:insert_at] + activity + body[insert_at:] + match.group(3)
+
+        updated, inserted = week_pattern.subn(insert_activity, updated, count=1)
+        if inserted != 1:
+            raise RuntimeError(f"live activity week group not found: {month}-{week}")
+        existing_keys.add(key)
+    return updated
 
 
 def update_chips_footer_and_live_row(html: str, now: dt.datetime, summary: dict, ingest: str | None) -> str:
@@ -624,7 +800,13 @@ def update_chips_footer_and_live_row(html: str, now: dt.datetime, summary: dict,
     return html
 
 
-def refresh(html_path: Path, db_path: Path, quiet: bool = False) -> dict:
+def refresh(
+    html_path: Path,
+    db_path: Path,
+    quiet: bool = False,
+    *,
+    preserve_payload_hash: bool = False,
+) -> dict:
     now = dt.datetime.now(KST)
     year, month = now.year, now.month
     prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
@@ -634,6 +816,7 @@ def refresh(html_path: Path, db_path: Path, quiet: bool = False) -> dict:
     revenue_snapshot = fetch_current_revenue_snapshot(db_path, now.date())
 
     html = html_path.read_text(encoding="utf-8")
+    html = remove_owned_media_reference_cards(html)
     html = update_default_month_state(html, month)
     html = update_live_quality(html, summary, month=month)
     html = update_live_activity_rows(html, rows, year=year, month=month)
@@ -654,6 +837,8 @@ def refresh(html_path: Path, db_path: Path, quiet: bool = False) -> dict:
         payload,
         touched_sources={"revenue_mirror", "live_quality", "okr_targets"},
         default_month=month,
+        update_payload_hash=not preserve_payload_hash,
+        force_stale_sources={"yt_quality", "owned_media"} if preserve_payload_hash else frozenset(),
     )
     before = html_path.read_text(encoding="utf-8")
     changed = before != html
@@ -698,10 +883,20 @@ def main() -> int:
     parser.add_argument("--duckdb", default=str(DEFAULT_DUCKDB))
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--allow-dirty", action="store_true")
+    parser.add_argument(
+        "--preserve-payload-hash",
+        action="store_true",
+        help="Keep the retained YouTube contract hash when its source refresh is unavailable",
+    )
     args = parser.parse_args()
     html_path = Path(args.html)
     assert_safe_default_refresh(html_path, allow_dirty=args.allow_dirty)
-    refresh(html_path, Path(args.duckdb), args.quiet)
+    refresh(
+        html_path,
+        Path(args.duckdb),
+        args.quiet,
+        preserve_payload_hash=args.preserve_payload_hash,
+    )
     return 0
 
 

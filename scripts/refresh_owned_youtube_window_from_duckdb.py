@@ -18,6 +18,8 @@ from pathlib import Path
 
 import duckdb
 
+from refresh_live_daily_from_duckdb import _reconcile_source_statuses, sync_stale_source_markers
+
 KST = dt.timezone(dt.timedelta(hours=9))
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_HTML = ROOT / "index.html"
@@ -33,6 +35,21 @@ def ensure_date(value) -> dt.date:
     if isinstance(value, dt.date):
         return value
     return dt.date.fromisoformat(str(value)[:10])
+
+
+def canonical_youtube_url(video_id, source_url) -> str:
+    candidates = [str(video_id or "")]
+    url = str(source_url or "")
+    match = re.search(
+        r'(?:youtu\.be/|youtube\.com/(?:shorts/|watch\?v=))([A-Za-z0-9_-]{11})',
+        url,
+    )
+    if match:
+        candidates.append(match.group(1))
+    for candidate in candidates:
+        if re.fullmatch(r"[A-Za-z0-9_-]{11}", candidate):
+            return f"https://www.youtube.com/watch?v={candidate}"
+    return url
 
 
 def fmt_m_d(day: dt.date | None) -> str:
@@ -376,7 +393,7 @@ def _activity_row(item: dict) -> str:
     state = "" if d7_complete else " · D+7 수집중"
     return f'''<div class="activity-row">
               <time class="activity-date" datetime="{day.isoformat()}">{day.month}/{day.day}</time>
-              <div class="activity-main activity-main-inline"><span class="activity-title-line"><a class="content-link" data-content-link="youtube" href="{esc(item.get('url'))}" target="_blank" rel="noopener">{esc(title)}<span aria-hidden="true">↗</span></a><small class="activity-inline-meta">{esc(form + state)}</small></span></div>
+              <div class="activity-main activity-main-inline"><span class="activity-title-line"><a class="content-link" data-content-link="youtube" href="{esc(canonical_youtube_url(item.get('video_id'), item.get('url')))}" target="_blank" rel="noopener">{esc(title)}<span aria-hidden="true">↗</span></a><small class="activity-inline-meta">{esc(form + state)}</small></span></div>
               <div class="activity-metric metric-trio num"><span class="metric-cell"><b>{esc(fmt_num(item.get('views_total')) if item.get('views_total') is not None else '—')}</b></span><span class="metric-cell"><b>{esc(d7)}</b></span><span class="metric-cell"><b>{esc(pis)}</b></span></div></div>'''
 
 
@@ -663,7 +680,7 @@ def render_content_card(item: dict) -> str:
     meta = f"{item['form']} · {item['ip']} · {fmt_m_d(item['publish_date'])}"
     return f'''
         <article class="yt-weekly-card" data-yt-weekly-card="mtd-{esc(item['video_id'])}">
-          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="{esc(item['url'])}" target="_blank" rel="noopener">{esc(title)}<span aria-hidden="true">↗</span></a></b><small>{esc(meta)}</small></div><span class="yt-tier">{esc(tier)}</span></div>
+          <div class="yt-weekly-title"><div><b><a class="content-link" data-content-link="youtube" href="{esc(canonical_youtube_url(item.get('video_id'), item.get('url')))}" target="_blank" rel="noopener">{esc(title)}<span aria-hidden="true">↗</span></a></b><small>{esc(meta)}</small></div><span class="yt-tier">{esc(tier)}</span></div>
           <div class="yt-weekly-metrics"><span><small>현재</small><b>{esc(fmt_num(item['views']))}</b></span><span><small>기준</small><b>public D+N</b></span><span><small>상태</small><b>complete</b></span></div>
           <div class="yt-card-note"><b>판정:</b> 월 누적 상세탭의 콘텐츠 참고 카드입니다. Highlight/Lowlight 판정은 동종 D+N 벤치마크가 있을 때만 별도 표시합니다.</div>
         </article>'''
@@ -797,6 +814,7 @@ def update_manifest_sources(
         if not value:
             raise RuntimeError(f"source timestamp missing for {key}")
         stamps[key] = value
+    _reconcile_source_statuses(manifest, built)
     payload_bytes = json.dumps(
         payload,
         ensure_ascii=False,
@@ -806,7 +824,8 @@ def update_manifest_sources(
     ).encode()
     manifest["source_payload_sha256"] = hashlib.sha256(payload_bytes).hexdigest()
     raw = json.dumps(manifest, ensure_ascii=False, separators=(",", ":"))
-    return manifest_re.sub(lambda m: m.group(1) + raw + m.group(3), html, count=1)
+    updated = manifest_re.sub(lambda m: m.group(1) + raw + m.group(3), html, count=1)
+    return sync_stale_source_markers(updated, manifest)
 
 
 def update_default_month_state(html: str, month: int) -> str:

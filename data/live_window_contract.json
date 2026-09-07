@@ -1,7 +1,7 @@
 {
   "contract_id": "mbd-live-window-2026-09-mtd-v2",
   "source": {
-    "duckdb": "/tmp/mbd_h2_target_snapshot.duckdb",
+    "duckdb": "/tmp/mbd-h2-pages-source-snapshot.duckdb",
     "schema_table": "live.raw_slots",
     "period": "2026-09-01~2026-09-03",
     "latest_completed_date": "2026-09-03",

@@ -211,6 +211,88 @@ class MbdH2CronRuntimeTest(unittest.TestCase):
             self.assertEqual({entry["log_dir"] for entry in entries}, {str(persistent_logs)})
             self.assertFalse(executed.exists(), "ephemeral clone must be cleaned after execution")
 
+    def test_cron_runner_deploys_mbd_when_youtube_snapshot_is_unavailable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source"
+            runtime_parent = root / "runtime"
+            persistent_logs = root / "logs"
+            py_log = root / "python-shim.jsonl"
+            py_shim = root / "python-shim"
+            fake_gh = root / "gh"
+            source.mkdir()
+            self._write_inert_daily_wrapper_fixture(source)
+            contract = source / "data" / "owned_youtube_window_contract.json"
+            contract_before = contract.read_bytes()
+            py_shim.write_text(
+                "#!/usr/bin/env python3\n"
+                "import json, os, pathlib, sys\n"
+                "entry={'argv':sys.argv[1:],'cwd':os.getcwd()}\n"
+                "with pathlib.Path(os.environ['PY_SHIM_LOG']).open('a',encoding='utf-8') as fh:\n"
+                "    fh.write(json.dumps(entry,sort_keys=True)+'\\n')\n"
+                "script=sys.argv[1] if len(sys.argv)>1 else ''\n"
+                "if script.endswith('fetch_target_youtube_snapshot.py'):\n"
+                "    raise SystemExit(1)\n"
+                "if script.endswith('refresh_live_daily_from_duckdb.py'):\n"
+                "    pathlib.Path('index.html').write_text('<html>fresh MBD/live</html>\\n',encoding='utf-8')\n"
+                "raise SystemExit(0)\n",
+                encoding="utf-8",
+            )
+            py_shim.chmod(0o755)
+            fake_gh.write_text(
+                "#!/usr/bin/env python3\n"
+                "import sys\n"
+                "if sys.argv[1:3] == ['run', 'list']:\n"
+                "    print('123')\n"
+                "raise SystemExit(0)\n",
+                encoding="utf-8",
+            )
+            fake_gh.chmod(0o755)
+            self._run(["git", "init", "-b", "main"], cwd=source)
+            self._run(["git", "add", "."], cwd=source)
+            self._run(
+                [
+                    "git", "-c", "user.name=MBD Test", "-c", "user.email=mbd-test@example.invalid",
+                    "commit", "-m", "fixture",
+                ],
+                cwd=source,
+            )
+            self._run(["git", "config", "receive.denyCurrentBranch", "updateInstead"], cwd=source)
+            env = os.environ.copy()
+            env.update(
+                {
+                    "MBD_H2_CLONE_URL": str(source),
+                    "MBD_H2_RUNTIME_PARENT": str(runtime_parent),
+                    "MBD_H2_LOG_DIR": str(persistent_logs),
+                    "MBD_H2_PYTHON": str(py_shim),
+                    "MBD_H2_MAX_ATTEMPTS": "1",
+                    "MBD_H2_RETRY_SLEEP_SECONDS": "0",
+                    "MBD_H2_MAX_RUNTIME_SECONDS": "60",
+                    "PY_SHIM_LOG": str(py_log),
+                    "PATH": str(root) + os.pathsep + env["PATH"],
+                    "GIT_AUTHOR_NAME": "MBD Test",
+                    "GIT_AUTHOR_EMAIL": "mbd-test@example.invalid",
+                    "GIT_COMMITTER_NAME": "MBD Test",
+                    "GIT_COMMITTER_EMAIL": "mbd-test@example.invalid",
+                }
+            )
+            result = self._run(["/bin/bash", str(RUNNER)], env=env, check=False)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("YouTube snapshot unavailable", result.stdout + result.stderr)
+            self.assertEqual(contract.read_bytes(), contract_before)
+            self.assertEqual((source / "index.html").read_text(encoding="utf-8"), "<html>fresh MBD/live</html>\n")
+            entries = [json.loads(line) for line in py_log.read_text(encoding="utf-8").splitlines()]
+            commands = [entry["argv"][0] for entry in entries if entry["argv"]]
+            self.assertIn("scripts/fetch_target_mbd_snapshot.py", commands)
+            self.assertIn("scripts/refresh_live_daily_from_duckdb.py", commands)
+            self.assertIn("scripts/refresh_live_window_from_duckdb.py", commands)
+            self.assertNotIn("scripts/refresh_owned_youtube_window_from_duckdb.py", commands)
+            live_entry = next(
+                entry for entry in entries
+                if entry["argv"] and entry["argv"][0] == "scripts/refresh_live_daily_from_duckdb.py"
+            )
+            self.assertIn("--preserve-payload-hash", live_entry["argv"])
+
     def test_cron_runner_parent_signals_stop_child_and_remove_clone(self):
         self.assertTrue(RUNNER.is_file(), f"missing cron runner: {RUNNER}")
         with tempfile.TemporaryDirectory() as tmp:
@@ -882,6 +964,15 @@ class MbdH2CronRuntimeTest(unittest.TestCase):
         self.assertIn("MBD_H2_PAGES_STALE_PUBLIC_READBACK", wrapper)
         self.assertIn("ERROR: public readback contract failed", wrapper)
         self.assertNotIn("ERROR: public readback failed", wrapper)
+        self.assertIn("YOUTUBE_SNAPSHOT_READY=0", wrapper)
+        self.assertIn("WARNING: YouTube snapshot unavailable; preserving the last verified YouTube surfaces", wrapper)
+        self.assertLess(
+            wrapper.index("scripts/fetch_target_mbd_snapshot.py"),
+            wrapper.index("scripts/fetch_target_youtube_snapshot.py"),
+        )
+        self.assertIn("--allow-stale-source yt_quality", wrapper)
+        self.assertIn("--allow-stale-source owned_media", wrapper)
+        self.assertIn("--preserve-payload-hash", wrapper)
 
     def test_daily_wrapper_never_uses_retired_company_mac_mbd_db(self):
         wrapper = (REPO / "ops" / "mbd_h2_pages_live_daily_refresh.sh").read_text(encoding="utf-8")

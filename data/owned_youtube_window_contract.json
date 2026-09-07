@@ -1,13 +1,13 @@
 {
   "contract_id": "owned-youtube-window-2026-09-mtd-v1",
   "source": {
-    "duckdb": "/tmp/mbd_h2_youtube_target_snapshot.duckdb",
+    "duckdb": "/tmp/mbd-h2-pages-youtube-source-snapshot.duckdb",
     "monthly_period": "2026-09-01~2026-09-04",
     "period_complete": false,
     "raw_status": "ok",
     "source_as_of": {
       "yt_quality": "2026-09-05T15:57:36+09:00",
-      "owned_media": "2026-09-05T15:57:35+09:00"
+      "owned_media": "2026-09-05T15:57:50+09:00"
     }
   },
   "required_copy": [
@@ -37,8 +37,8 @@
     },
     {
       "label": "발행",
-      "value": "1건",
-      "em": "LF 0 · SF 1"
+      "value": "11건",
+      "em": "LF 1 · SF 10"
     },
     {
       "label": "당월/당주 발행 기여",
@@ -77,11 +77,11 @@
   "main_surface": {
     "year": 2026,
     "month": 9,
-    "publish_count": 1,
-    "lf_publish_count": 0,
-    "sf_publish_count": 1,
-    "latest_publish_date": "2026-09-01",
-    "snapshot_date": "2026-09-05",
+    "publish_count": 11,
+    "lf_publish_count": 1,
+    "sf_publish_count": 10,
+    "latest_publish_date": "2026-09-06",
+    "snapshot_date": "2026-09-07",
     "elapsed_weeks": 1,
     "quality_basis": "analytics-d7",
     "d7_completed": 0,

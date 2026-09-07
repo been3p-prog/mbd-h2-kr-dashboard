@@ -73,27 +73,39 @@ CURRENT_STAGE="dashboard_regression_tests"
 "$PY" -m unittest scripts/test_verify_dashboard.py -v
 "$PY" -m unittest scripts/test_finalize_month_review.py -v
 
-CURRENT_STAGE="fetch_target_youtube_snapshot"
-mbd_h2_run_with_retry "fetch_target_youtube_snapshot" "$LOG" \
-  "$PY" scripts/fetch_target_youtube_snapshot.py --output "$YT_SNAPSHOT_CACHE" --quiet
 CURRENT_STAGE="fetch_target_mbd_snapshot"
 mbd_h2_run_with_retry "fetch_target_mbd_snapshot" "$LOG" \
   "$PY" scripts/fetch_target_mbd_snapshot.py --output "$MBD_SNAPSHOT_CACHE" --quiet
+YOUTUBE_SNAPSHOT_READY=0
+CURRENT_STAGE="fetch_target_youtube_snapshot"
+if mbd_h2_run_with_retry "fetch_target_youtube_snapshot" "$LOG" \
+  "$PY" scripts/fetch_target_youtube_snapshot.py --output "$YT_SNAPSHOT_CACHE" --quiet; then
+  YOUTUBE_SNAPSHOT_READY=1
+else
+  echo "WARNING: YouTube snapshot unavailable; preserving the last verified YouTube surfaces"
+fi
+export YOUTUBE_SNAPSHOT_READY
+LIVE_DAILY_ARGS=(scripts/refresh_live_daily_from_duckdb.py --quiet --duckdb "$MBD_SNAPSHOT_CACHE")
+if [[ "$YOUTUBE_SNAPSHOT_READY" != 1 ]]; then
+  LIVE_DAILY_ARGS+=(--preserve-payload-hash)
+fi
 CURRENT_STAGE="refresh_live_daily"
-mbd_h2_run_with_retry "refresh_live_daily" "$LOG" "$PY" \
-  scripts/refresh_live_daily_from_duckdb.py --quiet --duckdb "$MBD_SNAPSHOT_CACHE"
+mbd_h2_run_with_retry "refresh_live_daily" "$LOG" "$PY" "${LIVE_DAILY_ARGS[@]}"
 CURRENT_STAGE="refresh_live_window"
 mbd_h2_run_with_retry "refresh_live_window" "$LOG" "$PY" \
   scripts/refresh_live_window_from_duckdb.py --quiet --duckdb "$MBD_SNAPSHOT_CACHE"
-CURRENT_STAGE="refresh_owned_youtube_window"
-mbd_h2_run_with_retry "refresh_owned_youtube_window" "$LOG" "$PY" \
-  scripts/refresh_owned_youtube_window_from_duckdb.py --quiet --duckdb "$YT_SNAPSHOT_CACHE"
+if [[ "$YOUTUBE_SNAPSHOT_READY" == 1 ]]; then
+  CURRENT_STAGE="refresh_owned_youtube_window"
+  mbd_h2_run_with_retry "refresh_owned_youtube_window" "$LOG" "$PY" \
+    scripts/refresh_owned_youtube_window_from_duckdb.py --quiet --duckdb "$YT_SNAPSHOT_CACHE"
+fi
 
 # Guard before committing. These deterministic checks must fail fast.
 CURRENT_STAGE="git_diff_check"
 git diff --check
 CURRENT_STAGE="dashboard_freshness_guard"
-"$PY" scripts/verify_dashboard.py index.html --require-fresh
+"$PY" scripts/verify_dashboard.py index.html --require-fresh \
+  --allow-stale-source yt_quality --allow-stale-source owned_media
 CURRENT_STAGE="dashboard_smoke"
 "$PY" scripts/smoke_dashboard.py index.html
 CURRENT_STAGE="live_window_contract"
@@ -101,6 +113,9 @@ CURRENT_STAGE="live_window_contract"
 
 if git diff --quiet -- index.html data/live_window_contract.json data/owned_youtube_window_contract.json scripts/verify_dashboard.py scripts/test_verify_dashboard.py scripts/smoke_dashboard.py scripts/refresh_live_daily_from_duckdb.py scripts/refresh_live_window_from_duckdb.py scripts/refresh_owned_youtube_window_from_duckdb.py; then
   # Healthy no-op: stay silent for no_agent cron.
+  if [[ "$YOUTUBE_SNAPSHOT_READY" != 1 ]]; then
+    echo "WARNING: YouTube snapshot unavailable; preserved last verified YouTube surfaces" >&4
+  fi
   exit 0
 fi
 
@@ -259,5 +274,9 @@ PY
 
 CURRENT_STAGE="public_readback"
 mbd_h2_run_with_retry "public_readback" "$LOG" public_readback_once
+
+if [[ "$YOUTUBE_SNAPSHOT_READY" != 1 ]]; then
+  echo "WARNING: YouTube snapshot unavailable; preserved last verified YouTube surfaces" >&4
+fi
 
 # Healthy success: stay silent for no_agent cron.

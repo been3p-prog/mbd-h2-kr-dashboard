@@ -226,9 +226,9 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
         if layout.get("monthRootsOutsideMain") != 0:
             errors.append(
                 f"{tag}: month roots outside main={layout.get('monthRootsOutsideMain')} != 0")
-        if layout.get("currentKpiCount") != 4:
+        if layout.get("currentKpiCount") != 3:
             errors.append(
-                f"{tag}: current KPI direct-child count={layout.get('currentKpiCount')} != 4")
+                f"{tag}: current KPI direct-child count={layout.get('currentKpiCount')} != 3")
     if switch_expected:
         if result.get("optionCount") != 12:
             errors.append(f"{tag}: month selector has {result.get('optionCount')} options (expected 12)")

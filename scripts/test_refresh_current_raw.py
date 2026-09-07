@@ -81,6 +81,8 @@ class CurrentRawRefreshTest(unittest.TestCase):
                 ("2026-08-20", "D", "1P", "스마트", "일반", "", "1,100,000", "10", "0", "0"),
                 ("2026-08-20", "E", "3P", "에센셜", "일반", "보상성 무상 지원", "9,900,000", "10", "0", "0"),
                 ("2026-08-20", "F", "3P", "에센셜", "취소", "취소 편성", "8,800,000", "10", "0", "0"),
+                ("2026-08-21", "G", "", "시그니처", "일반", "", "9,900,000", "70", "75,000,000", "15,000,000"),
+                ("2026-08-22", "H", "1P", "스마트", "일반", "", "8,800,000", "60", "60,000,000", "12,000,000"),
             ],
         )
         con.execute('''
@@ -138,6 +140,12 @@ class CurrentRawRefreshTest(unittest.TestCase):
         self.assertNotIn("D", brands)
         self.assertNotIn("E", brands)
         self.assertNotIn("F", brands)
+        self.assertIn("G", brands)
+        self.assertIn("H", brands)
+        summary = refresh.summarize(rows, [])
+        self.assertEqual(summary["overall"]["n"], 4)
+        self.assertEqual(summary["overall"]["sum"], 495_000_000)
+        self.assertEqual(summary["overall"]["avg"], 123_750_000)
 
     def test_live_activity_keeps_schedule_but_scrubs_excluded_metrics(self):
         def activity_row(day, brand):
@@ -153,15 +161,23 @@ class CurrentRawRefreshTest(unittest.TestCase):
                 '<span class="metric-cell"><b>9.99억</b></span></div></div>'
             )
 
+        schedule = (
+            ("2026-08-09", "A"),
+            ("2026-08-25", "C"),
+            ("2026-08-20", "D"),
+            ("2026-08-20", "E"),
+            ("2026-08-20", "F"),
+            ("2026-08-21", "G"),
+            ("2026-08-22", "H"),
+        )
+        week_rows = {}
+        for day, brand in schedule:
+            week = (int(day[-2:]) - 1) // 7 + 1
+            week_rows.setdefault(week, []).append(activity_row(day, brand))
         html = ''.join(
-            activity_row(day, brand)
-            for day, brand in (
-                ("2026-08-09", "A"),
-                ("2026-08-25", "C"),
-                ("2026-08-20", "D"),
-                ("2026-08-20", "E"),
-                ("2026-08-20", "F"),
-            )
+            f'<details class="week-group" data-week-group="8-{week}"><summary>{week}주차</summary>'
+            f'<div class="week-items">{"".join(week_rows[week])}</div></details>'
+            for week in sorted(week_rows)
         )
         rows, _ = refresh.fetch_live_rows(
             self.db_path,
@@ -173,6 +189,10 @@ class CurrentRawRefreshTest(unittest.TestCase):
         rendered = refresh.update_live_activity_rows(html, rows, year=2026, month=8)
 
         self.assertIn('<b>100</b>', rendered)
+        self.assertIn('<b>70</b>', rendered)
+        self.assertIn('<b>7,500만</b>', rendered)
+        self.assertIn('<b>60</b>', rendered)
+        self.assertIn('<b>6,000만</b>', rendered)
         rendered_rows = {
             match.group("brand"): match.group("metrics")
             for match in re.finditer(
@@ -185,6 +205,90 @@ class CurrentRawRefreshTest(unittest.TestCase):
         }
         for brand in ("C", "D", "E", "F"):
             self.assertEqual(rendered_rows[brand].count('<b>—</b>'), 3, brand)
+
+    def test_live_activity_updates_nonlinked_schedule_titles(self):
+        html = (
+            '<div class="activity-row">'
+            '<time class="activity-date" datetime="2026-09-01">9/1</time>'
+            '<div class="activity-main activity-main-inline"><span class="activity-title-line">'
+            '<b class="content-title">폴인퍼니</b><small class="activity-inline-meta">스마트 · 일반</small>'
+            '</span></div><div class="activity-metric metric-trio num">'
+            '<span class="metric-cell"><b>—</b></span><span class="metric-cell"><b>—</b></span>'
+            '<span class="metric-cell"><b>—</b></span></div></div>'
+        )
+        rows = [{
+            "date": dt.date(2026, 9, 1),
+            "brand": "폴인퍼니",
+            "viewers": 5_252,
+            "gmv_1d": 94_510_000,
+            "gmv_1h": 50_770_000,
+        }]
+
+        rendered = refresh.update_live_activity_rows(html, rows, year=2026, month=9)
+
+        self.assertIn('<b>5,252</b>', rendered)
+        self.assertIn('<b>9,451만</b>', rendered)
+        self.assertIn('<b>5,077만</b>', rendered)
+
+    def test_live_activity_inserts_missing_completed_source_row_once(self):
+        html = (
+            '<details class="week-group" data-week-group="9-1" open><summary>1주차</summary>'
+            '<div class="week-items"><div class="activity-column-head">head</div>'
+            '<div class="activity-row"><time class="activity-date" datetime="2026-09-03">9/3</time>'
+            '<div class="activity-main activity-main-inline"><span class="activity-title-line">'
+            '<b class="content-title">기존 일정</b></span></div>'
+            '<div class="activity-metric metric-trio num"><span class="metric-cell"><b>—</b></span>'
+            '<span class="metric-cell"><b>—</b></span><span class="metric-cell"><b>—</b></span></div></div>'
+            '</div></details>'
+        )
+        rows = [{
+            "date": dt.date(2026, 9, 2),
+            "brand": "원천 완료 방송",
+            "team": "SMART",
+            "pgm": "오세일",
+            "viewers": 4_120,
+            "gmv_1d": 32_010_000,
+            "gmv_1h": 1_960_000,
+        }]
+
+        rendered = refresh.update_live_activity_rows(html, rows, year=2026, month=9)
+        rendered_twice = refresh.update_live_activity_rows(rendered, rows, year=2026, month=9)
+
+        self.assertEqual(rendered_twice.count("원천 완료 방송"), 1)
+        self.assertLess(rendered_twice.index("원천 완료 방송"), rendered_twice.index("기존 일정"))
+        self.assertIn('<b>4,120</b>', rendered_twice)
+        self.assertIn('<b>3,201만</b>', rendered_twice)
+        self.assertIn('<b>196만</b>', rendered_twice)
+        self.assertIn("스마트 · 오세일 · 실적 원천", rendered_twice)
+
+    def test_remove_owned_media_reference_cards_from_all_months(self):
+        html = (
+            '<style>.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}</style>'
+            '<div class="kpis"><div class="kpi"><div class="ic">A</div><div><div class="k">현재 RAW 누적</div></div></div>'
+            '<div class="kpi"><div class="ic">O</div><div><div class="k">온드미디어 · 참고</div><div class="v num">5,000만</div>'
+            '<div class="s"><span class="pill flat">3팀 스코프 밖 · 스택 최상단</span></div></div></div></div>'
+            '<div class="kpis"><div class="kpi"><div class="ic">B</div><div><div class="k">다음 달 부킹</div></div></div>'
+            '<div class="kpi"><div class="ic">O</div><div><div class="k">온드미디어 · 참고</div><div class="v num">5,000만</div>'
+            '<div class="s"><span class="pill flat">3팀 스코프 밖 · 스택 최상단</span></div></div></div></div>'
+        )
+        updated = refresh.remove_owned_media_reference_cards(html)
+        self.assertNotIn("온드미디어 · 참고", updated)
+        self.assertNotIn("3팀 스코프 밖 · 스택 최상단", updated)
+        self.assertEqual(updated.count('class="kpi"'), 2)
+        self.assertIn("grid-template-columns:repeat(3,1fr)", updated)
+        self.assertNotIn("grid-template-columns:repeat(4,1fr)", updated)
+
+    def test_youtube_links_are_rendered_as_canonical_watch_urls(self):
+        video_id = "b-AUWNqzojY"
+        expected = f"https://www.youtube.com/watch?v={video_id}"
+        self.assertEqual(
+            owned_refresh.canonical_youtube_url(video_id, f"https://youtu.be/{video_id}"),
+            expected,
+        )
+        self.assertEqual(
+            owned_refresh.canonical_youtube_url(video_id, f"https://youtube.com/shorts/{video_id}"),
+            expected,
+        )
 
     def test_manifest_advances_only_touched_source_timestamps(self):
         old = "2026-08-09T09:00:00+09:00"
@@ -218,6 +322,42 @@ class CurrentRawRefreshTest(unittest.TestCase):
         self.assertEqual(result["source_snapshot_as_of"]["yt_quality"], old)
         self.assertEqual(result["source_snapshot_as_of"]["okr_targets"], built)
         self.assertEqual(result["source_snapshot_as_of"]["owned_media"], old)
+
+    def test_manifest_can_preserve_retained_youtube_payload_hash(self):
+        old = "2026-08-09T09:00:00+09:00"
+        retained_hash = "a" * 64
+        manifest = {
+            "built_at_kst": old,
+            "source_snapshot_as_of": {
+                "revenue_mirror": old,
+                "live_quality": old,
+                "yt_quality": old,
+                "okr_targets": old,
+                "owned_media": old,
+            },
+            "source_payload_sha256": retained_hash,
+        }
+        html = (
+            '<div class="chips num"><span class="chip">RAW</span></div>'
+            '<script type="application/json" id="mbd-public-guard">'
+            + json.dumps(manifest)
+            + "</script>"
+        )
+        updated = refresh.update_manifest(
+            html,
+            "2026-08-24T10:00:00+09:00",
+            {"live": "new"},
+            touched_sources={"revenue_mirror", "live_quality", "okr_targets"},
+            update_payload_hash=False,
+            force_stale_sources={"yt_quality", "owned_media"},
+        )
+        raw = updated.split('id="mbd-public-guard">', 1)[1].split("</script>", 1)[0]
+        result = json.loads(raw)
+        self.assertEqual(result["source_payload_sha256"], retained_hash)
+        self.assertEqual(result["source_status"]["yt_quality"], "stale")
+        self.assertEqual(result["source_status"]["owned_media"], "stale")
+        self.assertEqual(updated.count('data-stale-source="yt_quality"'), 1)
+        self.assertEqual(updated.count('data-stale-source="owned_media"'), 1)
 
     def test_owned_refresh_advances_only_owned_and_youtube_timestamps(self):
         old = "2026-08-09T09:00:00+09:00"
@@ -991,6 +1131,7 @@ class CurrentRawRefreshTest(unittest.TestCase):
                 "previous_average_views": 1000,
             }
         }
+        candidate = refresh.remove_owned_media_reference_cards(candidate)
         candidate = owned_refresh.update_manifest_sources(
             candidate,
             now.isoformat(timespec="seconds"),
@@ -1203,6 +1344,19 @@ class TargetYoutubeSnapshotTest(unittest.TestCase):
             self.assertEqual(result["snapshot_date"], "2026-08-31")
             self.assertEqual(result["latest_publish_date"], "2026-08-29")
 
+    def test_target_snapshot_validator_accepts_expected_analytics_reporting_lag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, dt.date(2026, 8, 31))
+            con = duckdb.connect(str(path))
+            con.execute("UPDATE fact_analytics_d7 SET fetched_at = TIMESTAMP '2026-08-29 23:58:00', metric_end_date = DATE '2026-08-29'")
+            con.execute("UPDATE v_youtube_monthly_analytics SET fetched_at = TIMESTAMP '2026-08-29 23:58:00', metric_end_date = DATE '2026-08-29'")
+            con.execute("UPDATE v_youtube_weekly_analytics SET fetched_at = TIMESTAMP '2026-08-29 23:58:00', metric_end_date = DATE '2026-08-29'")
+            con.execute("UPDATE v_channel_daily_subscribers SET snapshot_date = DATE '2026-08-30', captured_at = TIMESTAMP '2026-08-30 23:58:00'")
+            con.close()
+            result = target_snapshot.validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+            self.assertEqual(result["snapshot_date"], "2026-08-31")
+
     def test_target_snapshot_validator_rejects_stale_snapshot(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "target.duckdb"
@@ -1235,7 +1389,7 @@ class TargetYoutubeSnapshotTest(unittest.TestCase):
             path = Path(tmp) / "target.duckdb"
             self._fixture(path, dt.date(2026, 8, 31))
             con = duckdb.connect(str(path))
-            con.execute("update v_youtube_monthly_analytics set fetched_at='2026-08-29 23:58:00'")
+            con.execute("update v_youtube_monthly_analytics set fetched_at='2026-08-28 23:58:00'")
             con.close()
             with self.assertRaisesRegex(RuntimeError, "stale target YouTube source"):
                 target_snapshot.validate_snapshot(path, as_of=dt.date(2026, 9, 1))
