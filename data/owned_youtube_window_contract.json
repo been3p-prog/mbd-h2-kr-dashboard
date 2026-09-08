@@ -2,12 +2,12 @@
   "contract_id": "owned-youtube-window-2026-09-mtd-v1",
   "source": {
     "duckdb": "/tmp/mbd_h2_youtube_target_snapshot.duckdb",
-    "monthly_period": "2026-09-01~2026-09-04",
+    "monthly_period": "2026-09-01~2026-09-06",
     "period_complete": false,
     "raw_status": "ok",
     "source_as_of": {
-      "yt_quality": "2026-09-05T15:57:36+09:00",
-      "owned_media": "2026-09-05T15:57:50+09:00"
+      "yt_quality": "2026-09-07T19:38:26+09:00",
+      "owned_media": "2026-09-07T19:38:25+09:00"
     }
   },
   "required_copy": [
@@ -32,63 +32,63 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "39만",
-      "em": "9/1–9/4"
+      "value": "81만",
+      "em": "9/1–9/6"
     },
     {
       "label": "발행",
-      "value": "12건",
-      "em": "LF 1 · SF 11"
+      "value": "13건",
+      "em": "LF 1 · SF 12"
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "1.3만",
+      "value": "19만",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "32만",
+      "value": "56만",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "2,667",
+      "value": "5,536",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "2,138",
-      "em": "댓글 56"
+      "value": "4,471",
+      "em": "댓글 129"
     },
     {
       "label": "공유",
-      "value": "473",
-      "em": "미매칭 5.9만"
+      "value": "936",
+      "em": "미매칭 6.4만"
     }
   ],
   "weekly_rows": [
     {
       "period": "8/31–9/6",
-      "views": 576346,
-      "complete": false
+      "views": 995289,
+      "complete": true
     }
   ],
   "content_cards": [],
   "main_surface": {
     "year": 2026,
     "month": 9,
-    "publish_count": 12,
+    "publish_count": 13,
     "lf_publish_count": 1,
-    "sf_publish_count": 11,
+    "sf_publish_count": 12,
     "latest_publish_date": "2026-09-07",
     "snapshot_date": "2026-09-07",
-    "elapsed_weeks": 1,
+    "elapsed_weeks": 2,
     "quality_basis": "analytics-d7",
     "d7_completed": 0,
     "average_views": 0,
     "lf_average_views": 0,
     "sf_average_views": 0,
     "subscriber_count": 803000,
-    "previous_average_views": 52775
+    "previous_average_views": 53471
   }
 }
