@@ -818,6 +818,9 @@ class SmokeViewportPolicyTest(unittest.TestCase):
                 "hasMain": True,
                 "monthRootCount": 36,
                 "monthRootsOutsideMain": 0,
+                "currentKpiMonth": "9",
+                "currentKpiLabels": ["9월 부킹 총액", "월 목표", "목표 채움"],
+                "currentForecastStates": [],
                 "currentKpiCount": 3,
             },
             "liveWindow": {
@@ -885,6 +888,52 @@ class SmokeViewportPolicyTest(unittest.TestCase):
         result["layout"]["currentKpiCount"] = 1
         errors = sd._check_viewport(result, 1440, 900, "desktop", switch_expected=None)
         self.assertTrue(any("KPI direct-child count" in e for e in errors))
+
+    def test_declared_pending_forecast_requires_four_kpi_roles(self):
+        for width, height, tag in sd.VIEWPORTS:
+            for count in (3, 4, 5):
+                with self.subTest(viewport=tag, count=count):
+                    result = self._result(width)
+                    result["layout"].update(
+                        currentForecastStates=["pending_scope"], currentKpiCount=count,
+                        currentKpiLabels=["9월 마감예상액", "현재 RAW 누적", "월 목표", "마감예상 GAP"],
+                    )
+                    errors = sd._check_viewport(result, width, height, tag, switch_expected=None)
+                    if count == 4:
+                        self.assertEqual(errors, [])
+                    else:
+                        self.assertTrue(any("KPI direct-child count" in error for error in errors))
+
+    def test_four_kpis_require_recognized_declaration_and_roles(self):
+        for states, labels in (
+            ([], ["9월 마감예상액", "현재 RAW 누적", "월 목표", "마감예상 GAP"]),
+            (["unknown"], ["9월 마감예상액", "현재 RAW 누적", "월 목표", "마감예상 GAP"]),
+            (["pending_scope", "pending_scope"], ["9월 마감예상액", "현재 RAW 누적", "월 목표", "마감예상 GAP"]),
+            (["pending_scope"], ["9월 마감예상액", "현재 RAW 누적", "월 목표", "월 목표"]),
+        ):
+            with self.subTest(states=states, labels=labels):
+                result = self._result(1440)
+                result["layout"].update(currentForecastStates=states, currentKpiCount=4, currentKpiLabels=labels)
+                self.assertTrue(sd._check_viewport(result, 1440, 900, "desktop", switch_expected=None))
+
+    def test_canonical_close_preserves_four_roles_without_pending_declaration(self):
+        for count in (3, 4, 5):
+            with self.subTest(count=count):
+                result = self._result(1440)
+                result["layout"].update(
+                    currentKpiCount=count,
+                    currentKpiLabels=["9월 확정 총액", "확정 RAW", "월 목표", "확정 GAP"],
+                )
+                errors = sd._check_viewport(result, 1440, 900, "desktop", switch_expected=None)
+                self.assertEqual(not errors, count == 4)
+
+    def test_legacy_kpi_layout_requires_exactly_three_cards(self):
+        for count in (3, 4, 5):
+            with self.subTest(count=count):
+                result = self._result(1440)
+                result["layout"]["currentKpiCount"] = count
+                errors = sd._check_viewport(result, 1440, 900, "desktop", switch_expected=None)
+                self.assertEqual(not errors, count == 3)
 
     def test_live_window_not_full_width_fails(self):
         result = self._result(1440)

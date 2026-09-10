@@ -110,6 +110,11 @@ def _probe_script(target_month: int) -> str:
         "var currentKpis=document.querySelector('.mvk[data-phase=\"current\"] > .kpis');"
         "out.layout={hasMain:!!main,monthRootCount:monthRoots.length,"
         "monthRootsOutsideMain:Array.prototype.filter.call(monthRoots,function(x){return !main||!main.contains(x);}).length,"
+        "currentKpiMonth:currentKpis?currentKpis.parentElement.dataset.m:null,"
+        "currentKpiLabels:currentKpis?Array.prototype.map.call(currentKpis.querySelectorAll(':scope > .kpi'),function(x){"
+        "var k=x.querySelector('.k');return k&&k.firstChild?k.firstChild.textContent.trim().split(' · ')[0]:null;}):null,"
+        "currentForecastStates:currentKpis?Array.prototype.map.call(currentKpis.querySelectorAll(':scope > .kpi[data-current-forecast-status]'),"
+        "function(x){return x.dataset.currentForecastStatus;}):null,"
         "currentKpiCount:currentKpis?currentKpis.querySelectorAll(':scope > .kpi').length:0};"
         "out.errors=(window.__smoke_errors||[]).slice(0,20);"
         "}catch(e){out.fatal=String(e)+' | '+((e&&e.stack)||'');}"
@@ -226,9 +231,22 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
         if layout.get("monthRootsOutsideMain") != 0:
             errors.append(
                 f"{tag}: month roots outside main={layout.get('monthRootsOutsideMain')} != 0")
-        if layout.get("currentKpiCount") != 3:
+        month = layout.get("currentKpiMonth")
+        labels = layout.get("currentKpiLabels")
+        states = layout.get("currentForecastStates")
+        expected_kpis = 3
+        if states == ["pending_scope"]:
+            expected_kpis = 4
+            if labels != [f"{month}월 마감예상액", "현재 RAW 누적", "월 목표", "마감예상 GAP"]:
+                errors.append(f"{tag}: current pending KPI roles are malformed: {labels!r}")
+        elif states != []:
+            errors.append(f"{tag}: current KPI forecast declarations are invalid: {states!r}")
+        elif labels == [f"{month}월 확정 총액", "확정 RAW", "월 목표", "확정 GAP"]:
+            # Closing the generated four-card layout removes its pending marker.
+            expected_kpis = 4
+        if layout.get("currentKpiCount") != expected_kpis:
             errors.append(
-                f"{tag}: current KPI direct-child count={layout.get('currentKpiCount')} != 3")
+                f"{tag}: current KPI direct-child count={layout.get('currentKpiCount')} != {expected_kpis}")
     if switch_expected:
         if result.get("optionCount") != 12:
             errors.append(f"{tag}: month selector has {result.get('optionCount')} options (expected 12)")
