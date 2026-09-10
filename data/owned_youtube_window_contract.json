@@ -2,12 +2,12 @@
   "contract_id": "owned-youtube-window-2026-09-mtd-v1",
   "source": {
     "duckdb": "/tmp/mbd_h2_youtube_target_snapshot.duckdb",
-    "monthly_period": "2026-09-01~2026-09-07",
+    "monthly_period": "2026-09-01~2026-09-08",
     "period_complete": false,
     "raw_status": "ok",
     "source_as_of": {
-      "yt_quality": "2026-09-08T15:56:46+09:00",
-      "owned_media": "2026-09-08T15:56:45+09:00"
+      "yt_quality": "2026-09-09T15:56:28+09:00",
+      "owned_media": "2026-09-09T15:56:27+09:00"
     }
   },
   "required_copy": [
@@ -32,44 +32,44 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "102만",
-      "em": "9/1–9/7"
+      "value": "119만",
+      "em": "9/1–9/8"
     },
     {
       "label": "발행",
-      "value": "14건",
-      "em": "LF 1 · SF 13"
+      "value": "15건",
+      "em": "LF 1 · SF 14"
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "25만",
+      "value": "29만",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "69만",
+      "value": "83만",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "6,459",
+      "value": "7,006",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "5,146",
-      "em": "댓글 149"
+      "value": "5,477",
+      "em": "댓글 166"
     },
     {
       "label": "공유",
-      "value": "1,164",
-      "em": "미매칭 7.8만"
+      "value": "1,363",
+      "em": "미매칭 8만"
     }
   ],
   "weekly_rows": [
     {
       "period": "8/31–9/6",
-      "views": 1197656,
+      "views": 1372042,
       "complete": true
     },
     {
@@ -82,18 +82,18 @@
   "main_surface": {
     "year": 2026,
     "month": 9,
-    "publish_count": 14,
+    "publish_count": 15,
     "lf_publish_count": 1,
-    "sf_publish_count": 13,
-    "latest_publish_date": "2026-09-08",
-    "snapshot_date": "2026-09-08",
+    "sf_publish_count": 14,
+    "latest_publish_date": "2026-09-09",
+    "snapshot_date": "2026-09-09",
     "elapsed_weeks": 2,
     "quality_basis": "analytics-d7",
-    "d7_completed": 1,
-    "average_views": 19350,
+    "d7_completed": 3,
+    "average_views": 14847,
     "lf_average_views": 0,
-    "sf_average_views": 19350,
+    "sf_average_views": 14847,
     "subscriber_count": 803000,
-    "previous_average_views": 53471
+    "previous_average_views": 54925
   }
 }
