@@ -96,7 +96,7 @@ class QualityHistoryTest(unittest.TestCase):
         self.assertNotIn('라이브 예상매출 집계 기준 확인 필요', result[start:end])
         self.assertIn('월말 확정 매출', result[start:end])
         self.assertIn('data-achievement-ring="달성"', result[start:end])
-        self.assertIn('9월 확정 총액', result)
+        self.assertIn('9월 마감확정치', result)
         _, manifest = guard.extract_manifest(result)
         now = dt.datetime.fromisoformat(manifest["built_at_kst"])
         self.assertEqual(guard.verify(result, now), [])

@@ -203,6 +203,7 @@ def fetch_current_revenue_snapshot(
     as_of: dt.date,
     *,
     target_won: int | None = None,
+    include_targets: bool = True,
 ) -> dict:
     """Return current-month MTD RAW revenue with future rows excluded."""
     month_start = as_of.replace(day=1)
@@ -255,7 +256,7 @@ def fetch_current_revenue_snapshot(
         con.close()
     team_targets = {str(team): clean_int(value) for team, value in target_rows}
     missing_targets = {"ad_gen", "ad_int", "live"} - set(team_targets)
-    if missing_targets:
+    if missing_targets and include_targets:
         raise RuntimeError(f"missing current revenue targets: {sorted(missing_targets)}")
     effective_target = clean_int(target_won) if target_won is not None else sum(team_targets.values())
     snapshot = {
@@ -270,6 +271,14 @@ def fetch_current_revenue_snapshot(
     snapshot["total_won"] = snapshot["ad_gen_won"] + snapshot["ad_int_won"] + snapshot["live_won"]
     snapshot["progress_pct"] = snapshot["total_won"] / effective_target * 100 if effective_target else None
     return snapshot
+
+
+def fetch_same_period_comparison(db_path: Path, as_of: dt.date) -> dict:
+    """Recompute previous MTD with identical revenue rules, not prior month total."""
+    from dashboard_kpi_cards import previous_cutoff
+    cutoff = previous_cutoff(as_of)
+    prior = fetch_current_revenue_snapshot(db_path, cutoff, include_targets=False)
+    return {"as_of": cutoff.isoformat(), "total_won": prior["total_won"]}
 
 
 def update_manifest(
@@ -457,7 +466,12 @@ def update_current_raw_surfaces(html: str, snapshot: dict) -> str:
         re.S,
     )
     match = top_pattern.search(segment)
-    if match:
+    if 'data-kpi-layout="two-card-v1"' in segment:
+        from dashboard_kpi_cards import current_cards, replace_top
+        replaced = replace_top(html, month, current_cards(snapshot))
+        rs, re_ = _month_bounds(replaced, "mvk", month)
+        segment = replaced[rs:re_]
+    elif match:
         segment = top_pattern.sub(lambda m: top_card(m.group("icon")), segment, count=1)
     else:
         future_top_pattern = re.compile(
@@ -811,7 +825,8 @@ def refresh(
     prev_rows, _ = fetch_live_rows(db_path, prev_year, prev_month)
     summary = summarize(rows, prev_rows)
     revenue_snapshot = fetch_current_revenue_snapshot(db_path, as_of)
-    from dashboard_forecast_state import fetch_forecast, update_forecast_surfaces
+    revenue_snapshot['previous_same_period'] = fetch_same_period_comparison(db_path, as_of)
+    from dashboard_forecast_state import fetch_forecast, update_current_revenue_state
     forecast = fetch_forecast(db_path, as_of)
 
     html = html_path.read_text(encoding="utf-8")
@@ -822,8 +837,9 @@ def refresh(
     from dashboard_quality_history import update_live_quality_history
     html = update_live_quality_history(html, db_path, year, month, as_of)
     html = update_chips_footer_and_live_row(html, now, summary, clock["source_as_of"])
-    html = update_current_raw_surfaces(html, revenue_snapshot)
-    html = update_forecast_surfaces(html, revenue_snapshot, forecast)
+    html = update_current_revenue_state(html, revenue_snapshot, forecast)
+    from dashboard_kpi_cards import normalize_legacy_tops
+    html = normalize_legacy_tops(html)
     payload = {
         "script": "scripts/refresh_live_daily_from_duckdb.py",
         "generated_at_kst": now.isoformat(timespec="seconds"),

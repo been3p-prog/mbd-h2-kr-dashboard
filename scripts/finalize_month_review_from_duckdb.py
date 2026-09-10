@@ -275,7 +275,7 @@ def _review_selector_and_phase(html: str, review_month: int) -> str:
         return match.group(1) + value + match.group(3)
 
     html = re.sub(
-        r'(class="(?:mvk|mvs|mvr) mv" data-m="(\d+)" data-phase=")(?:closed|cur|current|future)(")',
+        r'(class="(?:mvk|mvs|mvr) mv" data-m="(\d+)" data-phase=")(?:closed|cur|current|pending_close|future)(")',
         phase,
         html,
     )
@@ -283,61 +283,9 @@ def _review_selector_and_phase(html: str, review_month: int) -> str:
 
 
 def _finalize_top(html: str, current: dict, previous: dict) -> str:
+    from dashboard_kpi_cards import closed_cards, replace_top
     month = int(current["as_of"][5:7])
-    start, end = _month_bounds(html, "mvk", month)
-    block = html[start:end]
-    total_mom = _mom(int(current["total_won"]), int(previous["total_won"]))
-    cls, arrow, pct = _direction(total_mom)
-    first_label = re.search(
-        rf'<div class="k">{month}월 (?:마감예상액|확정 총액)',
-        block,
-    )
-    if not first_label:
-        raise RuntimeError("headline label missing")
-    label_at = first_label.start()
-    card_start = block.rfind('<div class="kpi"', 0, label_at)
-    card_end = _element_end(block, card_start)
-    icon_match = re.search(r'<div class="ic"(?: aria-hidden="true")?>.*?</div>', block[card_start:card_end], re.S)
-    if not icon_match:
-        raise RuntimeError("headline icon missing")
-    sub = f'전월 대비 <span class="pill {cls} num">{arrow} {pct}</span>'
-    headline = _kpi_card(
-        icon_match.group(0),
-        _actual_tip(month, current, previous),
-        f'{month}월 확정 총액<span class="phase">확정</span>',
-        fmt_sum(current["total_won"]),
-        sub,
-    )
-    block = block[:card_start] + headline + block[card_end:]
-
-    gap = int(current["total_won"]) - int(current["target_won"])
-    gap_tip = [f'<div class="th">{month}월 확정 GAP · 팀 기여</div>']
-    for label, key, target_key in TEAMS:
-        team_gap = int(current[key]) - int(current["team_targets_won"][target_key])
-        gap_tip.append(f'<div class="tr"><span>{label}</span><b>{_signed_won(team_gap)}</b></div>')
-    gap_tip.append('<div class="tn">GAP = 확정 RAW − 월 목표 (signed)</div>')
-    marker = re.search(r'<div class="k">(?:마감예상 GAP|확정 GAP)</div>', block)
-    if not marker:
-        raise RuntimeError("gap label missing")
-    marker_at = marker.start()
-    gap_start = block.rfind('<div class="kpi"', 0, marker_at)
-    gap_end = _element_end(block, gap_start)
-    icon_match = re.search(r'<div class="ic"(?: aria-hidden="true")?>.*?</div>', block[gap_start:gap_end], re.S)
-    if not icon_match:
-        raise RuntimeError("gap icon missing")
-    achievement = float(current["progress_pct"])
-    gap_color = "var(--red)" if gap >= 0 else "var(--blue)"
-    gap_cls = "up" if achievement >= 100 else "dn"
-    gap_card = _kpi_card(
-        icon_match.group(0),
-        "".join(gap_tip),
-        "확정 GAP",
-        f'<span style="color:{gap_color}">{_signed_won(gap)}</span>',
-        f'<span class="pill {gap_cls} num">달성률 {achievement:.1f}%</span>',
-    )
-    block = block[:gap_start] + gap_card + block[gap_end:]
-    block = block.replace("현재 RAW 누적", "확정 RAW")
-    return html[:start] + block + html[end:]
+    return replace_top(html, month, closed_cards(current, previous, _actual_tip(month, current, previous)))
 
 
 def _update_mix_tip(card: str, team_key: str, current: dict, previous: dict) -> str:

@@ -27,7 +27,7 @@ def update_default_month_state(html: str, month: int, *, year: int | None = None
             rf'class="(?:mvk|mvs|mvr) mv" data-m="{value}" data-phase="([^"]+)"', html)
         # Preserve accepted historical closes, but never invent one from month order.
         sealed = label.endswith(' · 확정') and bool(prior_phases) and set(prior_phases) == {'closed'}
-        phases[value] = ('closed' if sealed else 'pending_close') if value < month else (
+        phases[value] = 'closed' if sealed and value <= month else 'pending_close' if value < month else (
             'current' if value == month else 'future')
     labels = {'closed': '확정', 'pending_close': '마감 확인 필요', 'current': '진행 중', 'future': '부킹 진행'}
 

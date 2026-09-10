@@ -910,7 +910,8 @@ class CurrentRawRefreshTest(unittest.TestCase):
         )[0]
         self.assertIn("현재 RAW 누적 · 8/1~8/24", month8)
         self.assertIn("8.78억", month8)
-        self.assertIn("목표 진척 68.7%", month8)
+        self.assertIn("MoM —", month8)
+        self.assertIn("전월 동일기간 비교값 확인 필요", month8)
         self.assertIn("일반광고&lt;/span&gt;&lt;b&gt;6.81억", month8)
         self.assertIn("통광마&lt;/span&gt;&lt;b&gt;2,909만", month8)
         self.assertIn("라이브&lt;/span&gt;&lt;b&gt;1.68억", month8)
@@ -943,7 +944,7 @@ class CurrentRawRefreshTest(unittest.TestCase):
         self.assertIn('data-current-raw-empty="true"', month9_top)
         self.assertIn("현재 RAW 누적 · 9/1~9/1", month9_top)
         self.assertIn('<div class="v num">0</div>', month9_top)
-        self.assertIn("목표 진척 0.0%", month9_top)
+        self.assertIn("MoM —", month9_top)
         self.assertIn("FORECAST 2026-09", updated)
         self.assertNotIn("9월 부킹 총액<span class=\"phase\">부킹 진행</span>", month9_top)
         self.assertEqual(month9_detail.count("RAW 누적 · 9/1~9/1"), 3)
@@ -1029,6 +1030,10 @@ class CurrentRawRefreshTest(unittest.TestCase):
             mock.patch.object(refresh, "fetch_snapshot_clock", return_value={"as_of": dt.date(2026, 9, 1), "source_as_of": "2026-09-01T00:01:00+09:00", "captured_at": "2026-09-01T10:20:00+09:00"}),
             mock.patch.object(refresh, "fetch_live_rows", return_value=([], "2026-09-01 00:01:00")),
             mock.patch.object(refresh, "fetch_current_revenue_snapshot", return_value=revenue),
+            mock.patch.object(refresh, "fetch_same_period_comparison", return_value={"as_of": "2026-08-01", "total_won": 0}),
+            mock.patch("dashboard_forecast_state.fetch_forecast", return_value={
+                "ad_gen": 0, "ad_int": 0, "live": None, "status": "pending_scope",
+            }),
         ):
             try:
                 result = refresh.refresh(html_path, Path("/tmp/fixture.duckdb"), quiet=True)
@@ -1076,6 +1081,9 @@ class CurrentRawRefreshTest(unittest.TestCase):
             mock.patch.object(refresh, "fetch_snapshot_clock", return_value={"as_of": dt.date(2026, 9, 1), "source_as_of": "2026-09-01T00:01:00+09:00", "captured_at": "2026-09-01T10:20:00+09:00"}),
             mock.patch.object(refresh, "fetch_live_rows", return_value=([], "2026-09-01 00:01:00")),
             mock.patch.object(refresh, "fetch_current_revenue_snapshot", return_value=revenue),
+            mock.patch("dashboard_forecast_state.fetch_forecast", return_value={
+                "ad_gen": 0, "ad_int": 0, "live": None, "status": "pending_scope",
+            }),
         ):
             refresh.refresh(html_path, Path("/tmp/fixture.duckdb"), quiet=True)
 
@@ -1220,6 +1228,19 @@ class TargetMbdSnapshotTest(unittest.TestCase):
                 ("라이브커머스", "시그니처", "라이브"),
             ],
         )
+        con.execute('''create table revenue.v_revenue_forecast_monthly(
+            ym varchar, team_code varchar, forecast_revenue double,
+            source_table varchar, source_column varchar, rule_id varchar
+        )''')
+        con.executemany(
+            "insert into revenue.v_revenue_forecast_monthly values ('2026-09', ?, ?, ?, ?, ?)",
+            [
+                ("ad_gen", 937900000, "ad_gen.booking_pred", "revenue", "forecast_ad_gen_booking_v1"),
+                ("ad_int", 83333333, "ad_int.contract", "계약 금액", "forecast_ad_int_contract_v1"),
+                ("live", 179000000, "live.booking_confirmed", "패키지 비용", "forecast_live_booking_confirmed_v1"),
+                ("MBD_TOTAL", 1200233333, "team_forecast_sources", "forecast_revenue", "forecast_mbd_total_v1"),
+            ],
+        )
         con.close()
 
     def test_target_mbd_snapshot_validator_accepts_current_case_insensitive_ingest(self):
@@ -1237,6 +1258,40 @@ class TargetMbdSnapshotTest(unittest.TestCase):
             self._fixture(path, source_time="2026-08-29 00:01:00")
             with self.assertRaisesRegex(RuntimeError, "stale target MBD source"):
                 self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+
+    def test_target_mbd_snapshot_validator_requires_canonical_forecast(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, source_time="2026-09-01 00:01:00")
+            con = duckdb.connect(str(path))
+            con.execute("drop table revenue.v_revenue_forecast_monthly")
+            con.close()
+            with self.assertRaisesRegex(RuntimeError, "missing columns in revenue.v_revenue_forecast_monthly"):
+                self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+
+    def test_target_mbd_copy_preserves_canonical_forecast(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source, target = Path(tmp) / "source.duckdb", Path(tmp) / "target.duckdb"
+            self._fixture(source, source_time="2026-09-01 00:01:00")
+            proc = subprocess.run(
+                [sys.executable, "-B", "-", str(source), str(target)],
+                input=self._module().REMOTE_COPY_SCRIPT, text=True, capture_output=True,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            con = duckdb.connect(str(target), read_only=True)
+            try:
+                rows = con.execute(
+                    "select team_code, forecast_revenue, source_table, source_column, rule_id "
+                    "from revenue.v_revenue_forecast_monthly where ym = '2026-09' order by team_code"
+                ).fetchall()
+            finally:
+                con.close()
+            self.assertEqual(rows, [
+                ("MBD_TOTAL", 1200233333, "team_forecast_sources", "forecast_revenue", "forecast_mbd_total_v1"),
+                ("ad_gen", 937900000, "ad_gen.booking_pred", "revenue", "forecast_ad_gen_booking_v1"),
+                ("ad_int", 83333333, "ad_int.contract", "계약 금액", "forecast_ad_int_contract_v1"),
+                ("live", 179000000, "live.booking_confirmed", "패키지 비용", "forecast_live_booking_confirmed_v1"),
+            ])
 
     def test_target_mbd_snapshot_validator_rejects_missing_closed_month_actuals(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -664,7 +664,8 @@ def verify(
                        '<span>라이브</span><b><span class="tv"><span>2.15억</span><small class="up">MoM ▲ 16.2%</small>'):
             if marker not in decoded_august_top:
                 errors.append(f"missing monthly-flow tooltip MoM marker {marker!r}")
-        for marker in ('class="mvk mv" data-m="8" data-phase="closed"',
+        top_markers = ('8월 마감확정치', 'data-closed-raw-value="11.12억"',
+                       'data-closed-achievement="87.1%"', '확정 GAP', '-1.65억') if 'data-kpi-layout="two-card-v1"' in august_top else ('class="mvk mv" data-m="8" data-phase="closed"',
                        '<div class="k">8월 확정 총액<span class="phase">확정</span></div>',
                        '<div class="v num">11.1억</div>',
                        '확정 RAW · 8/1~8/31',
@@ -672,7 +673,8 @@ def verify(
                        '목표 진척 87.1%',
                        '<div class="k">월 목표</div><div class="v num">12.8억</div>',
                        '<div class="k">확정 GAP</div>',
-                       '-1.65억'):
+                       '-1.65억')
+        for marker in top_markers:
             if marker not in august_top:
                 errors.append(f"missing August review actual marker {marker!r}")
     if august_detail is None:
@@ -793,6 +795,89 @@ def verify(
         marker = f'{package} 하위'
         if html.count(marker) != expected:
             errors.append(f"live sub-promotion marker {marker!r} appears {html.count(marker)}x (expected {expected})")
+    # New layout is a two-card contract, independent of calendar phase.
+    for month in range(1, 13):
+        top = _month_surface(html, "mvk", month) or ""
+        if 'data-kpi-layout="two-card-v1"' not in top:
+            continue
+        roles = re.findall(r'<div class="kpi" data-kpi-role="([^"]+)"', top)
+        phase = re.search(r'data-phase="([^"]+)"', top)
+        allowed = {
+            'closed': [('closed_actual', 'target_gap')],
+            'current': [('forecast', 'current_raw'), ('booking', 'target')],
+            'pending_close': [('forecast', 'current_raw'), ('booking', 'target')],
+            'future': [('booking', 'target')],
+        }
+        if top.count('class="kpi"') != 2 or not phase or tuple(roles) not in allowed.get(phase[1], []):
+            errors.append(f"two-card KPI roles/count invalid: month {month}")
+        closed_card = re.search(r'<div class="kpi" data-kpi-role="closed_actual"[^>]*>', top)
+        if closed_card:
+            from dashboard_kpi_cards import element_end
+            attrs = dict(re.findall(r'(data-[\w-]+)="([^"]*)"', closed_card[0]))
+            body = top[closed_card.end():element_end(top, closed_card.start())]
+            value = re.search(r'<div class="v num">([^<]+)</div>', body)
+            achievement = re.search(r' · 달성률 ([0-9.]+%|—)(?=<|\s|$)', body)
+            if (not value or value[1] != attrs.get('data-closed-raw-value') or
+                    not achievement or achievement[1] != attrs.get('data-closed-achievement')):
+                errors.append(f'two-card closed visible values invalid: month {month}')
+        raw_card = re.search(r'<div class="kpi" data-kpi-role="current_raw"[^>]*>', top)
+        forecast_card = re.search(r'<div class="kpi" data-kpi-role="forecast"[^>]*>', top)
+        if forecast_card and 'data-current-forecast-status="canonical"' in forecast_card[0]:
+            from dashboard_kpi_cards import element_end, mom
+            attrs = dict(re.findall(r'(data-[\w-]+)="([^"]*)"', forecast_card[0]))
+            body = top[forecast_card.end():element_end(top, forecast_card.start())]
+            def forecast_amount(value):
+                return (f'{value / 100_000_000:.2f}'.rstrip('0').rstrip('.') + '억' if abs(value) >= 100_000_000
+                        else f'{round(value / 10_000):,}만' if abs(value) >= 10_000 else f'{value:,}')
+            try:
+                total, target = int(attrs['data-forecast-total-won']), int(attrs['data-forecast-target-won'])
+                teams = {k: int(attrs[f'data-forecast-{k.replace("_", "-")}-won']) for k in ('ad_gen', 'ad_int', 'live')}
+                previous = int(attrs['data-forecast-previous-won']) if 'data-forecast-previous-won' in attrs else None
+                cutoff = dt.date.fromisoformat(attrs['data-forecast-as-of'])
+                if (min(total, target, *teams.values()) < 0 or total != sum(teams.values()) or cutoff.month != month
+                        or attrs['data-forecast-source'] != 'revenue.v_revenue_forecast_monthly'):
+                    raise ValueError('invalid canonical metadata')
+                if not raw_card or f'data-current-as-of="{cutoff.isoformat()}"' not in raw_card[0]:
+                    raise ValueError('canonical forecast and RAW cutoff mismatch')
+                achievement = f'{total / target * 100:.1f}%' if target else '—'
+                if (f'<div class="v num">{forecast_amount(total)}</div>' not in body
+                        or mom(total, previous) not in body or f'예상 달성률 {achievement}' not in body):
+                    raise ValueError('canonical headline mismatch')
+                gauge = _gauge_surface(html, month) or ''
+                if f'data-forecast-total-won="{total}"' not in gauge or 'data-forecast-status="canonical"' not in gauge:
+                    raise ValueError('canonical chart mismatch')
+                if (f'<div class="lab num">{total / 100000000:.1f}</div>' not in gauge
+                        or f'>{(total-target) / 100000000:+.1f}</div>' not in gauge):
+                    raise ValueError('canonical chart visible value mismatch')
+                detail = _month_surface(html, 'mvr', month) or ''
+                for key, value in teams.items():
+                    team = re.search(rf'data-current-forecast-team="{key}"(.*?)(?=<div class="team"|$)', detail, re.S)
+                    if not team or f'<div class="bigv num">{forecast_amount(value)}</div>' not in team[1]:
+                        raise ValueError('canonical team mismatch')
+                    if f'data-forecast-team="{key}" data-forecast-won="{value}"' not in gauge:
+                        raise ValueError('canonical segment mismatch')
+            except (KeyError, ValueError, OverflowError):
+                errors.append(f'two-card canonical forecast invalid: month {month}')
+        if raw_card:
+            from dashboard_kpi_cards import previous_cutoff, mom
+            attrs = dict(re.findall(r'(data-[\w-]+)="([^"]*)"', raw_card[0]))
+            try:
+                as_of = dt.date.fromisoformat(attrs['data-current-as-of'])
+                total = int(attrs['data-current-total-won'])
+                prior_total = None
+                if 'data-previous-as-of' in attrs or 'data-previous-total-won' in attrs:
+                    if dt.date.fromisoformat(attrs['data-previous-as-of']) != previous_cutoff(as_of):
+                        raise ValueError('not previous same-period cutoff')
+                    prior_total = int(attrs['data-previous-total-won'])
+                if as_of.month != month:
+                    raise ValueError('current cutoff month mismatch')
+                tail = top[raw_card.end():]
+                amount = (f'{total / 100_000_000:.2f}'.rstrip('0').rstrip('.') + '억' if abs(total) >= 100_000_000
+                          else f'{round(total / 10_000):,}만' if abs(total) >= 10_000 else f'{total:,}')
+                if f'<div class="v num">{amount}</div>' not in tail or mom(total, prior_total) not in tail:
+                    raise ValueError('amount or MoM does not match source metadata')
+            except (KeyError, ValueError, OverflowError):
+                errors.append(f'two-card same-period comparison invalid: month {month}')
     # A current pending forecast must not imply a complete total in another surface.
     if 'data-current-forecast-status="pending_scope"' in html:
         for current in range(1, 13):
@@ -805,7 +890,8 @@ def verify(
                     errors.append(f"missing current pending forecast disclosure: {group}")
             if f'data-m="{current}" data-forecast-status="pending_scope"' not in html:
                 errors.append("current forecast chart must disclose pending scope")
-            for label in (f"{current}월 마감예상액", "마감예상 GAP"):
+            labels = (f"{current}월 마감예측치",) if 'data-kpi-layout="two-card-v1"' in top else (f"{current}월 마감예상액", "마감예상 GAP")
+            for label in labels:
                 if not re.search(rf'<div class="k">{label}</div><div class="v num">확인 필요</div>', top):
                     errors.append("unavailable forecast must not be rendered as an amount")
             gauge = _gauge_surface(html, current) or ""

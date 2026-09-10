@@ -56,6 +56,7 @@ def _probe_script(target_month: int) -> str:
         "function vis(){return Array.prototype.filter.call(document.querySelectorAll('.mvk'),"
         "function(x){return x.style.display!=='none';}).map(function(x){return x.dataset.m;});}"
         "try{var sel=document.getElementById('msel');"
+        "var initialMonth=sel?sel.value:null;"
         "out.hasSelect=!!sel;out.optionCount=sel?sel.options.length:0;"
         "out.initialHash=location.hash;out.visibleBefore=vis();"
         "sel.value='%d';sel.dispatchEvent(new Event('change'));"
@@ -104,13 +105,17 @@ def _probe_script(target_month: int) -> str:
         "teamCards:rest?rest.querySelectorAll('.team').length:0,"
         "qualityCards:rest?rest.querySelectorAll('.quality-card').length:0,"
         "rawRowTables:document.querySelectorAll('.livetbl,.raw-row-table').length,"
-        "futureRootCount:futureRoots.length,futureForbiddenCount:futureForbidden};"
+        "futureRootCount:futureRoots.length,futureForbiddenCount:futureForbidden,"
+        "futureExpectedCount:Array.prototype.filter.call(sel.options,function(x){return / · 부킹 진행$/.test(x.textContent);}).length*3};"
         "var main=document.querySelector('main');"
         "var monthRoots=document.querySelectorAll('.mvk,.mvs,.mvr');"
-        "var currentKpis=document.querySelector('.mvk[data-phase=\"current\"] > .kpis');"
+        "var currentKpis=document.querySelector('.mvk[data-m=\"'+initialMonth+'\"] > .kpis');"
         "out.layout={hasMain:!!main,monthRootCount:monthRoots.length,"
         "monthRootsOutsideMain:Array.prototype.filter.call(monthRoots,function(x){return !main||!main.contains(x);}).length,"
         "currentKpiMonth:currentKpis?currentKpis.parentElement.dataset.m:null,"
+        "currentKpiPhase:currentKpis?currentKpis.parentElement.dataset.phase:null,"
+        "currentKpiLayout:currentKpis?currentKpis.dataset.kpiLayout:null,"
+        "currentKpiRoles:currentKpis?Array.prototype.map.call(currentKpis.querySelectorAll(':scope > .kpi'),function(x){return x.dataset.kpiRole;}):null,"
         "currentKpiLabels:currentKpis?Array.prototype.map.call(currentKpis.querySelectorAll(':scope > .kpi'),function(x){"
         "var k=x.querySelector('.k');return k&&k.firstChild?k.firstChild.textContent.trim().split(' · ')[0]:null;}):null,"
         "currentForecastStates:currentKpis?Array.prototype.map.call(currentKpis.querySelectorAll(':scope > .kpi[data-current-forecast-status]'),"
@@ -216,7 +221,11 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
             errors.append(f"{tag}: lower-card qualityCards={lower.get('qualityCards')} != 2")
         if lower.get("rawRowTables") != 0:
             errors.append(f"{tag}: public raw-row tables={lower.get('rawRowTables')} != 0")
-        if not isinstance(lower.get("futureRootCount"), int) or lower.get("futureRootCount") <= 0:
+        expected_future = lower.get("futureExpectedCount")
+        if expected_future is not None:
+            if type(expected_future) is not int or expected_future < 0 or lower.get("futureRootCount") != expected_future:
+                errors.append(f"{tag}: future negative-control roots do not match selector")
+        elif not isinstance(lower.get("futureRootCount"), int) or lower.get("futureRootCount") <= 0:
             errors.append(f"{tag}: future negative-control roots missing")
         if lower.get("futureForbiddenCount") != 0:
             errors.append(
@@ -235,7 +244,25 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
         labels = layout.get("currentKpiLabels")
         states = layout.get("currentForecastStates")
         expected_kpis = 3
-        if states == ["pending_scope"]:
+        if layout.get("currentKpiLayout") == "two-card-v1":
+            expected_kpis = 2
+            roles = layout.get("currentKpiRoles")
+            phase = layout.get("currentKpiPhase")
+            valid = (
+                roles == ["forecast", "current_raw"] and states in (["pending_scope"], ["canonical"])
+                and phase in {"current", "pending_close"}
+                and labels == [f"{month}월 마감예측치", f"{month}월 현황누적치"]
+            ) or (
+                roles == ["booking", "target"] and states == []
+                and phase in {"future", "current", "pending_close"}
+                and labels == [f"{month}월 부킹 총액", "월 목표"]
+            ) or (
+                roles == ["closed_actual", "target_gap"] and states == [] and phase == "closed"
+                and labels == [f"{month}월 마감확정치", "월 목표"]
+            )
+            if not valid:
+                errors.append(f"{tag}: two-card KPI roles/declarations are malformed")
+        elif states == ["pending_scope"]:
             expected_kpis = 4
             if labels != [f"{month}월 마감예상액", "현재 RAW 누적", "월 목표", "마감예상 GAP"]:
                 errors.append(f"{tag}: current pending KPI roles are malformed: {labels!r}")

@@ -165,10 +165,10 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('PGM · 12주년', self.html)
         self.assertIn('PGM · 어서오!세일', self.html)
         self.assertNotIn('하위 구분 = PGM/프로모션', self.html)
-        # Current forecast is explicitly unavailable until the Live policy is approved.
-        self.assertIn('data-current-forecast-status="pending_scope"', self.html)
+        # Current forecast comes from the existing canonical forecast sources.
+        self.assertIn('data-current-forecast-status="canonical"', self.html)
         current = vd._month_surface(self.html, "mvr", 9)
-        self.assertIn("라이브 예상매출 집계 기준 확인 필요", html_mod.unescape(current))
+        self.assertIn("확정 편성 · 패키지 비용", html_mod.unescape(current))
         self.assertNotIn("1.74억", current)
         self.assertIn("data-week-toggle=", self.html)
         self.assertIn('data-content-link="live"', self.html)
@@ -361,7 +361,7 @@ class DashboardGuardTest(unittest.TestCase):
     def test_monthly_flow_tooltips_include_team_mom_with_red_up_blue_down(self):
         gauge_tips = {
             int(month): html_mod.unescape(tip)
-            for month, tip in re.findall(r'<div class="g [^"]*" data-m="(\d+)"(?: data-forecast-status="[^"]+")? data-tip="([^"]+)"', self.html)
+            for month, tip in re.findall(r'<div class="g [^"]*" data-m="(\d+)"[^>]*? data-tip="([^"]+)"', self.html)
         }
         self.assertEqual(len(gauge_tips), 12)
         august = gauge_tips[8]
@@ -369,7 +369,9 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('<span>통광마</span><b><span class="tv"><span>2,909만</span><small class="dn">MoM ▼ 46.1%</small>', august)
         self.assertIn('<span>라이브</span><b><span class="tv"><span>2.15억</span><small class="up">MoM ▲ 16.2%</small>', august)
         september = gauge_tips[9]
-        self.assertIn('라이브 예상매출 집계 기준 확인 필요', september)
+        self.assertIn('기존 예측 원천 · 월전체 부킹·계약', september)
+        for amount in ('9.38억', '8,333만', '1.79억'):
+            self.assertIn(amount, september)
         self.assertNotIn('MoM', september)
         self.assertNotIn('8.03억', september)
 
@@ -597,7 +599,7 @@ class DashboardGuardTest(unittest.TestCase):
                       if "일반광고 ·" in html_mod.unescape(value)]
         self.assertEqual(len(adgen_tips), 12)
         for tip_html in adgen_tips:
-            if "월전체 비취소 부킹·계약" in tip_html:
+            if "월전체 일반광고 비취소 부킹" in tip_html:
                 self.assertNotIn("MoM", tip_html)
                 self.assertIn("마감예상", tip_html)
                 continue
@@ -617,7 +619,7 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('class="gsubs"', july)
         self.assertIn("TOPS", july)
         self.assertIn("기타 정부지원", july)
-        self.assertIn("월전체 비취소 부킹·계약", september)
+        self.assertIn("월전체 일반광고 비취소 부킹", september)
         self.assertNotIn('class="gsubs"', september)  # stale unsupported breakdown removed
         for raw_comment in ("정부지원사업 TOPS", "경기도 주식회사"):
             self.assertNotIn(raw_comment, "".join(tips))
@@ -628,7 +630,7 @@ class DashboardGuardTest(unittest.TestCase):
                 if "통광마 ·" in html_mod.unescape(value)]
         self.assertEqual(len(tips), 12)
         for tip_html in tips:
-            if "월전체 비취소 부킹·계약" in tip_html:
+            if "계약 시작월 · 계약 금액" in tip_html:
                 self.assertNotIn("MoM", tip_html)
                 self.assertIn("마감예상", tip_html)
                 continue
@@ -646,7 +648,7 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("경기도주식회사", july)
         self.assertIn("샤크닌자 · 미디어PKG", august)
         self.assertIn("익산원예농협", august)
-        self.assertIn("월전체 비취소 부킹·계약", september)
+        self.assertIn("계약 시작월 · 계약 금액", september)
         self.assertNotIn("4,333만", september)
 
     def test_pages_workflow_uploads_index_only(self):

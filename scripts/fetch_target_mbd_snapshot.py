@@ -23,6 +23,9 @@ DEFAULT_REMOTE_PYTHON = "/Users/cnc-media/automations/.venvs/mbd/bin/python"
 DEFAULT_REMOTE_DB = "/Users/cnc-media/automations/mbd/mbd.duckdb"
 SOURCE_TEAMS = {"ad_gen", "ad_int", "live"}
 REQUIRED_COLUMNS = {
+    ("revenue", "v_revenue_forecast_monthly"): {
+        "ym", "team_code", "forecast_revenue", "source_table", "source_column", "rule_id",
+    },
     ("ad_gen", "booking_pred"): {"date", "status", "ad_type", "party_type", "revenue"},
     ("ad_int", "contract"): {"계약 시작일", "매출 귀속월", "미셀 매출액"},
     ("live", "raw_slots"): {
@@ -67,10 +70,12 @@ try:
         ("meta", "targets"),
         ("meta", "ingest_log"),
         ("revenue", "integrated_ssot"),
+        ("revenue", "v_revenue_forecast_monthly"),
     ):
         con.execute(
             "create table target." + schema + "." + table
-            + " as select * from source." + schema + "." + table
+            + (" as select ym, team_code, forecast_revenue, source_table, source_column, rule_id from source."
+               if table == "v_revenue_forecast_monthly" else " as select * from source.") + schema + "." + table
         )
     captured = dt.datetime.now(dt.timezone.utc)
     source_mtime = dt.datetime.fromtimestamp(os.stat(source).st_mtime, dt.timezone.utc)

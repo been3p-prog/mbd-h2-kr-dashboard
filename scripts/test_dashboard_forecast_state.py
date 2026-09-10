@@ -24,14 +24,14 @@ class ForecastStateTest(unittest.TestCase):
                         progress_pct=19.003)
         self.pred = dict(ad_gen=726600000, ad_int=73333333, live=None, status="pending_scope")
 
-    def test_current_four_roles_preserve_raw_and_closed_revenue_idempotently(self):
+    def test_current_two_roles_preserve_raw_and_closed_revenue_idempotently(self):
         before = guard._month_surface(self.html, "mvk", 8)
         updated = forecast.update_forecast_surfaces(self.html, self.raw, self.pred)
         top = guard._month_surface(updated, "mvk", 9)
-        self.assertEqual(top.count('class="kpi"'), 4)
-        for label in ("9월 마감예상액", "현재 RAW 누적", "월 목표", "마감예상 GAP"):
+        self.assertEqual(top.count('class="kpi"'), 2)
+        for label in ("9월 마감예측치", "9월 현황누적치", "월 목표", "MoM"):
             self.assertIn(label, top)
-        self.assertEqual(top.count('<div class="v num">확인 필요</div>'), 2)
+        self.assertEqual(top.count('<div class="v num">확인 필요</div>'), 1)
         teams = guard._month_surface(updated, "mvr", 9)
         self.assertEqual(teams.count("RAW 누적 · 9/1~9/9"), 3)
         self.assertIn("7.27억", teams)
@@ -45,12 +45,68 @@ class ForecastStateTest(unittest.TestCase):
         self.assertNotIn("8월 마감예상", comparison)
 
     def test_unknown_live_never_becomes_zero_or_unapproved_policy(self):
-        with mock.patch.object(daily, "fetch_current_revenue_snapshot", return_value=self.raw) as fetch:
-            result = forecast.fetch_forecast(Path("unused"), dt.date(2026, 9, 9))
-        self.assertIsNone(result["live"])
-        self.assertEqual(fetch.call_args.args[1], dt.date(2026, 9, 30))
+        with tempfile.TemporaryDirectory() as temp:
+            with self.assertRaises(duckdb.Error):
+                forecast.fetch_forecast(Path(temp) / 'missing.duckdb', dt.date(2026, 9, 9))
         with self.assertRaisesRegex(ValueError, "unapproved"):
             forecast.update_forecast_surfaces(self.html, self.raw, dict(self.pred, live=0))
+
+    def _canonical_fixture(self, path):
+        con = duckdb.connect(str(path))
+        con.execute('create schema revenue')
+        con.execute('create table revenue.v_revenue_forecast_monthly(ym varchar, team_code varchar, forecast_revenue double, source_table varchar, source_column varchar, rule_id varchar)')
+        con.executemany('insert into revenue.v_revenue_forecast_monthly values (?, ?, ?, ?, ?, ?)', [
+            ('2026-09','ad_gen',937900000,'ad_gen.booking_pred','revenue','forecast_ad_gen_booking_v1'),
+            ('2026-09','ad_int',83333333,'ad_int.contract','계약 금액','forecast_ad_int_contract_v1'),
+            ('2026-09','live',179000000,'live.booking_confirmed','패키지 비용','forecast_live_booking_confirmed_v1'),
+            ('2026-09','MBD_TOTAL',1200233333,'team_forecast_sources','forecast_revenue','forecast_mbd_total_v1')])
+        con.execute('create table revenue.integrated_ssot(revenue_month varchar, revenue_team varchar, team_attributed_revenue double, include_in_mbd_revenue boolean)')
+        con.executemany("insert into revenue.integrated_ssot values ('2026-08', ?, ?, true)",
+                        [('일반광고',868200000),('통합광고',29090909),('라이브커머스',215000000)])
+        con.close()
+
+    def test_canonical_forecast_connects_total_mom_achievement_and_chart(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'canonical.duckdb'
+            self._canonical_fixture(path)
+            pred = forecast.fetch_forecast(path, dt.date(2026,9,9))
+        self.assertEqual(pred['total_won'], 1200233333)
+        self.assertEqual(pred['previous_total_won'], 1112290909)
+        updated = forecast.update_forecast_surfaces(self.html, self.raw, pred)
+        top = guard._month_surface(updated, 'mvk', 9)
+        for marker in ('12억', 'MoM ▲ 7.9%', '예상 달성률 93.9%'):
+            self.assertIn(marker, top)
+        self.assertEqual(guard.verify(updated, dt.datetime.now(daily.KST)), [])
+        self.assertEqual(updated, forecast.update_forecast_surfaces(updated, self.raw, pred))
+        for before, after in [('<div class="v num">12억</div>','<div class="v num">99억</div>'),
+                              ('예상 달성률 93.9%','예상 달성률 99.9%'),
+                              ('data-forecast-won="179000000"','data-forecast-won="1"'),
+                              ('<div class="bigv num">1.79억</div>','<div class="bigv num">99억</div>')]:
+            surface_name = 'mvr' if 'bigv' in before else 'mvk'
+            surface = (guard._gauge_surface(updated, 9) if 'data-forecast-won' in before
+                       else guard._month_surface(updated, surface_name, 9))
+            bad = updated.replace(surface, surface.replace(before, after, 1), 1)
+            self.assertNotEqual(bad, updated)
+            self.assertTrue(any('canonical forecast' in e for e in guard.verify(bad, dt.datetime.now(daily.KST))))
+        with self.assertRaisesRegex(ValueError, 'payload'):
+            forecast.update_forecast_surfaces(self.html, self.raw, dict(pred, as_of='2026-08-31'))
+
+    def test_canonical_missing_duplicate_invalid_values_and_wrong_sources_fail_closed(self):
+        mutations = ["delete from revenue.v_revenue_forecast_monthly where team_code='live'",
+                     "insert into revenue.v_revenue_forecast_monthly select * from revenue.v_revenue_forecast_monthly where team_code='live'",
+                     "update revenue.v_revenue_forecast_monthly set forecast_revenue='NaN' where team_code='live'",
+                     "update revenue.v_revenue_forecast_monthly set forecast_revenue=-1 where team_code='live'",
+                     "update revenue.v_revenue_forecast_monthly set forecast_revenue=NULL where team_code='live'",
+                     "update revenue.v_revenue_forecast_monthly set forecast_revenue=1 where team_code='MBD_TOTAL'",
+                     "update revenue.v_revenue_forecast_monthly set source_table='live.cost_raw' where team_code='live'",
+                     "update revenue.v_revenue_forecast_monthly set ym='2026-08'"]
+        for sql in mutations:
+            with self.subTest(sql=sql), tempfile.TemporaryDirectory() as temp:
+                path = Path(temp) / 'canonical.duckdb'
+                self._canonical_fixture(path)
+                con = duckdb.connect(str(path)); con.execute(sql); con.close()
+                with self.assertRaisesRegex(ValueError, 'canonical forecast'):
+                    forecast.fetch_forecast(path, dt.date(2026,9,9))
 
     def test_october_rollover_does_not_reuse_september_forecast(self):
         raw = dict(self.raw, as_of="2026-10-01", range_label="10/1~10/1")
@@ -58,7 +114,7 @@ class ForecastStateTest(unittest.TestCase):
         text = daily.update_current_raw_surfaces(text, raw)
         text = forecast.update_forecast_surfaces(text, raw, self.pred)
         top = guard._month_surface(text, "mvk", 10)
-        self.assertIn("10월 마감예상액", top)
+        self.assertIn("10월 마감예측치", top)
         self.assertNotIn("목표 채움 · 부킹 진행", top)
         self.assertIn('data-phase="pending_close"', guard._month_surface(text, "mvk", 9))
         _, manifest = guard.extract_manifest(text)

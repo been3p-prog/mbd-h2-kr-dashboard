@@ -8,10 +8,13 @@ the current-month surfaces. Do not regenerate from an unrelated template.
 
 - RAW is three-team recognized revenue through the source snapshot date. General ads
   retain the existing strict 3P/type/cancellation filters; Live RAW uses strict 3P AF.
-- Current general-ad and attributed-contract forecasts use full-month versions of those
-  filters. The Live forecast fee/party policy is unresolved. It is unavailable, not
-  zero; the overall forecast, achievement and GAP remain unavailable in cards and chart.
-  Do not enable the draft all-booked package-fee rule without owner confirmation.
+- Current forecasts consume the existing canonical `revenue.v_revenue_forecast_monthly`:
+  general ads use non-cancel general-ad bookings (not the RAW-only party filter),
+  attributed contracts use contract amount by start month, and Live uses confirmed
+  bookings' package fees. RAW recognition remains separate and unchanged.
+  Only aggregate forecast columns are copied into the snapshot. Missing teams,
+  duplicate rows, non-finite/negative amounts, wrong provenance or total mismatch
+  fail the refresh and retain the last-good publication; no RAW/cost fallback is used.
 - Completed revenue remains closed; current and prior-month Live/YouTube quality,
   content metrics, averages and MoM may receive late facts without reopening revenue.
 - Other YouTube formats (for example LIVE) count in overall publication/performance,
@@ -49,3 +52,12 @@ Local verification:
 
 Rollback is a reviewed revert of the deployment commit followed by the normal Pages
 workflow, not a destructive reset of operator worktrees.
+# Two-card header contract (2026-09-10)
+
+- The header always has two direct KPI cards: current forecast/MTD, closed actual/target+GAP, or future booking/target.
+- Daily refresh and canonical close share `dashboard_kpi_cards.py`; an accepted current-month close is not reopened by the daily renderer.
+- Current MTD MoM compares the previous calendar month from day 1 to the same day, clamped to that month's end. January crosses into the previous year.
+- Both MTD amounts use identical approved revenue filters on the same read-only snapshot. The comparison is a restated prior period, not an archived “as known then” snapshot.
+- A missing or non-positive comparison denominator is unavailable, not 0%. Forecast MoM compares the canonical forecast total with the prior full-month three-team canonical actual, not prior bookings or prior MTD.
+- Closed-month MoM uses the prior full-month canonical actual; target and signed GAP occupy the second card.
+- The surrounding layout and quality sections are preserved. The current-month chart and team cards use the same canonical forecast total/components as the header. The chart fails closed if forecast exceeds the retained annual scale; a larger range requires a separately verified rescale.
