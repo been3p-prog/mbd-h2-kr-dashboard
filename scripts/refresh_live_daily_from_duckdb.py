@@ -827,7 +827,7 @@ def refresh(
     revenue_snapshot = fetch_current_revenue_snapshot(db_path, as_of)
     revenue_snapshot['previous_same_period'] = fetch_same_period_comparison(db_path, as_of)
     from dashboard_forecast_state import fetch_forecast, update_current_revenue_state
-    forecast = fetch_forecast(db_path, as_of)
+    forecast = fetch_forecast(db_path, as_of, include_next=True)
 
     html = html_path.read_text(encoding="utf-8")
     html = remove_owned_media_reference_cards(html)
@@ -840,6 +840,9 @@ def refresh(
     html = update_current_revenue_state(html, revenue_snapshot, forecast)
     from dashboard_kpi_cards import normalize_legacy_tops
     html = normalize_legacy_tops(html)
+    if forecast.get('next_booking'):
+        from dashboard_next_booking import update_next_booking
+        html = update_next_booking(html, as_of, forecast['next_booking'])
     payload = {
         "script": "scripts/refresh_live_daily_from_duckdb.py",
         "generated_at_kst": now.isoformat(timespec="seconds"),

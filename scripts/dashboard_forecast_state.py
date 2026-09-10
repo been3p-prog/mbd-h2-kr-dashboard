@@ -30,7 +30,7 @@ def replace_div(text: str, opening: str, replacement: str) -> str:
     return text[:start] + replacement + text[element_end(text, start):]
 
 
-def fetch_forecast(db_path, as_of: dt.date) -> dict:
+def fetch_forecast(db_path, as_of: dt.date, *, include_next: bool = False) -> dict:
     """Consume the existing canonical forecast; never substitute RAW or costs."""
     import duckdb
     expected = {
@@ -63,9 +63,13 @@ def fetch_forecast(db_path, as_of: dt.date) -> dict:
     previous_total = None
     if len(prior) == 3 and all(v is not None and math.isfinite(v) and v >= 0 for _, v in prior):
         previous_total = round(sum(v for _, v in prior))
-    return {**{k: values[k] for _, k in TEAMS}, 'total_won': values['MBD_TOTAL'],
+    result = {**{k: values[k] for _, k in TEAMS}, 'total_won': values['MBD_TOTAL'],
             'previous_total_won': previous_total, 'as_of': as_of.isoformat(),
             'status': 'canonical', 'source': 'revenue.v_revenue_forecast_monthly'}
+    if include_next:
+        from dashboard_next_booking import attach_next_booking
+        result = attach_next_booking(db_path, as_of, result)
+    return result
 
 
 def update_forecast_surfaces(text: str, raw: dict, forecast: dict) -> str:

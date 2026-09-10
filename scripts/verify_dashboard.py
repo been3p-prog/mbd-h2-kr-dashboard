@@ -878,6 +878,33 @@ def verify(
                     raise ValueError('amount or MoM does not match source metadata')
             except (KeyError, ValueError, OverflowError):
                 errors.append(f'two-card same-period comparison invalid: month {month}')
+    # The current next-month preview must agree with its linked booking surfaces.
+    for current in range(1, 12):
+        side = _month_surface(html, 'mvs', current) or ''
+        feature = re.search(r'<div class="feature"[^>]*data-next-booking-month="[^>]*>', side)
+        if not feature or 'data-phase="current"' not in side.partition('>')[0]:
+            continue
+        attrs = dict(re.findall(r'(data-[\w-]+)="([^"]*)"', feature[0]))
+        try:
+            month, total, target = (int(attrs[f'data-next-booking-{key}']) for key in ('month','total','target'))
+            values = {key:int(attrs[f'data-next-booking-{key}']) for key in ('ad-gen','ad-int','live')}
+            if month != current + 1 or total != sum(values.values()) or min(total,*values.values()) < 0 or target <= 0:
+                raise ValueError('invalid next booking metadata')
+            def booking_amount(value):
+                return (f'{value / 100_000_000:.2f}'.rstrip('0').rstrip('.') + '억' if abs(value) >= 100_000_000
+                        else f'{round(value / 10_000):,}만' if abs(value) >= 10_000 else f'{value:,}')
+            if (f'차월 부킹 · {month}월' not in side or f'<div class="fv num">{booking_amount(total)}</div>' not in side
+                    or f'목표 {booking_amount(target)} 대비 채움 {total / target * 100:.1f}%' not in side):
+                raise ValueError('next booking preview mismatch')
+            top, rest = _month_surface(html,'mvk',month) or '', _month_surface(html,'mvr',month) or ''
+            if f'<div class="v num">{booking_amount(total)}</div>' not in top or f'<div class="lab num">{total / 100000000:.1f}</div>' not in (_gauge_surface(html,month) or ''):
+                raise ValueError('next booking total mismatch')
+            for label,key in (('일반광고','ad-gen'),('통광마','ad-int'),('라이브','live')):
+                value = booking_amount(values[key])
+                if f'<div>{label}<b>{value}</b></div>' not in side or f'<span class="nm">{label}</span><div class="bigv num">{value}</div>' not in rest:
+                    raise ValueError('next booking component mismatch')
+        except (KeyError,ValueError,OverflowError):
+            errors.append(f'next booking surfaces invalid: month {current}')
     # A current pending forecast must not imply a complete total in another surface.
     if 'data-current-forecast-status="pending_scope"' in html:
         for current in range(1, 13):
