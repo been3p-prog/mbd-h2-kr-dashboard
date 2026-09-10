@@ -515,11 +515,11 @@ class CurrentRawRefreshTest(unittest.TestCase):
 
         updated = owned_refresh.update_default_month_state(html, 9)
 
-        self.assertIn('<option value="8">2026년 8월 · 확정</option>', updated)
+        self.assertIn('<option value="8">2026년 8월 · 마감 확인 필요</option>', updated)
         self.assertIn('<option value="9" selected>2026년 9월 · 진행 중</option>', updated)
         self.assertIn('<option value="10">2026년 10월 · 부킹 진행</option>', updated)
         self.assertIn('var CUR = 9;', updated)
-        self.assertIn('class="mvk mv" data-m="8" data-phase="closed"', updated)
+        self.assertIn('class="mvk mv" data-m="8" data-phase="pending_close"', updated)
         self.assertIn('class="mvr mv" data-m="9" data-phase="current"', updated)
         self.assertIn('class="mvs mv" data-m="10" data-phase="future"', updated)
 
@@ -836,7 +836,7 @@ class CurrentRawRefreshTest(unittest.TestCase):
                 expected_elapsed_weeks=5,
             )
 
-    def test_youtube_contract_records_actual_duckdb_path(self):
+    def test_youtube_public_contract_omits_operator_filesystem_path(self):
         month = {
             "period_start": dt.date(2026, 8, 1),
             "period_end": dt.date(2026, 8, 31),
@@ -859,7 +859,8 @@ class CurrentRawRefreshTest(unittest.TestCase):
             month, [], {"total": 1, "LF": 1, "SF": 0}, [],
             dt.datetime(2026, 8, 31, 12, 0), db_path=source,
         )
-        self.assertEqual(contract["source"]["duckdb"], str(source))
+        self.assertEqual(contract["source"]["duckdb"], "read-only YouTube snapshot")
+        self.assertNotIn(str(source), json.dumps(contract))
 
     def test_youtube_detail_marks_empty_dplusn_content_as_a_valid_state(self):
         month = {
@@ -1025,7 +1026,8 @@ class CurrentRawRefreshTest(unittest.TestCase):
         }
         with (
             mock.patch.object(refresh.dt, "datetime", FixedDateTime),
-            mock.patch.object(refresh, "fetch_live_rows", side_effect=[([], "2026-09-01 00:01:00"), ([], None)]),
+            mock.patch.object(refresh, "fetch_snapshot_clock", return_value={"as_of": dt.date(2026, 9, 1), "source_as_of": "2026-09-01T00:01:00+09:00", "captured_at": "2026-09-01T10:20:00+09:00"}),
+            mock.patch.object(refresh, "fetch_live_rows", return_value=([], "2026-09-01 00:01:00")),
             mock.patch.object(refresh, "fetch_current_revenue_snapshot", return_value=revenue),
         ):
             try:
@@ -1071,7 +1073,8 @@ class CurrentRawRefreshTest(unittest.TestCase):
         }
         with (
             mock.patch.object(refresh.dt, "datetime", FixedDateTime),
-            mock.patch.object(refresh, "fetch_live_rows", side_effect=[([], "2026-09-01 00:01:00"), ([], None)]),
+            mock.patch.object(refresh, "fetch_snapshot_clock", return_value={"as_of": dt.date(2026, 9, 1), "source_as_of": "2026-09-01T00:01:00+09:00", "captured_at": "2026-09-01T10:20:00+09:00"}),
+            mock.patch.object(refresh, "fetch_live_rows", return_value=([], "2026-09-01 00:01:00")),
             mock.patch.object(refresh, "fetch_current_revenue_snapshot", return_value=revenue),
         ):
             refresh.refresh(html_path, Path("/tmp/fixture.duckdb"), quiet=True)

@@ -55,7 +55,7 @@ LIVE_AVG_GMV_TARGET = 100_000_000
 LIVE_GMV_BASIS = "1D"
 PUBLIC_DETAIL_FIELDS = {
     "live": ["date", "status", "brand", "program", "package", "replay_url",
-             "viewer_count", "gmv_1d", "gmv_3h"],
+             "viewer_count", "gmv_1d", "gmv_3h", "gmv_1h"],
     "youtube": ["date", "status", "form", "title", "url", "views_total", "views_d7", "pis"],
 }
 CONTENT_LINK_RE = re.compile(
@@ -69,6 +69,7 @@ MANIFEST_ALLOWED_KEYS = frozenset({
     "sanitized_rows_included", "public_detail_fields",
     "source_payload_sha256", "live_avg_gmv_target_won", "live_gmv_basis"})
 MANIFEST_MAX_BYTES = 4096
+MANIFEST_OPTIONAL_KEYS = frozenset({"stage_payload_sha256", "snapshot_captured_at"})
 MANIFEST_SOURCE_KEYS = (
     "revenue_mirror", "live_quality", "yt_quality", "okr_targets", "owned_media")
 MANIFEST_STATUS_KEYS = ("live_quality", "yt_quality", "okr_targets", "owned_media")
@@ -170,8 +171,8 @@ def _check_manifest(
         return
 
     keys = set(manifest)
-    if keys - MANIFEST_ALLOWED_KEYS:
-        errors.append(f"manifest has unexpected keys {sorted(keys - MANIFEST_ALLOWED_KEYS)}")
+    if keys - MANIFEST_ALLOWED_KEYS - MANIFEST_OPTIONAL_KEYS:
+        errors.append(f"manifest has unexpected keys {sorted(keys - MANIFEST_ALLOWED_KEYS - MANIFEST_OPTIONAL_KEYS)}")
     if MANIFEST_ALLOWED_KEYS - keys:
         errors.append(f"manifest missing keys {sorted(MANIFEST_ALLOWED_KEYS - keys)}")
 
@@ -205,6 +206,20 @@ def _check_manifest(
     payload_sha = manifest.get("source_payload_sha256")
     if not (isinstance(payload_sha, str) and re.fullmatch(r"[0-9a-f]{64}", payload_sha)):
         errors.append("manifest source_payload_sha256 is not a lowercase 64-hex SHA-256")
+    stages = manifest.get("stage_payload_sha256", {})
+    if (not isinstance(stages, dict) or set(stages) - {"live_daily", "live_window", "owned_youtube", "revenue_close"}
+            or any(not isinstance(v, str) or not re.fullmatch(r"[0-9a-f]{64}", v) for v in stages.values())):
+        errors.append("invalid per-stage payload hash")
+    captures = manifest.get("snapshot_captured_at", {})
+    if not isinstance(captures, dict) or set(captures) - {"mbd", "youtube"}:
+        errors.append("invalid snapshot capture metadata")
+    else:
+        for value in captures.values():
+            try:
+                if not isinstance(value, str) or dt.datetime.fromisoformat(value).tzinfo is None:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                errors.append("snapshot capture timestamp must be timezone-aware")
 
     statuses = manifest.get("source_status")
     if not isinstance(statuses, dict):
@@ -378,11 +393,15 @@ def _check_youtube_main(html: str, errors: list) -> None:
             )
 
     rendered_forms = re.findall(
-        r'data-content-link="youtube".*?</a><small[^>]*>(LF|SF)[^<]*</small>',
+        r'data-content-link="youtube".*?</a><small[^>]*>([^<]+)</small>',
         yt_block,
         re.S,
     )
+    rendered_forms = [value.split(" · ", 1)[0].strip() for value in rendered_forms]
     expected_split = f"SF {rendered_forms.count('SF')}건 · LF {rendered_forms.count('LF')}건"
+    other_count = sum(value not in {"LF", "SF"} for value in rendered_forms)
+    if other_count:
+        expected_split += f" · 기타 {other_count}건"
     if len(rendered_forms) != rendered_count or expected_split not in yt_block:
         errors.append(f"youtube main publish split mismatch: expected={expected_split!r}")
 
@@ -738,19 +757,60 @@ def verify(
     for marker in ('부킹건수 목표', '비취소 부킹건수 ÷ 부킹건수 목표'):
         if marker in html:
             errors.append(f"obsolete booking-rate target denominator present: {marker!r}")
-    if html.count('data-live-progress-count=') != 9:
-        errors.append(f"live progress count markers {html.count('data-live-progress-count=')} != 9")
-    if html.count('data-live-package-count=') != 27:
-        errors.append(f"live package count markers {html.count('data-live-package-count=')} != 27")
-    for marker in ('시그니처 하위', '에센셜 하위', '스마트 하위'):
-        if html.count(marker) != 8:
-            errors.append(f"live sub-promotion marker {marker!r} appears {html.count(marker)}x (expected 8)")
-    # [2026-08-09] 9월 신청 시트 30건의 패키지비 합계가 미래월 부킹 화면까지 연결됐는지 고정한다.
-    for marker in ('라이브 · 9월 패키지별 부킹', '1.74억', '8.03억',
-                   '목표 12.8억 대비 채움 62.9%',
-                   'data-achievement-ring="채움" style="--p:82.1"'):
-        if marker not in html:
-            errors.append(f"missing September live booking source-parity marker {marker!r}")
+    retained_breakdowns = 0
+    subpromotion_counts = {package: 0 for package in ('시그니처', '에센셜', '스마트')}
+    for month in range(1, 13):
+        surface = _month_surface(html, "mvr", month) or ""
+        legacy_breakdown = 'data-live-revenue-breakdown=' in surface
+        closed = 'data-phase="closed"' in surface.partition('>')[0]
+        expected = int(legacy_breakdown or closed)
+        retained_breakdowns += expected
+        if surface.count('data-live-progress-count=') != expected:
+            errors.append(f"live progress count markers do not match retained breakdowns: month {month}")
+        if surface.count('data-live-package-count=') != expected * 3:
+            errors.append(f"live package count markers do not match retained breakdowns: month {month}")
+        decoded = html_lib.unescape(surface)
+        package_rows = list(re.finditer(r'data-live-package-count="([^"]+)"', decoded))
+        if expected and sorted(row.group(1) for row in package_rows) != sorted(subpromotion_counts):
+            errors.append(f"live package count markers have missing or duplicate packages: month {month}")
+        for index, row in enumerate(package_rows):
+            package = row.group(1)
+            if package not in subpromotion_counts:
+                continue
+            end = package_rows[index + 1].start() if index + 1 < len(package_rows) else decoded.find('<div class="card quality-card', row.end())
+            section = decoded[row.end():end if end >= 0 else len(decoded)]
+            # Retained closed cards have one drilldown per package. Canonical closes
+            # may omit a drilldown when no promotion drivers were supplied.
+            expected_sub = int((legacy_breakdown and closed) or '<div class="isubs">' in section)
+            subpromotion_counts[package] += expected_sub
+            if section.count(f'{package} 하위') != expected_sub:
+                errors.append(f"live sub-promotion marker {package + ' 하위'!r} is missing or duplicated: month {month}")
+    if html.count('data-live-progress-count=') != retained_breakdowns:
+        errors.append("live progress count markers do not match retained breakdowns")
+    if html.count('data-live-package-count=') != retained_breakdowns * 3:
+        errors.append("live package count markers do not match retained breakdowns")
+    for package, expected in subpromotion_counts.items():
+        marker = f'{package} 하위'
+        if html.count(marker) != expected:
+            errors.append(f"live sub-promotion marker {marker!r} appears {html.count(marker)}x (expected {expected})")
+    # A current pending forecast must not imply a complete total in another surface.
+    if 'data-current-forecast-status="pending_scope"' in html:
+        for current in range(1, 13):
+            top = _month_surface(html, "mvk", current) or ""
+            if 'data-current-forecast-status="pending_scope"' not in top:
+                continue
+            for group in ("mvk", "mvr"):
+                surface = _month_surface(html, group, current)
+                if surface is None or "확인 필요" not in surface:
+                    errors.append(f"missing current pending forecast disclosure: {group}")
+            if f'data-m="{current}" data-forecast-status="pending_scope"' not in html:
+                errors.append("current forecast chart must disclose pending scope")
+            for label in (f"{current}월 마감예상액", "마감예상 GAP"):
+                if not re.search(rf'<div class="k">{label}</div><div class="v num">확인 필요</div>', top):
+                    errors.append("unavailable forecast must not be rendered as an amount")
+            gauge = _gauge_surface(html, current) or ""
+            if '<div class="seg"' in gauge or '<div class="lab num">—</div>' not in gauge:
+                errors.append("unavailable forecast chart must not retain a revenue stack")
     for marker in PRIVATE_DETAIL_MARKERS:
         if marker.lower() in html.lower():
             errors.append(f"private detail marker must not be public: {marker!r}")

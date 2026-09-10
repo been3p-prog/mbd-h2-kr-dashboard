@@ -20,6 +20,8 @@ from pathlib import Path
 
 import duckdb
 
+from dashboard_period_state import update_default_month_state
+
 KST = dt.timezone(dt.timedelta(hours=9))
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_HTML = ROOT / "index.html"
@@ -279,6 +281,8 @@ def update_manifest(
     default_month: int | None = None,
     update_payload_hash: bool = True,
     force_stale_sources: set[str] | frozenset[str] = frozenset(),
+    source_as_of: str | None = None,
+    captured_at: str | None = None,
 ) -> str:
     manifest_re = re.compile(r'(<script type="application/json" id="mbd-public-guard">)(.*?)(</script>)', re.S)
     match = manifest_re.search(html)
@@ -293,7 +297,13 @@ def update_manifest(
     for key in touched_sources:
         if key not in manifest.get("source_snapshot_as_of", {}):
             raise RuntimeError(f"unknown manifest source timestamp {key}")
-        manifest["source_snapshot_as_of"][key] = built
+        if source_as_of is not None:
+            stamp = dt.datetime.fromisoformat(source_as_of)
+            if stamp.tzinfo is None:
+                raise ValueError("source snapshot time must be timezone-aware")
+        manifest["source_snapshot_as_of"][key] = source_as_of or built
+    if captured_at is not None:
+        manifest.setdefault("snapshot_captured_at", {})["mbd"] = captured_at
     if force_stale_sources and not isinstance(manifest.get("source_status"), dict):
         manifest["source_status"] = {key: "current" for key in SOURCE_STATUS_LABELS}
     _reconcile_source_statuses(manifest, built)
@@ -302,9 +312,12 @@ def update_manifest(
         raise RuntimeError(f"unknown forced stale source: {sorted(unknown_forced)}")
     for key in force_stale_sources:
         manifest["source_status"][key] = "stale"
+    payload_bytes = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode()
+    stage = "revenue_close" if "review_month" in payload else "live_daily"
+    payload_sha = hashlib.sha256(payload_bytes).hexdigest()
+    manifest.setdefault("stage_payload_sha256", {})[stage] = payload_sha
     if update_payload_hash:
-        payload_bytes = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode()
-        manifest["source_payload_sha256"] = hashlib.sha256(payload_bytes).hexdigest()
+        manifest["source_payload_sha256"] = payload_sha
     new_raw = json.dumps(manifest, ensure_ascii=False, separators=(",", ":"))
     updated = manifest_re.sub(lambda m: m.group(1) + new_raw + m.group(3), html, count=1)
     return sync_stale_source_markers(updated, manifest)
@@ -326,7 +339,7 @@ def _reconcile_source_statuses(manifest: dict, built: str) -> None:
             statuses[key] = "stale"
             continue
         age_hours = (built_at - source_at).total_seconds() / 3600
-        statuses[key] = "stale" if age_hours > FRESHNESS_SLA_HOURS else "current"
+        statuses[key] = "stale" if age_hours > FRESHNESS_SLA_HOURS or age_hours < -5 / 60 else "current"
 
 
 def sync_stale_source_markers(html: str, manifest: dict) -> str:
@@ -373,16 +386,14 @@ def remove_owned_media_reference_cards(html: str) -> str:
     )
     updated = card.sub("", html)
 
-    updated = updated.replace(
-        "grid-template-columns:repeat(4,minmax(0,1fr))",
-        "grid-template-columns:repeat(3,minmax(0,1fr))",
-        1,
-    )
-    updated = updated.replace(
-        "grid-template-columns:repeat(4,1fr)",
-        "grid-template-columns:repeat(3,1fr)",
-        1,
-    )
+    if updated != html:
+        updated = updated.replace(
+            "grid-template-columns:repeat(4,minmax(0,1fr))",
+            "grid-template-columns:repeat(3,minmax(0,1fr))", 1,
+        ).replace(
+            "grid-template-columns:repeat(4,1fr)",
+            "grid-template-columns:repeat(3,1fr)", 1,
+        )
     if ".chip.warn{" not in updated:
         updated = updated.replace(
             ".chip.vi{color:var(--violet)}",
@@ -391,55 +402,6 @@ def remove_owned_media_reference_cards(html: str) -> str:
         )
     if "온드미디어 · 참고" in updated or "3팀 스코프 밖 · 스택 최상단" in updated:
         raise RuntimeError("legacy owned-media reference KPI removal was incomplete")
-    return updated
-
-
-def update_default_month_state(html: str, month: int) -> str:
-    if not 1 <= month <= 12:
-        raise ValueError(f"default month out of range: {month}")
-    select_re = re.compile(r'(<select id="msel">)(.*?)(</select>)', re.S)
-    select = select_re.search(html)
-    if not select:
-        raise RuntimeError("month selector not found")
-    target_count = 0
-
-    def update_option(match: re.Match) -> str:
-        nonlocal target_count
-        value = int(match.group(1))
-        label = match.group(2)
-        if " · " not in label:
-            raise RuntimeError(f"month selector label malformed: {label}")
-        prefix = label.rsplit(" · ", 1)[0]
-        phase = "확정" if value < month else "진행 중" if value == month else "부킹 진행"
-        if value == month:
-            target_count += 1
-        selected = " selected" if value == month else ""
-        return f'<option value="{value}"{selected}>{prefix} · {phase}</option>'
-
-    options = re.sub(
-        r'<option value="(\d+)"(?: selected)?>([^<]+)</option>',
-        update_option,
-        select.group(2),
-    )
-    if target_count != 1:
-        raise RuntimeError(f"month selector target count mismatch: month={month} count={target_count}")
-    updated = html[:select.start()] + select.group(1) + options + select.group(3) + html[select.end():]
-    updated, cursor_count = re.subn(r'\bvar CUR = \d+;', f'var CUR = {month};', updated)
-    if cursor_count != 1:
-        raise RuntimeError(f"month JS cursor count mismatch: {cursor_count}")
-
-    def update_phase(match: re.Match) -> str:
-        value = int(match.group(2))
-        phase = "closed" if value < month else "current" if value == month else "future"
-        return match.group(1) + phase + match.group(3)
-
-    updated, phase_count = re.subn(
-        r'(class="(?:mvk|mvs|mvr) mv" data-m="(\d+)" data-phase=")(?:closed|cur|current|future)(")',
-        update_phase,
-        updated,
-    )
-    if phase_count == 0:
-        raise RuntimeError("month phase surfaces not found")
     return updated
 
 
@@ -622,14 +584,10 @@ def update_live_quality(html: str, summary: dict, *, month: int) -> str:
         if seed_count != 1:
             raise RuntimeError(f"failed to initialize live quality surface for month {month}")
     overall = summary["overall"]
-    if overall["n"]:
-        segment = segment.replace(
-            '<div class="qsplit" data-live-quality-empty="true">',
-            '<div class="qsplit">',
-            1,
-        )
-    elif 'data-live-quality-empty="true"' not in segment:
-        segment = segment.replace('<div class="qsplit">', '<div class="qsplit" data-live-quality-empty="true">', 1)
+    def quality_state(match):
+        tag = match.group().replace(' data-live-quality-empty="true"', '')
+        return tag if overall["n"] else tag[:-1] + ' data-live-quality-empty="true">'
+    segment = re.sub(r'<div class="qsplit"[^>]*>', quality_state, segment, count=1)
     target_pct = (overall["avg"] or 0) / TARGET_WON * 100
     cls, _, mom_text = fmt_delta(overall["mom"])
     avg = fmt_won(overall["avg"] or 0)
@@ -695,9 +653,9 @@ def update_live_activity_rows(
             f'<span class="metric-cell"><b>{fmt_won(data["gmv_1h"]) if data["gmv_1h"] else "—"}</b></span></div>'
         )
         rendered = re.sub(r'<div class="activity-metric metric-trio num">.*?</div>', metrics, row, count=1, flags=re.S)
-        if "실적 원천" in rendered:
+        if 'class="activity-inline-meta"' in rendered:
             rendered = re.sub(
-                r'<small class="activity-inline-meta">.*?실적 원천</small>',
+                r'<small class="activity-inline-meta">.*?</small>',
                 f'<small class="activity-inline-meta">{html_lib.escape(source_meta(data))}</small>',
                 rendered,
                 count=1,
@@ -758,7 +716,23 @@ def update_live_activity_rows(
         if inserted != 1:
             raise RuntimeError(f"live activity week group not found: {month}-{week}")
         existing_keys.add(key)
-    return updated
+    # Only this refreshed period is known to carry 1H source values. Historical
+    # columns retain their original labels until explicitly source-reconciled.
+    try:
+        start, end = _month_bounds(updated, "mvr", month)
+    except RuntimeError:
+        return updated  # Small row-only fixtures have no month container.
+    block = updated[start:end].replace("3H 거래액", "1H 거래액")
+    updated = updated[:start] + block + updated[end:]
+    # Correctly declare the already-visible measurement, not a new public metric.
+    manifest_re = re.compile(r'(<script type="application/json" id="mbd-public-guard">)(.*?)(</script>)', re.S)
+    def declare_hour(match):
+        manifest = json.loads(match[2])
+        fields = manifest.get("public_detail_fields", {}).get("live", [])
+        if "gmv_1h" not in fields:
+            fields.append("gmv_1h")
+        return match[1] + json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + match[3]
+    return manifest_re.sub(declare_hour, updated, count=1)
 
 
 def update_chips_footer_and_live_row(html: str, now: dt.datetime, summary: dict, ingest: str | None) -> str:
@@ -781,7 +755,7 @@ def update_chips_footer_and_live_row(html: str, now: dt.datetime, summary: dict,
     ingest_note = ingest or now.isoformat(timespec="seconds")
     footer_head = (
         f'LIVE 빌드 {built_short} · 현재 RAW 매출 = DuckDB 3팀 MTD · 라이브 1D = live.raw_slots {range_label} '
-        f'· ingest {ingest_note} · 마감예상/OKR/온드/유튜브 = 별도 공개 스냅샷 '
+        f'· 원천 파일 기준 {ingest_note} · 업무별 적재시각과 다를 수 있음 '
     )
     html = re.sub(
         r'<div class="foot">LIVE 빌드 .*?\(<a ',
@@ -792,12 +766,31 @@ def update_chips_footer_and_live_row(html: str, now: dt.datetime, summary: dict,
     )
     html = re.sub(
         r'<br>audit: .*?</div>',
-        f'<br>audit: 라이브 1D 품질 {summary["overall"]["n"]}건 readback green · 정적 Pages daily refresh는 Hermes cron에서 수행</div>',
+        f'<br>audit: 라이브 1D 품질 {summary["overall"]["n"]}건 · 매출 확정과 품질 지연 반영은 별도 · 정적 Pages daily refresh</div>',
         html,
         count=1,
         flags=re.S,
     )
     return html
+
+
+def fetch_snapshot_clock(db_path: Path, now: dt.datetime) -> dict:
+    """Use the transport's aware timestamps, never guess naive ingest timezone."""
+    con = duckdb.connect(str(db_path), read_only=True)
+    try:
+        rows = con.execute("select captured_at, source_mtime from snapshot.meta").fetchall()
+    finally:
+        con.close()
+    if len(rows) != 1:
+        raise RuntimeError("exactly one snapshot clock required")
+    captured, modified = rows[0]
+    if any(value is None or value.tzinfo is None for value in (captured, modified)):
+        raise RuntimeError("aware snapshot capture/source timestamp required")
+    if modified > captured or captured > now + dt.timedelta(minutes=5):
+        raise RuntimeError("invalid or future snapshot clock")
+    return {"captured_at": captured.astimezone(KST).isoformat(timespec="seconds"),
+            "source_as_of": modified.astimezone(KST).isoformat(timespec="seconds"),
+            "as_of": min(now.date(), modified.astimezone(KST).date())}
 
 
 def refresh(
@@ -809,19 +802,28 @@ def refresh(
 ) -> dict:
     now = dt.datetime.now(KST)
     year, month = now.year, now.month
+    clock = fetch_snapshot_clock(db_path, now)
+    as_of = clock["as_of"]
+    if (as_of.year, as_of.month) != (year, month):
+        raise RuntimeError("snapshot does not cover current month; retain last-good dashboard")
     prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
-    rows, ingest = fetch_live_rows(db_path, year, month, end_date=now.date())
+    rows, ingest = fetch_live_rows(db_path, year, month, end_date=as_of)
     prev_rows, _ = fetch_live_rows(db_path, prev_year, prev_month)
     summary = summarize(rows, prev_rows)
-    revenue_snapshot = fetch_current_revenue_snapshot(db_path, now.date())
+    revenue_snapshot = fetch_current_revenue_snapshot(db_path, as_of)
+    from dashboard_forecast_state import fetch_forecast, update_forecast_surfaces
+    forecast = fetch_forecast(db_path, as_of)
 
     html = html_path.read_text(encoding="utf-8")
     html = remove_owned_media_reference_cards(html)
-    html = update_default_month_state(html, month)
+    html = update_default_month_state(html, month, year=year)
     html = update_live_quality(html, summary, month=month)
     html = update_live_activity_rows(html, rows, year=year, month=month)
-    html = update_chips_footer_and_live_row(html, now, summary, ingest)
+    from dashboard_quality_history import update_live_quality_history
+    html = update_live_quality_history(html, db_path, year, month, as_of)
+    html = update_chips_footer_and_live_row(html, now, summary, clock["source_as_of"])
     html = update_current_raw_surfaces(html, revenue_snapshot)
+    html = update_forecast_surfaces(html, revenue_snapshot, forecast)
     payload = {
         "script": "scripts/refresh_live_daily_from_duckdb.py",
         "generated_at_kst": now.isoformat(timespec="seconds"),
@@ -830,6 +832,7 @@ def refresh(
         "latest_positive_date": str(summary["latest_positive_date"]),
         "live_1d": summary,
         "current_raw_revenue": revenue_snapshot,
+        "forecast": forecast,
     }
     html = update_manifest(
         html,
@@ -839,6 +842,8 @@ def refresh(
         default_month=month,
         update_payload_hash=not preserve_payload_hash,
         force_stale_sources={"yt_quality", "owned_media"} if preserve_payload_hash else frozenset(),
+        source_as_of=clock["source_as_of"],
+        captured_at=clock["captured_at"],
     )
     before = html_path.read_text(encoding="utf-8")
     changed = before != html

@@ -152,8 +152,9 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('MoM ▲ 40.3%', self.html)
         self.assertIn('패키지 총액 = AF 패키지비', self.html)
         self.assertIn('진행건수 = 확정 편성건', self.html)
-        self.assertEqual(self.html.count('data-live-progress-count='), 9)
-        self.assertEqual(self.html.count('data-live-package-count='), 27)
+        retained = 9 - self.html.count('data-current-forecast-team="live"')
+        self.assertEqual(self.html.count('data-live-progress-count='), retained)
+        self.assertEqual(self.html.count('data-live-package-count='), retained * 3)
         self.assertIn('진행 36건', self.html)
         self.assertIn('전월 +6건', self.html)
         self.assertIn('시그니처&lt;small class=&quot;up&quot;&gt;8건 · +2건', self.html)
@@ -164,11 +165,11 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('PGM · 12주년', self.html)
         self.assertIn('PGM · 어서오!세일', self.html)
         self.assertNotIn('하위 구분 = PGM/프로모션', self.html)
-        # [2026-08-09] 9월 신청 시트 30건, 패키지비 1.74억의 미래월 부킹 반영.
-        self.assertIn('라이브 · 9월 패키지별 부킹', self.html)
-        self.assertIn('8.03억', self.html)
-        self.assertIn('목표 12.8억 대비 채움 62.9%', self.html)
-        self.assertIn('data-achievement-ring="채움" style="--p:82.1"', self.html)
+        # Current forecast is explicitly unavailable until the Live policy is approved.
+        self.assertIn('data-current-forecast-status="pending_scope"', self.html)
+        current = vd._month_surface(self.html, "mvr", 9)
+        self.assertIn("라이브 예상매출 집계 기준 확인 필요", html_mod.unescape(current))
+        self.assertNotIn("1.74억", current)
         self.assertIn("data-week-toggle=", self.html)
         self.assertIn('data-content-link="live"', self.html)
         self.assertIn('data-content-link="youtube"', self.html)
@@ -360,7 +361,7 @@ class DashboardGuardTest(unittest.TestCase):
     def test_monthly_flow_tooltips_include_team_mom_with_red_up_blue_down(self):
         gauge_tips = {
             int(month): html_mod.unescape(tip)
-            for month, tip in re.findall(r'<div class="g [^"]*" data-m="(\d+)" data-tip="([^"]+)"', self.html)
+            for month, tip in re.findall(r'<div class="g [^"]*" data-m="(\d+)"(?: data-forecast-status="[^"]+")? data-tip="([^"]+)"', self.html)
         }
         self.assertEqual(len(gauge_tips), 12)
         august = gauge_tips[8]
@@ -368,9 +369,9 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('<span>통광마</span><b><span class="tv"><span>2,909만</span><small class="dn">MoM ▼ 46.1%</small>', august)
         self.assertIn('<span>라이브</span><b><span class="tv"><span>2.15억</span><small class="up">MoM ▲ 16.2%</small>', august)
         september = gauge_tips[9]
-        self.assertIn('<small class="dn">MoM -32.5%</small>', september)
-        self.assertIn('<small class="up">MoM +49.0%</small>', september)
-        self.assertIn('<small class="dn">MoM -20.2%</small>', september)
+        self.assertIn('라이브 예상매출 집계 기준 확인 필요', september)
+        self.assertNotIn('MoM', september)
+        self.assertNotIn('8.03억', september)
 
     def test_public_guard_rejects_non_allowlisted_content_link(self):
         bad = self.html.replace("https://www.youtube.com/watch?v=", "https://evil.example/watch?v=", 1)
@@ -596,6 +597,10 @@ class DashboardGuardTest(unittest.TestCase):
                       if "일반광고 ·" in html_mod.unescape(value)]
         self.assertEqual(len(adgen_tips), 12)
         for tip_html in adgen_tips:
+            if "월전체 비취소 부킹·계약" in tip_html:
+                self.assertNotIn("MoM", tip_html)
+                self.assertIn("마감예상", tip_html)
+                continue
             self.assertEqual(tip_html.count('class="tr"'), 3)
             for bucket in ("유상", "무상", "정부지원"):
                 self.assertIn(bucket, tip_html)
@@ -612,9 +617,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('class="gsubs"', july)
         self.assertIn("TOPS", july)
         self.assertIn("기타 정부지원", july)
-        self.assertIn('class="gsubs"', september)
-        self.assertIn("경기도주식회사", september)
-        self.assertIn("기타 정부지원", september)
+        self.assertIn("월전체 비취소 부킹·계약", september)
+        self.assertNotIn('class="gsubs"', september)  # stale unsupported breakdown removed
         for raw_comment in ("정부지원사업 TOPS", "경기도 주식회사"):
             self.assertNotIn(raw_comment, "".join(tips))
 
@@ -624,6 +628,10 @@ class DashboardGuardTest(unittest.TestCase):
                 if "통광마 ·" in html_mod.unescape(value)]
         self.assertEqual(len(tips), 12)
         for tip_html in tips:
+            if "월전체 비취소 부킹·계약" in tip_html:
+                self.assertNotIn("MoM", tip_html)
+                self.assertIn("마감예상", tip_html)
+                continue
             self.assertEqual(tip_html.count('class="tr"'), 3)
             self.assertEqual(tip_html.count("MoM "), 3)
             for bucket in ("유상", "무상", "정부지원"):
@@ -638,8 +646,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("경기도주식회사", july)
         self.assertIn("샤크닌자 · 미디어PKG", august)
         self.assertIn("익산원예농협", august)
-        self.assertIn("헬로우슬립 · 컴팩트PKG", september)
-        self.assertIn("마틸라 · 컴팩트PKG", september)
+        self.assertIn("월전체 비취소 부킹·계약", september)
+        self.assertNotIn("4,333만", september)
 
     def test_pages_workflow_uploads_index_only(self):
         workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /

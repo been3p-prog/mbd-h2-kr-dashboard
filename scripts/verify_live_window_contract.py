@@ -67,6 +67,14 @@ def check(html: str, contract: dict) -> list[str]:
     actual_card_count = live.count('data-live-broadcast-card=')
     if actual_card_count != len(cards):
         errors.append(f"CARD_COUNT {actual_card_count} != contract {len(cards)}")
+    quality = contract.get("quality_summary")
+    if quality:
+        month = int(quality["month"])
+        match = re.search(rf'class="mvr mv" data-m="{month}".*?(<div class="qsplit"[^>]*>)', html, re.S)
+        for key, value in (("count", quality["count"]), ("total", quality["gmv_1d"]), ("average", quality["average"])):
+            attr = re.search(rf'data-live-quality-source-{key}="([^"]+)"', match[1] if match else "")
+            if not attr or float(attr[1]) != float(value):
+                errors.append(f"MAIN_DETAIL_QUALITY_MISMATCH[{key}]")
 
     for metric in contract.get("hero_kpis", []):
         label, value, em = metric["label"], metric["value"], metric["em"]
@@ -117,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
             print(error)
         return 1
     print("LIVE_WINDOW_CONTRACT=GREEN")
-    print(f"contract={contract['contract_id']} source_rows={contract['source']['sheet_rows']}")
+    print(f"contract={contract['contract_id']} completed_rows={contract['source']['completed_row_count']}")
     return 0
 
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import html as html_lib
 import json
 import re
@@ -221,7 +222,7 @@ def hero_kpis(summary: dict) -> list[dict]:
         {"label": "시청", "value": fmt_short_count(summary["viewers"]), "em": f"평균 {fmt_short_count(summary['avg_viewers'])}"},
         {"label": "클릭률", "value": fmt_pct(summary["click_rate"]), "em": f"클릭 {fmt_num(summary['clicks'])}"},
         {"label": "구매", "value": fmt_num(summary["buyers"]), "em": f"구매율 {fmt_pct(summary['buy_rate'], 2)}"},
-        {"label": "AF/마진", "value": fmt_won(summary["af"]), "em": f"마진 {fmt_won(summary['margin'])}"},
+        {"label": "1H 거래액", "value": fmt_won(summary["gmv_1h"]), "em": "방송 중 거래액 누적"},
     ]
 
 
@@ -270,7 +271,7 @@ def render_card(row: dict, index: int, rank_by_1d: dict[str, int]) -> tuple[str,
     cid = card_id(row, index)
     cls, tag = card_tag(row, rank_by_1d)
     click_rate = row["clicks"] / row["viewers"] * 100 if row["viewers"] else None
-    meta = f"{fmt_m_d(row['date'])} · {row['pd']} · {row['package_key']} · {row['pgm']}"
+    meta = f"{fmt_m_d(row['date'])} · {row['package_key']} · {row['pgm']}"
     metrics = {
         "시청": fmt_short_count(row["viewers"]),
         "클릭률": fmt_pct(click_rate),
@@ -283,8 +284,7 @@ def render_card(row: dict, index: int, rank_by_1d: dict[str, int]) -> tuple[str,
     )
     note = (
         f"방송별 데이터 GMV {fmt_won(row['broadcast_gmv'])} · "
-        f"1H {fmt_won(row['gmv_1h']) if row['gmv_1h'] else '—'} · "
-        f"AF {fmt_won(row['af'])} · 비용 {fmt_won(row['cost'])} · 마진 {fmt_won(row['margin'])}"
+        f"1H {fmt_won(row['gmv_1h']) if row['gmv_1h'] else '—'}"
     )
     next_action = "해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용."
     html = f'''
@@ -437,13 +437,15 @@ def render_section(
     contract = {
         "contract_id": f"mbd-live-window-{now.year}-{month:02d}-mtd-v2",
         "source": {
-            "duckdb": str(db_path),
+            "duckdb": "read-only MBD snapshot",
             "schema_table": "live.raw_slots",
             "period": f"{now.year}-{month:02d}-01~{latest}",
             "latest_completed_date": str(latest),
             "completed_row_count": summary["n"],
             "sheet_rows": [],
         },
+        "quality_summary": {"month": month, "count": summary["n"],
+                            "gmv_1d": summary["gmv_1d"], "average": summary["avg_gmv_1d"]},
         "rules": {
             "broadcast_card_amount": {"label": "거래액", "visible_prefix": "1D", "source_column": "일 전체 GMV (라이브 브랜드 전체)"},
             "period_efficiency": {"labels": ["방송별 GMV", "방당 GMV"], "source_column": "방송별 데이터 GMV"},
@@ -501,6 +503,15 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
     section, contract = render_section(rows, now, ingest, db_path)
     html = html_path.read_text(encoding="utf-8")
     updated = replace_live_section(html, section)
+    manifest_re = re.compile(r'(<script type="application/json" id="mbd-public-guard">)(.*?)(</script>)', re.S)
+    def stage_hash(match):
+        manifest = json.loads(match[2])
+        payload = json.dumps(contract, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode()
+        manifest.setdefault("stage_payload_sha256", {})["live_window"] = hashlib.sha256(payload).hexdigest()
+        return match[1] + json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + match[3]
+    updated, manifest_count = manifest_re.subn(stage_hash, updated, count=1)
+    if manifest_count != 1:
+        raise RuntimeError("public manifest missing for Live window")
     html_changed = updated != html
     contract_text = json.dumps(contract, ensure_ascii=False, indent=2, default=str) + "\n"
     old_contract = contract_path.read_text(encoding="utf-8") if contract_path.exists() else ""

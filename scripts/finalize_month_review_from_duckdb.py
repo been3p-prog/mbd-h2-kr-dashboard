@@ -14,6 +14,8 @@ from pathlib import Path
 
 import duckdb
 
+from dashboard_quality_history import update_live_quality_summary, update_live_quality_history
+
 from refresh_live_daily_from_duckdb import (
     DEFAULT_DUCKDB,
     DEFAULT_HTML,
@@ -295,7 +297,7 @@ def _finalize_top(html: str, current: dict, previous: dict) -> str:
     label_at = first_label.start()
     card_start = block.rfind('<div class="kpi"', 0, label_at)
     card_end = _element_end(block, card_start)
-    icon_match = re.search(r'<div class="ic">.*?</div>', block[card_start:card_end], re.S)
+    icon_match = re.search(r'<div class="ic"(?: aria-hidden="true")?>.*?</div>', block[card_start:card_end], re.S)
     if not icon_match:
         raise RuntimeError("headline icon missing")
     sub = f'전월 대비 <span class="pill {cls} num">{arrow} {pct}</span>'
@@ -320,7 +322,7 @@ def _finalize_top(html: str, current: dict, previous: dict) -> str:
     marker_at = marker.start()
     gap_start = block.rfind('<div class="kpi"', 0, marker_at)
     gap_end = _element_end(block, gap_start)
-    icon_match = re.search(r'<div class="ic">.*?</div>', block[gap_start:gap_end], re.S)
+    icon_match = re.search(r'<div class="ic"(?: aria-hidden="true")?>.*?</div>', block[gap_start:gap_end], re.S)
     if not icon_match:
         raise RuntimeError("gap icon missing")
     achievement = float(current["progress_pct"])
@@ -343,6 +345,11 @@ def _update_mix_tip(card: str, team_key: str, current: dict, previous: dict) -> 
     if not attr:
         raise RuntimeError(f"team tooltip missing: {team_key}")
     tip = html_lib.unescape(attr.group(1))
+    if 'data-current-forecast-team=' in card:
+        tip = '<div class="th">확정 매출 구성</div>' + ''.join(
+            f'<div class="tr"><span>{bucket}</span><b>—</b></div>'
+            for bucket in ("유상", "무상", "정부지원")
+        )
     for bucket in ("유상", "무상", "정부지원"):
         value = int(current["mix"][team_key][bucket])
         prev = int(previous["mix"][team_key][bucket])
@@ -369,6 +376,27 @@ def _update_live_actual_tip(card: str, current: dict, previous: dict) -> str:
     if not attr:
         raise RuntimeError("live team tooltip missing")
     old_tip = html_lib.unescape(attr.group(1))
+    if 'data-current-forecast-team=' in card:
+        month = int(current["as_of"][5:7])
+        recognized = sum(int(v) for v in current["live_package_count"].values())
+        rows = [f'<div class="th">라이브 · {month}월 확정 패키지별 매출</div>',
+                f'<div class="cnt" data-live-progress-count="{month}">확정 매출 {recognized}건 · 편성 건수 미연결</div>']
+        for package in ("시그니처", "에센셜", "스마트"):
+            value = int(current["live_package_revenue"][package])
+            prior = int(previous["live_package_revenue"][package])
+            cls, arrow, pct = _direction(_mom(value, prior))
+            count = int(current["live_package_count"][package])
+            prev_count = previous.get("live_package_count", {}).get(package)
+            delta = count - int(prev_count) if prev_count is not None else None
+            count_text = f' · 전월 대비 {delta:+d}건' if delta is not None else ' · 전월 건수 미연결'
+            rows.append(f'<div class="tr" data-live-package-count="{package}"><span>{package}<small class="flat">{count}건{count_text}</small></span><b><span class="tv"><span>{fmt_won(value)}</span><small class="{cls}">MoM {arrow} {pct}</small></span></b></div>')
+            drivers = current.get("live_pgm_revenue", {}).get(package, {})
+            if drivers:
+                rows.append(f'<div class="isubs"><div class="ititle">{package} 하위</div>')
+                rows.extend(f'<div class="is"><span>{html_lib.escape(driver)}</span><b>{fmt_won(v)}</b></div>' for driver, v in drivers.items())
+                rows.append('</div>')
+        rows.append('<div class="tn">월말 확정 매출 기준 · 품질 성과 모집단과 별도</div>')
+        return card[:attr.start(1)] + html_lib.escape(''.join(rows), quote=True) + card[attr.end(1):]
     count_block = re.search(
         r'<div class="cnt" data-live-progress-count="[^"]+">.*?</div>',
         old_tip,
@@ -436,6 +464,9 @@ def _finalize_teams(html: str, current: dict, previous: dict) -> str:
             card = _update_live_actual_tip(card, current, previous)
         elif current.get("mix") and previous.get("mix"):
             card = _update_mix_tip(card, target_key, current, previous)
+        elif 'data-current-forecast-team=' in card:
+            tip = f'<div class="th">{label} · {month}월 확정 매출</div><div class="tr"><span>확정 매출</span><b>{fmt_won(value)}</b></div><div class="tn">세부 매출 구성 미연결</div>'
+            card = re.sub(r'data-tip="[^"]*"', lambda _: 'data-tip="' + html_lib.escape(tip, quote=True) + '"', card, count=1)
         card = re.sub(
             rf'(<span class="nm">{re.escape(label)}</span><div class="bigv num">)[^<]*(</div>)',
             rf'\g<1>{fmt_won(value)}\g<2>',
@@ -448,7 +479,7 @@ def _finalize_teams(html: str, current: dict, previous: dict) -> str:
             f'<span class="achv-in"><b>{achievement:.1f}%</b><small>달성률</small></span></span>'
         )
         card, ring_count = re.subn(
-            r'<span class="achv [^"]+" data-achievement-ring="달성".*?</span></span>',
+            r'<span class="achv [^"]+" data-achievement-ring="(?:달성|채움)".*?</span></span>',
             ring,
             card,
             count=1,
@@ -457,6 +488,8 @@ def _finalize_teams(html: str, current: dict, previous: dict) -> str:
         if ring_count != 1:
             raise RuntimeError(f"achievement ring missing: {label}")
         gap = value - target
+        if 'data-current-forecast-team=' in card and '<span>GAP</span>' not in card:
+            card = card.replace('<div class="rows num">', '<div class="rows num">' + f'<div class="r"><span>GAP</span><b style="color:var(--{"red" if gap >= 0 else "blue"})">{_signed_won(gap)}</b></div>', 1)
         card = re.sub(
             r'(<div class="r"><span>GAP</span><b style="color:var\(--(?:red|blue)\)">)[^<]*(</b></div>)',
             rf'\g<1>{_signed_won(gap)}\g<2>',
@@ -472,6 +505,9 @@ def _finalize_teams(html: str, current: dict, previous: dict) -> str:
             count=1,
         )
         card = card.replace("RAW 누적", "확정 RAW")
+        if 'data-current-forecast-team=' in card:
+            card = re.sub(r' data-current-forecast-team="[^"]*"', '', card)
+            card = re.sub(r'<div class="r"><span>기준</span><b>.*?</b></div>', '<div class="r"><span>기준</span><b>월말 확정 매출</b></div>', card, count=1)
         block = block[:card_start] + card + block[card_end:]
     return html[:start] + block + html[end:]
 
@@ -528,6 +564,8 @@ def finalize_month_review(html: str, current: dict, previous: dict, *, built_at:
     html = _finalize_top(html, current, previous)
     html = _finalize_teams(html, current, previous)
     html = _finalize_chart(html, current, previous)
+    if "live_quality" in current:
+        html = update_live_quality_summary(html, current["live_quality"], as_of.month)
     built = (built_at or dt.datetime.now(KST)).isoformat(timespec="seconds")
     payload = {"review_month": as_of.strftime("%Y-%m"), "actual": current, "previous": previous}
     html = update_manifest(html, built, payload, touched_sources={"revenue_mirror"}, default_month=as_of.month)
@@ -606,6 +644,7 @@ def main() -> int:
     if previous is None:
         previous = fetch_canonical_actual_snapshot(db, previous_end)
     result = finalize_month_review(source.read_text(), current, previous)
+    result = update_live_quality_history(result, db, year, month, end)
     output.parent.mkdir(parents=True, exist_ok=True)
     partial = output.with_name(f"{output.name}.{uuid.uuid4().hex}.partial")
     partial.write_text(result)

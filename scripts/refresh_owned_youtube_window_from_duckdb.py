@@ -18,6 +18,8 @@ from pathlib import Path
 
 import duckdb
 
+from dashboard_period_state import update_default_month_state
+
 from refresh_live_daily_from_duckdb import _reconcile_source_statuses, sync_stale_source_markers
 
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -483,9 +485,17 @@ def render_main_quality(block: str, month: int, series: dict[int, dict]) -> str:
         )
 
     subscriber_source = str(subscriber) if subscriber is not None else "none"
-    return f'''<div class="qsplit" data-yt-main-quality-basis="analytics-d7" data-yt-main-source-average-views="{overall}" data-yt-main-source-lf-average-views="{int(current.get('LF', 0))}" data-yt-main-source-sf-average-views="{int(current.get('SF', 0))}" data-yt-main-source-subscriber-count="{subscriber_source}" data-yt-main-source-d7-completed="{completed}"><div data-yt-main-average="{month}"><div class="qk2">전체 평균 조회수</div>
+    rendered = f'''<div class="qsplit" data-yt-main-quality-basis="analytics-d7" data-yt-main-source-average-views="{overall}" data-yt-main-source-lf-average-views="{int(current.get('LF', 0))}" data-yt-main-source-sf-average-views="{int(current.get('SF', 0))}" data-yt-main-source-subscriber-count="{subscriber_source}" data-yt-main-source-d7-completed="{completed}"><div data-yt-main-average="{month}"><div class="qk2">전체 평균 조회수</div>
       <div class="qv num">{fmt_num(overall) if overall else '—'}</div><div class="qs">{''.join(pills)}</div>
       <div class="qmeta"><span>D+7 완료 {completed}/{published}건 · YouTube Analytics</span> · <a href="https://docs.google.com/spreadsheets/d/1lXIjLja-DEdBmDWDTM9LqNOG9UhVPCLS2B09InHQD90/edit?gid=673164445#gid=673164445" target="_blank" rel="noopener">MBD YT SSOT ↗</a></div></div><div><div class="qcells yt-qcells"><div class="qcell hero" data-yt-subscriber-card="{month}"><div class="qk">구독자</div><div class="qn num">{fmt_num(subscriber) if subscriber is not None else '—'}</div><div class="qm2 num">{subscriber_detail}</div>{_qmom(subscriber, previous.get('subscriber'))}</div><div class="qcell" data-yt-publish-card="{month}"><div class="qk">{month}월 발행</div><div class="qn num">{published}건</div><div class="qm2 num">SF {int(current.get('SF_count', 0))}건 · LF {int(current.get('LF_count', 0))}건</div>{_qmom(published, previous.get('published'))}</div><div class="qcell" data-yt-watch-duration-card="{month}"><div class="qk">평균 시청지속시간</div><div class="qn num">—</div><div class="qm2 num">Analytics 지속시간 미적재</div><div class="qmom flat num">MoM —</div></div>{average_card('LF')}{average_card('SF')}</div></div></div>'''
+
+
+    lf, sf = int(current.get("LF_count", 0)), int(current.get("SF_count", 0))
+    unknown = published - lf - sf
+    if unknown < 0:
+        raise RuntimeError("YouTube form counts exceed published count")
+    split = f"SF {sf}건 · LF {lf}건"
+    return rendered.replace(split, split + f" · 기타 {unknown}건", 1) if unknown else rendered
 
 
 def render_quality_trend(series: dict[int, dict], focus_month: int, target: int | None) -> str:
@@ -754,7 +764,7 @@ def render_section(
     contract = {
         "contract_id": f"owned-youtube-window-{month['period_start'].year}-{m:02d}-mtd-v1",
         "source": {
-            "duckdb": str(db_path),
+            "duckdb": "read-only YouTube snapshot",
             "monthly_period": f"{month['metric_start_date']}~{month['metric_end_date']}",
             "period_complete": bool(month["period_complete"]),
             "raw_status": month["raw_status"],
@@ -823,58 +833,10 @@ def update_manifest_sources(
         default=str,
     ).encode()
     manifest["source_payload_sha256"] = hashlib.sha256(payload_bytes).hexdigest()
+    manifest.setdefault("stage_payload_sha256", {})["owned_youtube"] = manifest["source_payload_sha256"]
     raw = json.dumps(manifest, ensure_ascii=False, separators=(",", ":"))
     updated = manifest_re.sub(lambda m: m.group(1) + raw + m.group(3), html, count=1)
     return sync_stale_source_markers(updated, manifest)
-
-
-def update_default_month_state(html: str, month: int) -> str:
-    if not 1 <= month <= 12:
-        raise ValueError(f"default month out of range: {month}")
-    select_re = re.compile(r'(<select id="msel">)(.*?)(</select>)', re.S)
-    select = select_re.search(html)
-    if not select:
-        raise RuntimeError("month selector not found")
-    target_count = 0
-
-    def update_option(match: re.Match) -> str:
-        nonlocal target_count
-        value = int(match.group(1))
-        label = match.group(2)
-        if " · " not in label:
-            raise RuntimeError(f"month selector label malformed: {label}")
-        prefix = label.rsplit(" · ", 1)[0]
-        phase = "확정" if value < month else "진행 중" if value == month else "부킹 진행"
-        if value == month:
-            target_count += 1
-        selected = " selected" if value == month else ""
-        return f'<option value="{value}"{selected}>{prefix} · {phase}</option>'
-
-    options = re.sub(
-        r'<option value="(\d+)"(?: selected)?>([^<]+)</option>',
-        update_option,
-        select.group(2),
-    )
-    if target_count != 1:
-        raise RuntimeError(f"month selector target count mismatch: month={month} count={target_count}")
-    updated = html[:select.start()] + select.group(1) + options + select.group(3) + html[select.end():]
-    updated, cursor_count = re.subn(r'\bvar CUR = \d+;', f'var CUR = {month};', updated)
-    if cursor_count != 1:
-        raise RuntimeError(f"month JS cursor count mismatch: {cursor_count}")
-
-    def update_phase(match: re.Match) -> str:
-        value = int(match.group(2))
-        phase = "closed" if value < month else "current" if value == month else "future"
-        return match.group(1) + phase + match.group(3)
-
-    updated, phase_count = re.subn(
-        r'(class="(?:mvk|mvs|mvr) mv" data-m="(\d+)" data-phase=")(?:closed|cur|current|future)(")',
-        update_phase,
-        updated,
-    )
-    if phase_count == 0:
-        raise RuntimeError("month phase surfaces not found")
-    return updated
 
 
 def _source_iso(value: dt.datetime | None) -> str:
@@ -908,6 +870,11 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         main_rows, snapshot_date = fetch_main_content(con, current_start, current_end)
         quality_series = fetch_quality_series(con, now.year, now.month, as_of=now.date())
         source_as_of = fetch_source_as_of(con, month["fetched_at"])
+        previous_main = None
+        if now.month > 1:
+            previous_end = current_start - dt.timedelta(days=1)
+            previous_rows, previous_snapshot = fetch_main_content(con, previous_end.replace(day=1), previous_end)
+            previous_main = (previous_end, previous_rows, previous_snapshot)
     finally:
         con.close()
     if publish_counts.get("total", 0) != len(main_rows):
@@ -946,8 +913,32 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         "subscriber_count": current_quality.get("subscriber"),
         "previous_average_views": int(previous_quality.get("overall", 0)),
     }
+    contract["quality_history"] = {
+        str(focus): {
+            "publish_count": int(quality_series[focus].get("published", 0)),
+            "d7_completed": int(quality_series[focus].get("completed", 0)),
+            "average_views": int(quality_series[focus].get("overall", 0)),
+            "lf_average_views": int(quality_series[focus].get("LF", 0)),
+            "sf_average_views": int(quality_series[focus].get("SF", 0)),
+        }
+        for focus in range(max(1, now.month - 1), now.month + 1)
+    }
     html = html_path.read_text(encoding="utf-8")
     updated = replace_section(html, section)
+    if previous_main is not None:
+        previous_end, previous_rows, previous_snapshot = previous_main
+        updated = update_main_youtube_surfaces(
+            updated, year=now.year, month=previous_end.month, as_of=previous_end,
+            snapshot_date=previous_snapshot, rows=previous_rows, quality_series=quality_series,
+        )
+        if int(quality_series[previous_end.month].get("published", 0)) != len(previous_rows):
+            raise RuntimeError("YouTube previous-month quality publish count mismatch")
+        assert_main_parity(
+            updated, month=previous_end.month, expected_published=len(previous_rows),
+            expected_latest_publish_date=max((row["publish_date"] for row in previous_rows), default=None),
+            expected_snapshot_date=previous_snapshot,
+            expected_elapsed_weeks=math.ceil(previous_end.day / 7),
+        )
     updated = update_main_youtube_surfaces(
         updated,
         year=now.year,
@@ -972,7 +963,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         source_as_of=source_as_of,
         default_month=now.month,
     )
-    updated = update_default_month_state(updated, now.month)
+    updated = update_default_month_state(updated, now.month, year=now.year)
     html_changed = updated != html
     contract_text = json.dumps(contract, ensure_ascii=False, indent=2, default=str) + "\n"
     old_contract = contract_path.read_text(encoding="utf-8") if contract_path.exists() else ""
