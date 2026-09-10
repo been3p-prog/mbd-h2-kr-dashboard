@@ -96,6 +96,16 @@ def update_live_quality_history(html: str, db_path: Path, year: int, month: int,
         html = update_live_quality_summary(html, series[m], m, series=series)
         html = update_live_activity_rows(html, rows_by_month[m], year=year, month=m)
         html = clear_ineligible_live_metrics(html, rows_by_month[m], year, m, as_of)
+        # A previously reconciled ledger must retain its full-schedule contract
+        # when late results arrive after month close. Current month is rebuilt
+        # by the daily refresh after this historical pass.
+        if m < month:
+            from refresh_live_daily_from_duckdb import _month_bounds
+            start, end = _month_bounds(html, 'mvr', m)
+            if 'data-live-main-source-count=' in html[start:end]:
+                from dashboard_live_schedule import fetch_schedule, update_schedule
+                cutoff = dt.date(year, m, calendar.monthrange(year, m)[1])
+                html = update_schedule(html, fetch_schedule(db_path, year, m), as_of=cutoff, source_as_of=as_of)
     return html
 
 

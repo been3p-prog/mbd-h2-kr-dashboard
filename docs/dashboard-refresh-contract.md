@@ -33,7 +33,26 @@ Optional YouTube failure retains last-good data/hash with an explicit stale disc
 
 Public Live rows do not publish PD names, cost or margin. The already-visible hourly
 measurement is 1H, not 3H; untouched historical 3H columns retain their prior basis.
-Main/detail Live count, 1D total and average are cross-checked before deployment.
+Main/detail Live performance count, 1D total and average are cross-checked before deployment.
+The full schedule count is separate from the positive-GMV performance population.
+
+## Full weekly content visibility (2026-09-10)
+
+- The current Live ledger is rebuilt from all non-cancelled `live.raw_slots` rows
+  for the selected current month on each daily refresh. New, moved and removed
+  slots reconcile with the source; same-day/same-brand broadcasts are not merged.
+  Free slots remain visible with an exclusion label; quality/revenue filters are unchanged.
+- All calendar weeks are open by default, with chronological rows. Future metrics
+  remain unavailable even if the source contains a value. Empty metrics are not
+  presented as zero; unmeasured elapsed slots say 실적 집계 대기.
+- A reconciled previous-month ledger also receives late facts without reopening revenue.
+  Source snapshot date and the historical month-end classification cutoff stay separate.
+- YouTube includes every active published video through the refresh cutoff, with
+  current cumulative views and available D+7 Analytics. All month weeks are open,
+  including empty future weeks. No future planning table is connected: empty weeks
+  are not proof that nothing is planned. The UI explicitly discloses this limitation.
+- Public source counts, dates, full-week coverage and Live status counts are guarded.
+  This remains the existing daily batch, not realtime; upstream metric delays remain visible.
 
 ## Operating sequence
 

@@ -836,6 +836,9 @@ def refresh(
     html = update_live_activity_rows(html, rows, year=year, month=month)
     from dashboard_quality_history import update_live_quality_history
     html = update_live_quality_history(html, db_path, year, month, as_of)
+    from dashboard_live_schedule import fetch_schedule, update_schedule
+    schedule_rows = fetch_schedule(db_path, year, month)
+    html = update_schedule(html, schedule_rows, as_of=as_of)
     html = update_chips_footer_and_live_row(html, now, summary, clock["source_as_of"])
     html = update_current_revenue_state(html, revenue_snapshot, forecast)
     from dashboard_kpi_cards import normalize_legacy_tops
@@ -849,6 +852,7 @@ def refresh(
         "source": str(db_path),
         "month": f"{year:04d}-{month:02d}",
         "latest_positive_date": str(summary["latest_positive_date"]),
+        "schedule_count": len(schedule_rows),
         "live_1d": summary,
         "current_raw_revenue": revenue_snapshot,
         "forecast": forecast,

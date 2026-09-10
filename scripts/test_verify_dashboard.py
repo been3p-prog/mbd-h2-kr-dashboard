@@ -476,6 +476,13 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertFalse(vd.youtube_week_state_ok('', '', 9, 1))
         self.assertTrue(vd.youtube_week_state_ok('data-week-group="9-1"', '', 9, 1))
 
+    def test_youtube_week_state_accepts_full_calendar_month_not_only_elapsed(self):
+        ledger = '<div class="content-ledger" data-content-ledger="youtube">'
+        ledger += '<div data-yt-main-source-total-weeks="5"></div>'
+        ledger += ''.join(f'<details data-week-group="9-{week}" open></details>' for week in range(1, 6))
+        self.assertTrue(vd.youtube_week_state_ok(ledger, '', 9, 2))
+        self.assertFalse(vd.youtube_week_state_ok(ledger.replace('9-5', '9-4'), '', 9, 2))
+
     def test_youtube_week_state_ignores_live_week_groups_before_youtube_ledger(self):
         live_groups = "".join(
             f'<details data-week-group="9-{week}"></details>' for week in range(1, 6)

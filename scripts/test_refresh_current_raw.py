@@ -1029,6 +1029,7 @@ class CurrentRawRefreshTest(unittest.TestCase):
             mock.patch.object(refresh.dt, "datetime", FixedDateTime),
             mock.patch.object(refresh, "fetch_snapshot_clock", return_value={"as_of": dt.date(2026, 9, 1), "source_as_of": "2026-09-01T00:01:00+09:00", "captured_at": "2026-09-01T10:20:00+09:00"}),
             mock.patch.object(refresh, "fetch_live_rows", return_value=([], "2026-09-01 00:01:00")),
+            mock.patch("dashboard_live_schedule.fetch_schedule", return_value=[]),
             mock.patch.object(refresh, "fetch_current_revenue_snapshot", return_value=revenue),
             mock.patch.object(refresh, "fetch_same_period_comparison", return_value={"as_of": "2026-08-01", "total_won": 0}),
             mock.patch("dashboard_forecast_state.fetch_forecast", return_value={
@@ -1080,6 +1081,7 @@ class CurrentRawRefreshTest(unittest.TestCase):
             mock.patch.object(refresh.dt, "datetime", FixedDateTime),
             mock.patch.object(refresh, "fetch_snapshot_clock", return_value={"as_of": dt.date(2026, 9, 1), "source_as_of": "2026-09-01T00:01:00+09:00", "captured_at": "2026-09-01T10:20:00+09:00"}),
             mock.patch.object(refresh, "fetch_live_rows", return_value=([], "2026-09-01 00:01:00")),
+            mock.patch("dashboard_live_schedule.fetch_schedule", return_value=[]),
             mock.patch.object(refresh, "fetch_current_revenue_snapshot", return_value=revenue),
             mock.patch("dashboard_forecast_state.fetch_forecast", return_value={
                 "ad_gen": 0, "ad_int": 0, "live": None, "status": "pending_scope",

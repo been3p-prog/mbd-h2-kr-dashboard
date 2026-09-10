@@ -403,12 +403,12 @@ def render_main_ledger(*, year: int, month: int, as_of: dt.date, rows: list[dict
     month_end = _month_end(year, month)
     period_end = min(month_end, as_of) if as_of >= dt.date(year, month, 1) else month_end
     elapsed_weeks = max(1, math.ceil(period_end.day / 7))
+    total_weeks = math.ceil(month_end.day / 7)
     latest_publish = max((ensure_date(row["publish_date"]) for row in rows), default=None)
     completed = sum(1 for row in rows if row.get("d7_complete"))
     snapshot_label = fmt_m_d(snapshot_date) if snapshot_date else "확인중"
-    latest_nonempty_week = max(((ensure_date(row["publish_date"]).day - 1) // 7 + 1 for row in rows), default=1)
     groups: list[str] = []
-    for index in range(1, elapsed_weeks + 1):
+    for index in range(1, total_weeks + 1):
         start_day = (index - 1) * 7 + 1
         end_day = min(index * 7, month_end.day)
         week_start = dt.date(year, month, start_day)
@@ -417,8 +417,7 @@ def render_main_ledger(*, year: int, month: int, as_of: dt.date, rows: list[dict
         item_html = "".join(_activity_row(item) for item in items)
         if not item_html:
             item_html = '<div class="activity-empty">이 주차 발행 없음</div>'
-        open_attr = " open" if index == latest_nonempty_week else ""
-        groups.append(f'''<details class="week-group" data-week-group="{month}-{index}"{open_attr}>
+        groups.append(f'''<details class="week-group" data-week-group="{month}-{index}" open>
           <summary data-week-toggle="{month}-{index}"><span class="week-label">{month}월 {index}주차 <small>{fmt_range(week_start, week_end)}</small></span>
           <span class="week-chevron" aria-hidden="true"></span></summary>
           <div class="week-items"><div class="activity-column-head" aria-label="지표 칼럼"><div class="activity-metric-head metric-trio"><span>누적조회수</span><span>D7 조회수</span><span>PIS</span></div></div>{item_html}</div></details>''')
@@ -426,8 +425,10 @@ def render_main_ledger(*, year: int, month: int, as_of: dt.date, rows: list[dict
         f'<div class="plan-note" data-yt-main-source-publish-count="{len(rows)}" '
         f'data-yt-main-source-latest-publish-date="{latest_publish.isoformat() if latest_publish else "none"}" '
         f'data-yt-main-source-snapshot-date="{snapshot_date.isoformat() if snapshot_date else "none"}" '
-        f'data-yt-main-source-elapsed-weeks="{elapsed_weeks}">'
-        f'<b>{month}월 발행 {len(rows)}건</b> · D+7 완료 {completed}건 · {esc(snapshot_label)} public 스냅샷</div>'
+        f'data-yt-main-source-elapsed-weeks="{elapsed_weeks}" '
+        f'data-yt-main-source-total-weeks="{total_weeks}">'
+        f'<b>{month}월 발행 {len(rows)}건</b> · D+7 완료 {completed}건 · {esc(snapshot_label)} public 스냅샷'
+        ' · 발행 콘텐츠 기준(예정 편성 원천 미연결)</div>'
         + "".join(groups)
     )
 
@@ -611,6 +612,7 @@ def assert_main_parity(
     expected_latest_publish_date: dt.date | None,
     expected_snapshot_date: dt.date | None,
     expected_elapsed_weeks: int,
+    expected_total_weeks: int | None = None,
 ) -> None:
     start, end = month_block_bounds(html, month)
     block = html[start:end]
@@ -633,6 +635,10 @@ def assert_main_parity(
         actual = match.group(1) if match else None
         if actual != expected_value:
             raise RuntimeError(f"YouTube main {label} mismatch: rendered={actual!r} source={expected_value!r}")
+    total_weeks_match = re.search(r'data-yt-main-source-total-weeks="([^"]+)"', yt_block)
+    if expected_total_weeks is not None:
+        if not total_weeks_match or total_weeks_match[1] != str(expected_total_weeks):
+            raise RuntimeError("YouTube main total weeks metadata mismatch")
     rendered_links = yt_block.count('data-content-link="youtube"')
     if rendered_links != expected_published:
         raise RuntimeError(
@@ -640,15 +646,14 @@ def assert_main_parity(
         )
     if 'data-yt-main-quality-basis="analytics-d7"' not in yt_block:
         raise RuntimeError("YouTube main quality basis marker missing")
-    rendered_weeks = {
-        int(value)
-        for value in re.findall(rf'data-week-group="{month}-(\d+)"', yt_block)
-    }
-    expected_weeks = set(range(1, expected_elapsed_weeks + 1))
-    if rendered_weeks != expected_weeks:
+    week_tags = re.findall(rf'<details class="week-group" data-week-group="{month}-(\d+)"([^>]*)>', yt_block)
+    rendered_weeks = [int(value) for value, _ in week_tags]
+    expected_weeks = list(range(1, (expected_total_weeks or expected_elapsed_weeks) + 1))
+    if rendered_weeks != expected_weeks or (expected_total_weeks is not None and
+            any(not re.search(r'\bopen(?:\s|=|$)', attrs) for _, attrs in week_tags)):
         raise RuntimeError(
-            f"YouTube main elapsed weeks mismatch: rendered={sorted(rendered_weeks)} "
-            f"source={sorted(expected_weeks)}"
+            f"YouTube main weeks mismatch: rendered={rendered_weeks} "
+            f"source={expected_weeks}; all full-month weeks must be open"
         )
 
 
@@ -938,6 +943,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
             expected_latest_publish_date=max((row["publish_date"] for row in previous_rows), default=None),
             expected_snapshot_date=previous_snapshot,
             expected_elapsed_weeks=math.ceil(previous_end.day / 7),
+            expected_total_weeks=math.ceil(previous_end.day / 7),
         )
     updated = update_main_youtube_surfaces(
         updated,
@@ -955,6 +961,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         expected_latest_publish_date=latest_publish,
         expected_snapshot_date=snapshot_date,
         expected_elapsed_weeks=elapsed_weeks,
+        expected_total_weeks=math.ceil(_month_end(now.year, now.month).day / 7),
     )
     updated = update_manifest_sources(
         updated,

@@ -71,6 +71,7 @@ class QualityHistoryTest(unittest.TestCase):
                 result, month=month, expected_published=25,
                 expected_latest_publish_date=dt.date(2026, month, 1),
                 expected_snapshot_date=None, expected_elapsed_weeks=(day + 6) // 7,
+                expected_total_weeks=5,
             )
         start, end = live._month_bounds(result, "mvr", 8)
         before_start, before_end = live._month_bounds(self.html, "mvr", 8)

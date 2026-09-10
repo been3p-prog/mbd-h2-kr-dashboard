@@ -10,6 +10,7 @@ verify() 는 예외를 던지지 않고 정렬된 위반 리스트를 반환한�
 from __future__ import annotations
 
 import argparse
+import calendar
 import datetime as dt
 import html as html_lib
 import json
@@ -105,11 +106,15 @@ def youtube_week_state_ok(month_surface: str, youtube_window: str, month: int, e
     ledger_start = month_surface.find(ledger_marker)
     if ledger_start >= 0:
         month_surface = month_surface[ledger_start:]
-    rendered = {
+    total_match = re.search(r'data-yt-main-source-total-weeks="(\d+)"', month_surface)
+    total = int(total_match[1]) if total_match else elapsed
+    if total_match and total != (calendar.monthrange(2026, month)[1] + 6) // 7:
+        return False
+    rendered = [
         int(value)
         for value in re.findall(rf'data-week-group="{month}-(\d+)"', month_surface)
-    }
-    return rendered == set(range(1, elapsed + 1)) or (
+    ]
+    return rendered == list(range(1, total + 1)) or (
         not rendered and 'data-yt-weekly-empty="true"' in youtube_window
     )
 
@@ -438,15 +443,55 @@ def _check_youtube_main(html: str, errors: list) -> None:
     if elapsed_weeks is not None:
         if not 1 <= elapsed_weeks <= 5:
             errors.append(f"youtube main elapsed weeks {elapsed_weeks} is outside 1..5")
-        expected_weeks = set(range(1, elapsed_weeks + 1))
-        rendered_weeks = {
+        total_match = re.search(r'data-yt-main-source-total-weeks="(\d+)"', yt_block)
+        total_weeks = int(total_match[1]) if total_match else elapsed_weeks
+        if total_match and total_weeks != (calendar.monthrange(2026, month)[1] + 6) // 7:
+            errors.append("youtube main total weeks does not match calendar month")
+        expected_weeks = list(range(1, total_weeks + 1))
+        rendered_weeks = [
             int(value)
             for value in re.findall(rf'data-week-group="{month}-(\d+)"', yt_block)
-        }
+        ]
         if rendered_weeks != expected_weeks:
             errors.append(
                 f"youtube main elapsed weeks mismatch: rendered={sorted(rendered_weeks)}, expected={sorted(expected_weeks)}"
             )
+        if total_match and len(re.findall(rf'<details class="week-group" data-week-group="{month}-\d+" open>', yt_block)) != total_weeks:
+            errors.append("youtube full-month weeks must be open by default")
+
+
+def _check_live_schedule(html: str, errors: list) -> None:
+    """Validate source count, full weeks and status counts on reconciled ledgers."""
+    for month in range(1, 13):
+        block = _month_surface(html, 'mvr', month)
+        if not block or 'data-live-main-source-count=' not in block:
+            continue
+        ledger = block.split('data-content-ledger="live">', 1)[-1].split('<div class="card quality-card yt-quality">', 1)[0]
+        try:
+            value = lambda name: re.search(rf'data-live-main-source-{name}="([^"]+)"', ledger)[1]
+            count, measured, pending, future = [int(value(key)) for key in ('count', 'measured', 'pending', 'future')]
+            as_of = dt.date.fromisoformat(value('as-of'))
+            if as_of.month != month or min(count, measured, pending, future) < 0:
+                raise ValueError()
+        except (TypeError, ValueError):
+            errors.append('live schedule source metadata is invalid')
+            continue
+        row_dates = re.findall(r'<time class="activity-date" datetime="([^"]+)"', ledger)
+        if count != len(row_dates) or count != measured + pending + future:
+            errors.append('live schedule source count mismatch')
+        states = re.findall(r'<small class="activity-inline-meta">(.*?)</small>', ledger)
+        if [sum(label in state for state in states) for label in ('실적 반영', '실적 집계 대기', '예정')] != [measured, pending, future]:
+            errors.append('live schedule status count mismatch')
+        weeks = re.findall(rf'<details class="week-group" data-week-group="{month}-(\d+)" open>', ledger)
+        total_weeks = (calendar.monthrange(as_of.year, month)[1] + 6) // 7
+        if weeks != [str(week) for week in range(1, total_weeks + 1)]:
+            errors.append('live schedule full-month open weeks mismatch')
+        try:
+            dates = [dt.date.fromisoformat(value) for value in row_dates]
+            if dates != sorted(dates) or any((d.year, d.month) != (as_of.year, month) for d in dates) or sum(d > as_of for d in dates) != future:
+                errors.append('live schedule dates mismatch')
+        except ValueError:
+            errors.append('live schedule dates are invalid')
 
 
 def verify(
@@ -480,6 +525,7 @@ def verify(
         allow_stale_sources=allowed_stale,
     )
     _check_youtube_main(html, errors)
+    _check_live_schedule(html, errors)
 
     # 3) LIVE 마커 정확히 1회 · STAGING/승인 전 비공개 부재
     for marker in LIVE_MARKERS:
