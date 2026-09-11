@@ -20,13 +20,29 @@
   explicit unavailable daily-channel-total disclosure; it does not establish a
   daily Analytics source.
 
-## Not yet verified
+## Native-user Slack follow-up — completed 21:43 KST
 
-Live and ad bots did not answer app-authored test messages. The existing Slack
+Live and ad bots initially did not answer app-authored test messages. The existing Slack
 connection attaches `bot_id` even with `as_user=true`; their existing bot-loop
 guards deliberately ignore those messages. Those guards were not weakened.
-Native user-message testing is pending computer-use permission. Do not label
-these two Slack delivery routes E2E-passed based on process state or engine tests.
+After computer-use permission became available, eight native-user messages were
+sent in been_jobs and the exact threads were read back through Slack:
+
+- Live: month, previous Monday–Sunday week, September 10 detail, and September
+  Simmons-only scope — 4/4 passed.
+- Ads: month, previous Monday–Sunday week, September 10, and August general-ad
+  actual detail — 4/4 passed.
+- All eight roots had no `bot_id`; each had exactly one reply from the intended
+  bot. After whitespace and Slack's `⚠️`/`:warning:` transport equivalence only,
+  complete reply text matched the common dashboard snapshot. Numeric values,
+  labels, dates, links and version identifiers were not normalized away.
+
+Combined actual Slack E2E coverage: **13/13** (Live 4, Ads 4, YouTube 5).
+This verifies these representative questions, not every possible phrasing or
+every historical month. No runtime code or access-control change was needed for
+this follow-up. Thread IDs and raw message bodies are not published in this report.
+
+## Remaining source and operational limitations
 
 No test messages were sent to any other channel. No source data, authorization,
 membership, cron, gateway, or Hermes state was changed. Original source gaps

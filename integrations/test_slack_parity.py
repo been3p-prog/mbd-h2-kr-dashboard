@@ -23,6 +23,13 @@ QUESTIONS=[
 ]
 
 
+def normalize_reply(text):
+    # Slack serializes this Unicode emoji as a shortcode in rich-text replies.
+    # Preserve every number, qualifier, link and punctuation character.
+    text=text.replace('⚠️', ':warning:').replace('⚠', ':warning:')
+    return re.sub(r'\s+', ' ', text).strip()
+
+
 def main():
     p=argparse.ArgumentParser();p.add_argument('--send',action='store_true');p.add_argument('--packet',required=True)
     p.add_argument('--receipt',required=True);p.add_argument('--group',choices=['all','month','rest'],default='all')
@@ -66,8 +73,7 @@ def main():
             reply=api('conversations.replies',{'channel':CHANNEL,'ts':item['ts'],'limit':20})
             actual=next((m for m in reply.get('messages',[]) if m.get('user')==BOTS[item['domain']] and m.get('ts')!=item['ts']),None)
             if actual is None:continue
-            normalize=lambda s:re.sub(r'\s+',' ',s).strip()
-            ok=normalize(actual.get('text',''))==normalize(item['expected'])
+            ok=normalize_reply(actual.get('text',''))==normalize_reply(item['expected'])
             result={'domain':item['domain'],'case':item['key'],'ok':ok,'channel':CHANNEL,'root_ts':item['ts'],'reply_ts':actual['ts'],
                     'permalink':'https://ohou-se.slack.com/archives/'+CHANNEL+'/p'+actual['ts'].replace('.','')}
             results.append(result);pending.remove(item)
