@@ -113,6 +113,18 @@
       "relations": ["v_youtube_monthly_analytics", "v_youtube_weekly_analytics", "v_public_dplusn_video"],
       "basis": "Existing channel period metrics and completed D+N content view. Metric periods and publication cohorts remain distinct from calendar schedule weeks.",
       "consumer": "scripts/refresh_owned_youtube_window_from_duckdb.py:render_section"
+    },
+    "youtube_verified_api": {
+      "channel_id": "UCBKtitA1RwY7F32rCniV1dA",
+      "producer": "scripts/youtube_verified_analytics.py",
+      "storage": "dashboard_verified_youtube in disposable snapshot only; never canonical DB",
+      "daily": "YouTube Analytics reports.query dimensions=day metrics=views; actual returned-day coverage, never public snapshot differences",
+      "period": "Standalone views for each exact weekly/monthly range; signed daily-vs-period residual retained. Request end is not data availability.",
+      "formats": "creatorContentType: shorts, videoOnDemand, liveStream, posts. Platform taxonomy, not an inferred manual LF/SF mapping.",
+      "d7": "Previous/current-month publication cohorts independently queried: require returned D0-D6 coverage for views and engagement. Standalone views and separate likes/comments/shares. Missing days fail closed as pending.",
+      "discovery": "Uploads pagination through previous-month boundary; videos.list exact channel, ID, public status and KST publication date. Unknown public videos displayed separately without modifying dim_video or guessing schedule identity/format.",
+      "freshness": "API capture <=48h; actual metric cutoff <=7 days old; no same-day availability promise",
+      "failure": "Fail candidate collection; retain last-good snapshot/HTML/cache. No authentication file or canonical data writes."
     }
   },
   "bot_consumers": {
@@ -123,7 +135,7 @@
     "domains": ["live", "youtube", "ads"],
     "version_binding": "Exact public index.html byte SHA plus source clock and rendered-value parity",
     "missing_live_party": "Exclude from strict 3P RAW and disclose attribution unknown; do not infer 3P or claim revenue absent.",
-    "youtube_daily_channel": "Unavailable until a verified daily channel source is connected; publication cohort and D7 are separate.",
+    "youtube_daily_channel": "Verified API overlay shared with dashboard. Daily/range answers show actual coverage; missing dates are pending, never zero. Monthly/weekly totals remain standalone official queries.",
     "test_channel": "C086M0WDKPC"
   },
   "verification_policy": {

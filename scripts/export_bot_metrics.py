@@ -37,6 +37,8 @@ def export(mbd_path, yt_path, html_path, as_of):
     c = duckdb.connect(str(mbd_path), read_only=True)
     y = duckdb.connect(str(yt_path), read_only=True)
     try:
+        from youtube_verified_analytics import load_overlay
+        verified = load_overlay(y, required=True)
         live = query(c, r'''select try_cast("온에어 일자" as date) as date,
           coalesce("브랜드명", '') as brand, coalesce("패키지", '') as package,
           try_cast(regexp_replace(coalesce("방송별 데이터 GMV", ''), '[^0-9.-]', '', 'g') as bigint) as gmv,
@@ -125,7 +127,7 @@ def export(mbd_path, yt_path, html_path, as_of):
                   'source_as_of': manifest.get('source_snapshot_as_of', {}),
                   'revenue': {'months': months, 'days': daily}, 'live': live,
                   'youtube': {'periods': periods, 'content': content, 'snapshot_date': snapshot,
-                              'subscribers': subscribers, 'schedules': schedules}}
+                              'subscribers': subscribers, 'schedules': schedules, 'verified_api':verified}}
         # Bind metric VALUES as well as the bytes: a fresh HTML hash alone is not parity.
         current = months[as_of.strftime('%Y-%m')]
         for name, value in [('current-total-won',current['raw']['total_won']),
@@ -137,6 +139,9 @@ def export(mbd_path, yt_path, html_path, as_of):
         if live_contract['quality_summary']['count'] != len(quality) or live_contract['quality_summary']['gmv_1d'] != sum(r['gmv_1d'] for r in quality):
             raise ValueError('Live quality differs from dashboard contract')
         yt_contract = json.loads((Path(html_path).resolve().parent/'data/owned_youtube_window_contract.json').read_text())
+        verified_sha=hashlib.sha256(json.dumps(verified,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+        if yt_contract.get('verified_api',{}).get('sha256')!=verified_sha:
+            raise ValueError('verified API payload differs from rendered dashboard contract')
         if yt_contract['schedule_coverage']['source_count'] != schedules[as_of.strftime('%Y-%m')]['coverage']['source_count']:
             raise ValueError('YouTube schedule differs from dashboard contract')
         if yt_contract['schedule_coverage'] != schedules[as_of.strftime('%Y-%m')]['coverage']:
@@ -165,7 +170,7 @@ def export(mbd_path, yt_path, html_path, as_of):
                 raise ValueError('forecast team differs from dashboard')
         section,_=render_section(m,fetch_weeks(y,m['period_start'],m['period_end']),
             fetch_publish_counts(y,as_of.replace(day=1),as_of),
-            fetch_top_content(y,m['metric_start_date'],m['metric_end_date']),dt.datetime.now(KST),db_path=yt_path)
+            fetch_top_content(y,m['metric_start_date'],m['metric_end_date']),dt.datetime.now(KST),db_path=yt_path,verified=verified)
         if replace_section(source_text,section) != source_text:
             raise ValueError('YouTube period metrics differ from dashboard')
         quality_series=fetch_quality_series(y,as_of.year,as_of.month,as_of=as_of)
@@ -174,6 +179,7 @@ def export(mbd_path, yt_path, html_path, as_of):
             rows=[r for r in content if r['publish_date'].month==month]
             checked=update_main_youtube_surfaces(source_text,year=as_of.year,month=month,as_of=cutoff,
                 snapshot_date=snapshot,rows=rows,quality_series=quality_series,
+                verified=verified,
                 schedule=schedules[f'{as_of.year}-{month:02d}'])
             if checked != source_text:
                 raise ValueError('YouTube content/quality metrics differ from dashboard')

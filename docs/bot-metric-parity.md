@@ -15,10 +15,14 @@ the same read-only MBD/YouTube snapshots used by the HTML refresh.
 - Live: exact brand scope, calendar dates, cancellation exclusion, positive-1D
   quality population with free rows excluded. 1D and broadcast GMV remain distinct.
   Unknown 1P/3P AF remains outside RAW and is disclosed, never imputed as 3P.
-- YouTube: official complete/partial periods, actual publication cohort, completed
-  Analytics D7 and latest cumulative values remain distinct. No verified daily
-  channel total exists in this source contract; daily answers explicitly say so
-  and separately report publication/D7 details. No daily total is synthesized.
+- YouTube: official complete/partial periods, registered publication cohort,
+  independently verified Analytics D7 and public cumulative views remain distinct.
+  The verified API overlay connects daily and creatorContentType data; requests
+  after the actual returned cutoff say pending, not zero. Exact weekly/monthly
+  headlines use standalone period queries, not daily sums. Platform Shorts/general
+  video classifications are explicitly distinct from manual SF/LF cohorts.
+  Newly discovered public IDs appear separately and do not silently enter manual
+  schedule or D7 denominators. No title matching or format guessing is performed.
 - Weeks default to Monday–Sunday. `9월 1주차` explicitly requests the dashboard's
   month-week (days 1–7). Answers show exact start/end dates.
 - Unsupported brand/period constraints are rejected, never dropped.

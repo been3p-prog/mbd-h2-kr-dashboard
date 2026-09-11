@@ -598,6 +598,7 @@ def update_main_youtube_surfaces(
     rows: list[dict],
     quality_series: dict[int, dict],
     schedule=None,
+    verified=None,
 ) -> str:
     start, end = month_block_bounds(html, month)
     block = html[start:end]
@@ -622,6 +623,9 @@ def update_main_youtube_surfaces(
         snapshot_date=snapshot_date,
         schedule=schedule,
     )
+    if verified:
+        from youtube_verified_analytics import render_overlay
+        ledger += render_overlay(verified, month)
     block = block[:ledger_start] + ledger + block[ledger_end:]
     if schedule:
         from youtube_schedule import source_contract, verify_coverage
@@ -737,6 +741,7 @@ def render_section(
     now: dt.datetime,
     *,
     db_path: Path = DEFAULT_YT_DB,
+    verified=None,
 ) -> tuple[str, dict]:
     m = month["period_start"].month
     metric_range = fmt_range(month["metric_start_date"], month["metric_end_date"])
@@ -794,6 +799,9 @@ def render_section(
     <div class="yt-source"><b>데이터 기준:</b> YouTube Analytics API monthly/weekly period rows + public D+N snapshot · fetched_at {esc(str(month['fetched_at']))} · raw_status {esc(month['raw_status'])}</div>
   </div>
 </section>'''
+    if verified:
+        from youtube_verified_analytics import render_overlay
+        section = section.replace('<div class="yt-source">', render_overlay(verified, m, daily=True)+'<div class="yt-source">')
     contract = {
         "contract_id": f"owned-youtube-window-{month['period_start'].year}-{m:02d}-mtd-v1",
         "source": {
@@ -894,13 +902,15 @@ def fetch_source_as_of(con: duckdb.DuckDBPyConnection, monthly_fetched_at: dt.da
     }
 
 
-def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = False) -> dict:
+def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = False, *, require_verified: bool = False) -> dict:
     now = dt.datetime.now(KST)
     current_start = dt.date(now.year, now.month, 1)
     current_end = min(now.date(), _month_end(now.year, now.month))
     con = duckdb.connect(str(db_path), read_only=True)
     try:
         month = fetch_month(con, now.year, now.month)
+        from youtube_verified_analytics import load_overlay
+        verified = load_overlay(con, required=require_verified)
         weeks = fetch_weeks(con, month["period_start"], month["period_end"])
         publish_counts = fetch_publish_counts(con, current_start, current_end)
         top_content = fetch_top_content(con, month["metric_start_date"], month["metric_end_date"])
@@ -925,8 +935,12 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
             f"YouTube current-month source mismatch: publish_counts={publish_counts.get('total', 0)} rows={len(main_rows)}"
         )
     section, contract = render_section(
-        month, weeks, publish_counts, top_content, now, db_path=db_path
+        month, weeks, publish_counts, top_content, now, db_path=db_path, verified=verified
     )
+    if verified:
+        contract['verified_api'] = {'actual_end':verified['actual_end'], 'captured_at':verified['captured_at'],
+            'discovered_count':len(verified['discovered']),
+            'sha256':hashlib.sha256(json.dumps(verified,ensure_ascii=False,sort_keys=True).encode()).hexdigest()}
     contract["source"]["source_as_of"] = source_as_of
     contract['schedule_coverage'] = schedule['coverage']
     latest_publish = max((row["publish_date"] for row in main_rows), default=None)
@@ -974,6 +988,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         updated = update_main_youtube_surfaces(
             updated, year=now.year, month=previous_end.month, as_of=previous_end,
             snapshot_date=previous_snapshot, rows=previous_rows, quality_series=quality_series,
+            verified=verified,
             schedule=reconcile(schedule_payload, previous_rows, year=now.year, month=previous_end.month,
                                as_of=now.date(), known_videos=known_videos),
         )
@@ -995,6 +1010,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         rows=main_rows,
         quality_series=quality_series,
         schedule=schedule,
+        verified=verified,
     )
     assert_main_parity(
         updated,
@@ -1049,7 +1065,7 @@ def main() -> int:
     parser.add_argument("--duckdb", default=str(DEFAULT_YT_DB))
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    refresh(Path(args.html), Path(args.contract), Path(args.duckdb), quiet=args.quiet)
+    refresh(Path(args.html), Path(args.contract), Path(args.duckdb), quiet=args.quiet, require_verified=True)
     return 0
 
 

@@ -20,6 +20,8 @@ QUESTIONS=[
  ('live','day','9월 10일 라이브 상세'),('youtube','day','9월 10일 유튜브 성과 상세'),('ads','day','9월 10일 광고 매출'),
  ('live','brand','9월 시몬스 라이브 성과'),('youtube','detail','8월 가장 잘된 롱폼 하나랑 숏폼 하나 알려줘'),('ads','detail','8월 일반광고 매출 상세'),
  ('youtube','schedule','9월 유튜브 편성'),
+ ('youtube','verified_day','9월 8일 유튜브 조회수'),
+ ('youtube','platform_format','9월 숏폼 조회수'),
 ]
 
 

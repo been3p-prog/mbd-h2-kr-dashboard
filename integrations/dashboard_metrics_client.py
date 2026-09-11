@@ -133,6 +133,65 @@ def validate(packet, now, public_bytes=None):
         source_time = dt.datetime.fromisoformat(stamp)
         if source_time.tzinfo is None or not -300 <= (now-source_time).total_seconds() <= 48*3600:
             raise ValueError('원천 수집 갱신 지연')
+    api = packet['youtube'].get('verified_api')
+    if api:
+        stamp=dt.datetime.fromisoformat(api['captured_at'])
+        if api.get('schema')!='youtube-verified-api-v1' or api.get('channel_id')!='UCBKtitA1RwY7F32rCniV1dA':
+            raise ValueError('공식 API 채널 검증 실패')
+        if stamp.tzinfo is None or not -300 <= (now-stamp).total_seconds() <= 48*3600:
+            raise ValueError('공식 API 수집 지연')
+        end=dt.date.fromisoformat(api['actual_end'])
+        if not now.date()-dt.timedelta(days=7) <= end <= now.date():
+            raise ValueError('공식 API 집계일 지연')
+
+
+def verified_youtube_answer(api, start, end, form_filter):
+    """Standalone period totals take precedence; arbitrary dates use daily basis."""
+    kind={'LF':'videoOnDemand','SF':'shorts'}.get(form_filter)
+    label={'LF':'일반 동영상(YouTube 분류, 수기 LF와 별도)',
+           'SF':'Shorts(YouTube 분류, 수기 SF와 별도)'}.get(form_filter,'채널')
+    period=next((r for r in api['periods'] if r['period_start']==str(start) and r['period_end']==str(end)),None)
+    if period:
+        value=period['formats'].get(kind,0) if kind else period['views']
+        lines=[f'• {label} 기간 조회수: {number(value)}회 · 공식 기간 조회',
+               f'• 실제 집계: {start}~{period["metric_end_date"]} · '+('완료' if period['metric_end_date']==str(end) else '진행 중')]
+        if not kind:
+            names={'shorts':'Shorts','videoOnDemand':'일반 동영상','liveStream':'라이브','posts':'게시물'}
+            lines+=['• 플랫폼 포맷: '+' / '.join(f'{names[k]} {number(v)}' for k,v in period['formats'].items()),
+                    f'• 기간 내 발행 기여 {number(period["new_views"])} + 기발행 {number(period["prior_views"])} + 잔차 {number(period["residual"])} = {number(value)}',
+                    f'• 일별 합계와 공식 기간 총계 차이 {period["daily_residual"]:+,}회 · 총계는 공식 기간 조회값 유지']
+        previous_start=(start-dt.timedelta(days=1)).replace(day=1) if period['period_type']=='month' else start-dt.timedelta(days=7)
+        previous=next((r for r in api['periods'] if r['period_type']==period['period_type'] and r['period_start']==str(previous_start)),None)
+        if period['metric_end_date']==period['period_end'] and previous and previous['metric_end_date']==previous['period_end']:
+            baseline=previous['formats'].get(kind,0) if kind else previous['views']
+            if baseline:
+                lines += [f'• {"MoM" if period["period_type"]=="month" else "WoW"} {(value/baseline-1)*100:+.1f}% · 완료 기간끼리 비교']
+        return lines
+    if str(start)<api['coverage_start']:
+        return ['• 해당 일별 범위: 확인 못 함(공식 일별 연결 기간 밖)']
+    stop=min(str(end),api['actual_end'])
+    if str(start)>stop:
+        return [f'• {label} 조회수: 집계 대기 · 실제 Analytics 최신일 {api["actual_end"]}. 미집계를 0으로 표시하지 않습니다.']
+    coverage=[r['date'] for r in api['daily'] if str(start)<=r['date']<=stop]
+    expected=(dt.date.fromisoformat(stop)-start).days+1
+    if len(set(coverage))!=expected or len(coverage)!=expected:
+        raise ValueError('공식 일별 데이터에 누락·중복이 있습니다.')
+    rows=api['daily_formats'] if kind else api['daily']
+    total=sum(r['views'] for r in rows if str(start)<=r['date']<=stop and (not kind or r['form']==kind))
+    return [f'• {label} 조회수: {number(total)}회 · 공식 일별 조회'+(' 합계' if start!=end else ''),
+            f'• 실제 집계: {start}~{stop}'+(' · 이후 날짜는 집계 대기' if stop<str(end) else '')]
+
+
+def discovered_lines(api, start, end):
+    found=[r for r in api.get('discovered',[]) if str(start)<=r['published_date']<=str(end)]
+    if not found:return []
+    lines=[f'• 공개 업로드 추가 확인 {len(found)}건 · 기존 영상/편성 DB 미연결. 위 발행·D7 분모와 별도입니다.']
+    for r in found[:20]:
+        if r.get('privacy')!='public' or r.get('channel_id')!='UCBKtitA1RwY7F32rCniV1dA' or not re.fullmatch('[A-Za-z0-9_-]{11}',r['video_id']):
+            raise ValueError('추가 공개 영상 신원 확인 실패')
+        lines += [f'• {r["published_date"]} {safe(r["title"])} · 공개 누적 {number(r["views"])} · <https://www.youtube.com/watch?v={r["video_id"]}|영상> · D7 —']
+    if len(found)>20:lines += ['• 추가 공개 영상 전체는 대시보드에서 확인하거나 일별 조회해주세요.']
+    return lines
 
 
 def live_scope(rows, q):
@@ -254,9 +313,11 @@ def youtube_answer(p, q, start, end, kind):
         lines += [f'• 편성 원천 {c["source_count"]}건 · 발행 연결 {c["matched_count"]}건 · 예정 {c["planned"]}건 · 미매칭 {c["unmatched"]}건',
                   f'• 커뮤니티 확인 {c["community"]}건 · 콘텐츠 미정 {c["slot"]}건 · 날짜만 있는 빈 구좌 {c["empty_slot_count"]}건(별도)',
                   f'• 시트 조회 {c["captured_at"]} · 주월간 대시보드 / 편성·개별 성과 아카이빙']
-        return lines
+        return lines + discovered_lines(yt.get('verified_api',{}),start,end)
     official = next((r for r in yt['periods'] if r['period_start']==start.isoformat() and r['period_end']==end.isoformat()), None)
-    if official and official['available'] and not form_filter:
+    if yt.get('verified_api'):
+        lines += verified_youtube_answer(yt['verified_api'],start,end,form_filter)
+    elif official and official['available'] and not form_filter:
         lines += [f'• 채널 총조회수: {number(official["views"])}회 · '+('마감' if official['period_complete'] else '진행 중'),
                   f'• 실제 집계: {official["metric_start_date"]}~{official["metric_end_date"]}',
                   f'• 기간 내 발행 기여 {number(official["new_views"])} + 기발행 {number(official["prior_views"])} + 잔차 {number(official["residual"])} = {number(official["views"])}']
@@ -267,8 +328,10 @@ def youtube_answer(p, q, start, end, kind):
     else:
         lines += ['• '+(form_filter+' 기간 조회수' if form_filter else '채널 기간 조회수')+': 확인 못 함(검증된 해당 기간·범위 Analytics 원천 없음). 발행 영상 누적이나 D7로 대신하지 않습니다.']
     forms = {f:sum(r['form']==f for r in rows) for f in ('LF','SF')}
-    lines += [f'• 기간 내 실제 발행 {len(rows)}건 (LF {forms["LF"]} / SF {forms["SF"]} / 기타 {len(rows)-sum(forms.values())})']
+    lines += [f'• 기간 내 등록 발행 {len(rows)}건 (LF {forms["LF"]} / SF {forms["SF"]} / 기타 {len(rows)-sum(forms.values())})']
     lines += [f'• 발행 cohort D+7 완료 {len(complete)}/{len(rows)}건 · 평균 {number(sum(r["d7_views"] for r in complete)/len(complete)) if complete else "—"}회']
+    if not form_filter:
+        lines += discovered_lines(yt.get('verified_api',{}),start,end)
     sub = [r for r in yt['subscribers'] if r['date'] <= min(end.isoformat(),p['as_of'])]
     if sub:
         lines += [f'• 구독자 {number(sub[-1]["count"])}명 · 수집 {sub[-1]["date"]}']

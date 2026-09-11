@@ -248,6 +248,11 @@ def sync_snapshot(
                 con.close()
             result['schedule_rows'] = payload['source_rows']
             result['schedule_captured_at'] = payload['captured_at']
+            from youtube_verified_analytics import fetch_overlay, apply_overlay
+            verified = fetch_overlay(ssh, remote_python)
+            apply_overlay(partial, verified)
+            result['analytics_actual_end'] = verified['actual_end']
+            result['discovered_public_count'] = len(verified['discovered'])
         os.replace(partial, output)
         result["output"] = str(output)
         return result
