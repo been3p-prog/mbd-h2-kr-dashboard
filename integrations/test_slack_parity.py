@@ -9,7 +9,6 @@ import json
 import re
 import time
 from pathlib import Path
-import requests
 from dashboard_metrics_client import answer,KST
 
 CHANNEL='C086M0WDKPC'
@@ -26,13 +25,15 @@ QUESTIONS=[
 
 
 def normalize_reply(text):
-    # Slack serializes this Unicode emoji as a shortcode in rich-text replies.
+    # Exact transport aliases observed in replies, including public video titles.
     # Preserve every number, qualifier, link and punctuation character.
-    text=text.replace('⚠️', ':warning:').replace('⚠', ':warning:')
+    for unicode,shortcode in [('⚠️',':warning:'),('⚠',':warning:'),('🔴',':red_circle:'),('🏠',':house:')]:
+        text=text.replace(unicode,shortcode)
     return re.sub(r'\s+', ' ', text).strip()
 
 
 def main():
+    import requests
     p=argparse.ArgumentParser();p.add_argument('--send',action='store_true');p.add_argument('--packet',required=True)
     p.add_argument('--receipt',required=True);p.add_argument('--group',choices=['all','month','rest'],default='all')
     p.add_argument('--domain',choices=list(BOTS))

@@ -100,6 +100,15 @@ class VerifiedTests(unittest.TestCase):
         self.p['daily'].pop(7);self.assertIn('누락·중복',self.answer('9월 8일 유튜브 조회수'))
     def test_bot_discovery_escaped(self):
         a=self.answer('9월 유튜브 상세');self.assertNotIn('<script>alert',a);self.assertIn('공개 업로드 추가 확인 1건',a)
+    def test_slack_title_emoji_only_transport_equivalence(self):
+        import importlib.util
+        sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'integrations'))
+        spec=importlib.util.spec_from_file_location('slack_probe',Path(__file__).resolve().parents[1]/'integrations/test_slack_parity.py')
+        probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
+        n=probe.normalize_reply
+        self.assertEqual(n('🔴 방송 🏠 1,439,009 · 9/8'),n(':red_circle: 방송 :house: 1,439,009 · 9/8'))
+        self.assertNotEqual(n('🔴 1,439,009 · 9/8'),n(':red_circle: 1,439,010 · 9/8'))
+        self.assertNotEqual(n('🔴 1,439,009 · 9/8'),n(':red_circle: 1,439,009 · 9/10'))
 
 
 if __name__=='__main__':unittest.main()

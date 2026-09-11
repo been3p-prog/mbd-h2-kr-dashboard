@@ -40,3 +40,21 @@ files and reverts the reviewed Pages commit; no destructive checkout/reset.
 - Actual release acceptance additionally requires exact Pages byte readback,
   remote client/cache checksum readback and Slack replies in been_jobs only.
   A natural next scheduled tick is separate evidence, not implied by manual tests.
+
+## Release readback
+
+- Implementation revision `8e6a6a739f9561dfdaeab69b565d07b968b2adb0`;
+  Actions `34604638149` verify/deploy succeeded.
+- Public HTML SHA256 `37102412841589f636b771b438223a46bd0583b4c4364f594f023c597c4f9146`
+  matched exactly before private cache publication.
+- Shared engine and private cache were installed with exact checksum readback;
+  all 15 deployed, public-version-gated question cases matched local answers.
+- Seven actual YouTube replies were received in been_jobs. Four initially differed
+  solely by Slack's `🔴`→`:red_circle:` / `🏠`→`:house:` conversion in public video
+  titles. Only these exact transport aliases were added to the comparison; a
+  regression test ensures numeric/date changes still fail comparison.
+  Readback of the same seven threads then passed **7/7**, without resending.
+  Final local regression suite including the transport test passed **288/288**.
+- No tests were sent to other channels. Live/Ads actual Slack tests were not
+  repeated in this release; their current deployed computation passed the shared
+  15-case probe. A natural next scheduled refresh remains unobserved.
