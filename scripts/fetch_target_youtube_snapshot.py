@@ -199,6 +199,7 @@ def sync_snapshot(
     key: Path = DEFAULT_KEY,
     remote_python: str = DEFAULT_REMOTE_PYTHON,
     remote_db: str = DEFAULT_REMOTE_DB,
+    include_schedule: bool = False,
 ) -> dict:
     if not key.is_file():
         raise RuntimeError("target SSH key missing")
@@ -236,6 +237,17 @@ def sync_snapshot(
             detail = describe_transport_failure(fetched.returncode, getattr(fetched, "stderr", None))
             raise RuntimeError(f"target DuckDB snapshot transfer failed: {detail}")
         result = validate_snapshot(partial)
+        if include_schedule:
+            from youtube_schedule import fetch_sheet, store_snapshot, load_snapshot
+            payload = fetch_sheet()
+            store_snapshot(partial, payload)
+            con = duckdb.connect(str(partial), read_only=True)
+            try:
+                load_snapshot(con, now=dt.datetime.now(KST))
+            finally:
+                con.close()
+            result['schedule_rows'] = payload['source_rows']
+            result['schedule_captured_at'] = payload['captured_at']
         os.replace(partial, output)
         result["output"] = str(output)
         return result
@@ -276,7 +288,7 @@ def main() -> int:
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
-    result = sync_snapshot(Path(args.output))
+    result = sync_snapshot(Path(args.output), include_schedule=True)
     if not args.quiet:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0

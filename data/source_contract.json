@@ -1,0 +1,123 @@
+{
+  "schema": "mbd-dashboard-sot-v1",
+  "year": 2026,
+  "timezone": "Asia/Seoul",
+  "sources": {
+    "youtube_schedule": {
+      "spreadsheet_id": "1lXIjLja-DEdBmDWDTM9LqNOG9UhVPCLS2B09InHQD90",
+      "sheet_id": 1570456410,
+      "sheet_title": "편성/개별 성과 아카이빙",
+      "header_row": 6,
+      "data_start_row": 7,
+      "columns": "A:G",
+      "headers": ["ID", "온에어 일자", "시간", "지면/포맷", "IP", "콘텐츠명", "url"],
+      "freshness_hours": 48,
+      "url": "https://docs.google.com/spreadsheets/d/1lXIjLja-DEdBmDWDTM9LqNOG9UhVPCLS2B09InHQD90/edit#gid=1570456410",
+      "definition_status": "source_headers_verified",
+      "forms": ["LF", "SF", "커뮤니티", "라이브"],
+      "public_fields": ["scheduled_date", "scheduled_time", "form", "ip", "title"],
+      "link_policy": "Canonical YouTube URL from a validated ID only; no link for an absent or conflicting ID.",
+      "identity_policy": "Match published facts by validated video ID only. Never match by inferred title or create a video ID for an unassigned slot.",
+      "row_policy": "Exclude headers and section metadata. Count date-only empty slots separately; show a form-bearing slot without a title as an undetermined slot.",
+      "metric_policy": "Do not consume H:O performance cells. Unpublished or unmatched rows have unavailable metrics and never enter publication or quality denominators.",
+      "cancellation_status": "확인 못 함: A:G and the inspected headers contain no independent cancellation column; do not infer cancellation.",
+      "freshness_basis": "Successful source collection timestamp; not the publication-metrics timestamp or dashboard build timestamp."
+    },
+    "revenue_forecast": {
+      "definition_status": "defined_from_existing_code",
+      "relation": "revenue.v_revenue_forecast_monthly",
+      "period_key": "ym",
+      "value_column": "forecast_revenue",
+      "team_codes": ["ad_gen", "ad_int", "live", "MBD_TOTAL"],
+      "components": {
+        "ad_gen": {"source_table": "ad_gen.booking_pred", "source_column": "revenue", "rule_id": "forecast_ad_gen_booking_v1", "basis": "General-ad bookings by date month under the canonical non-CANCEL rule; no RAW-only party filter."},
+        "ad_int": {"source_table": "ad_int.contract", "source_column": "계약 금액", "rule_id": "forecast_ad_int_contract_v1", "basis": "Contract amount by contract start month."},
+        "live": {"source_table": "live.booking_confirmed", "source_column": "패키지 비용", "rule_id": "forecast_live_booking_confirmed_v1", "basis": "Confirmed booking package fee by 진행월; never cost_raw or RAW AF."},
+        "MBD_TOTAL": {"source_table": "team_forecast_sources", "source_column": "forecast_revenue", "rule_id": "forecast_mbd_total_v1", "basis": "Sum of the three forecast components."}
+      },
+      "validation": "Require one row per expected team, exact provenance, finite nonnegative integer amounts and an exact team-to-total reconciliation.",
+      "consumer": "scripts/dashboard_forecast_state.py:fetch_forecast"
+    },
+    "revenue_actual": {
+      "definition_status": "defined_from_existing_code",
+      "relation": "revenue.integrated_ssot",
+      "period_key": "revenue_month",
+      "value_column": "team_attributed_revenue",
+      "include_flag": "include_in_mbd_revenue",
+      "team_mapping": {"일반광고": "ad_gen", "통합광고": "ad_int", "라이브커머스": "live"},
+      "basis": "Included canonical monthly actuals; close only through the explicit month-close flow. Daily quality refresh does not reopen a close.",
+      "legacy_exception": "The August 2026 close uses the approved July comparison retained in LEGACY_PREVIOUS_BY_REVIEW_MONTH; do not claim that baseline came from integrated_ssot.",
+      "consumer": "scripts/finalize_month_review_from_duckdb.py:fetch_canonical_actual_snapshot"
+    },
+    "revenue_mtd": {
+      "definition_status": "defined_from_existing_code",
+      "components": {
+        "ad_gen": "ad_gen.booking_pred.revenue; date within month-to-cutoff, ad_type 일반광고, normalized status not CANCEL/CANCELLED, party_type 3P/제3자/판촉결합.",
+        "ad_int": "ad_int.contract.미셀 매출액; 매출 귀속월 matches YYYYMM and 계약 시작일 is on or before cutoff.",
+        "live": "live.raw_slots.AF수취액; 온에어 일자 within month-to-cutoff, exact 3P, free/cancel tokens excluded from package/program/promotion text."
+      },
+      "comparison": "Previous same-day month-to-date with identical filters, clamped to prior month end; restated on the current snapshot, not an archived as-known-then value.",
+      "consumer": "scripts/refresh_live_daily_from_duckdb.py:fetch_current_revenue_snapshot"
+    },
+    "revenue_targets": {
+      "definition_status": "defined_from_existing_code",
+      "relation": "meta.targets",
+      "period_key": "ym",
+      "value_column": "value_num",
+      "filters": {"metric": "매출", "kind": "target", "team": ["ad_gen", "ad_int", "live"]},
+      "basis": "Three-team revenue targets. Excludes other company lines and Live GMV targets.",
+      "next_booking": "The next-month preview, header, teams and chart share canonical forecast components and the next month's three-team targets.",
+      "consumers": ["scripts/refresh_live_daily_from_duckdb.py", "scripts/dashboard_next_booking.py", "scripts/finalize_month_review_from_duckdb.py"]
+    },
+    "live_schedule": {
+      "definition_status": "defined_from_existing_code",
+      "relation": "live.raw_slots",
+      "date_column": "온에어 일자",
+      "basis": "Full selected month, excluding 취소/cancel tokens in package/program/promotion text. Includes free and future slots and preserves same-date/same-brand separate broadcasts.",
+      "public_columns": ["온에어 일자", "브랜드명", "패키지", "PGM", "라이브 시청자 (비로그인 포함)", "일 전체 GMV (라이브 브랜드 전체)", "라이브 1H GMV"],
+      "private_filter_only_column": "비고 (프로모션)",
+      "metric_policy": "Future metrics are unavailable. Missing values and unmeasured-slot placeholder zeroes are unavailable; source count is separate from performance count.",
+      "consumer": "scripts/dashboard_live_schedule.py"
+    },
+    "live_performance": {
+      "definition_status": "defined_from_existing_code",
+      "relation": "live.raw_slots",
+      "date_column": "온에어 일자",
+      "basis": "Month-to-cutoff rows with positive 1D GMV; excludes free/cancel tokens. No revenue-only 1P/3P filter.",
+      "values": {"viewers": "라이브 시청자 (비로그인 포함)", "gmv_1d": "일 전체 GMV (라이브 브랜드 전체)", "gmv_1h": "라이브 1H GMV"},
+      "average": "Sum of positive 1D brand-daily GMV divided by the included broadcast row count; not forecast revenue or the full schedule count.",
+      "consumer": "scripts/refresh_live_daily_from_duckdb.py:fetch_live_rows"
+    },
+    "youtube_published": {
+      "definition_status": "defined_from_existing_code",
+      "relation": "dim_video",
+      "identity_column": "video_id",
+      "date_column": "publish_date",
+      "basis": "Active videos published within the selected month through the cutoff. Sheet schedules do not create publication facts.",
+      "format_policy": "LF/SF and other published formats stay in their existing cohorts; schedule-only 커뮤니티/라이브 rows do not enter any publication denominator.",
+      "consumers": ["scripts/refresh_owned_youtube_window_from_duckdb.py:fetch_publish_counts", "scripts/refresh_owned_youtube_window_from_duckdb.py:fetch_main_content", "scripts/refresh_owned_youtube_window_from_duckdb.py:fetch_quality_series"]
+    },
+    "youtube_metrics": {
+      "definition_status": "defined_from_existing_code",
+      "relations": ["v_latest_snapshot", "fact_analytics_d7", "v_channel_daily_subscribers", "fact_snapshot"],
+      "join_key": "video_id",
+      "cumulative_views": "v_latest_snapshot.cumulative_view_count",
+      "d7": "Latest eligible fact_analytics_d7 row per ID, ordered by completion, fetched_at and metric_end_date. D7 averages use completed published videos only.",
+      "pis": "Published D7 like_count + comment_count + share_count; not sheet H:O or an invented score for a schedule.",
+      "subscribers": "Latest monthly v_channel_daily_subscribers row; existing current-month carry-forward behavior is preserved.",
+      "snapshot_label": "Global max fact_snapshot.snapshot_date remains a metrics clock and does not certify schedule freshness.",
+      "consumer": "scripts/refresh_owned_youtube_window_from_duckdb.py"
+    },
+    "youtube_period_metrics": {
+      "definition_status": "defined_from_existing_code",
+      "relations": ["v_youtube_monthly_analytics", "v_youtube_weekly_analytics", "v_public_dplusn_video"],
+      "basis": "Existing channel period metrics and completed D+N content view. Metric periods and publication cohorts remain distinct from calendar schedule weeks.",
+      "consumer": "scripts/refresh_owned_youtube_window_from_duckdb.py:render_section"
+    }
+  },
+  "verification_policy": {
+    "source_definition_is_not_live_proof": true,
+    "missing_states": ["확인 못 함", "미연결", "검증된 없음"],
+    "completion": "Verify source collection, validated cache, rendered row coverage, unchanged performance denominators, required tests and exact published-artifact readback when deployment is authorized."
+  }
+}

@@ -57,7 +57,7 @@ LIVE_GMV_BASIS = "1D"
 PUBLIC_DETAIL_FIELDS = {
     "live": ["date", "status", "brand", "program", "package", "replay_url",
              "viewer_count", "gmv_1d", "gmv_3h", "gmv_1h"],
-    "youtube": ["date", "status", "form", "title", "url", "views_total", "views_d7", "pis"],
+    "youtube": ["date", "status", "form", "title", "url", "views_total", "views_d7", "pis", "scheduled_date", "scheduled_time", "ip"],
 }
 CONTENT_LINK_RE = re.compile(
     r'<a class="content-link" data-content-link="(live|youtube)" href="([^"]+)" target="_blank" rel="noopener">')
@@ -499,6 +499,7 @@ def verify(
     now: dt.datetime,
     *,
     require_fresh: bool = False,
+    require_schedule: bool = False,
     allow_stale_sources: set[str] | frozenset[str] = frozenset(),
 ) -> list:
     """DOM-first LIVE 아티팩트 계약 검증. 정렬된 위반 리스트 반환([] = 통과)."""
@@ -525,6 +526,19 @@ def verify(
         allow_stale_sources=allowed_stale,
     )
     _check_youtube_main(html, errors)
+    try:
+        _, schedule_manifest = extract_manifest(html)
+        schedule_month = schedule_manifest.get('default_month')
+        block = _month_surface(html, 'mvr', schedule_month) if isinstance(schedule_month, int) else None
+        if block and ('data-yt-schedule-source-count=' in block or require_schedule):
+            from youtube_schedule import verify_coverage, source_contract
+            schedule_stale_allowed = ('yt_quality' in allowed_stale and
+                                      schedule_manifest.get('source_status', {}).get('yt_quality') == 'stale')
+            verify_coverage(block, now=now, require_fresh=require_fresh and not schedule_stale_allowed)
+            if source_contract()[1]['url'] not in block:
+                errors.append('YouTube schedule source link missing')
+    except (AssertionError, RuntimeError, ValueError, KeyError, TypeError) as exc:
+        errors.append('YouTube schedule coverage invalid: ' + str(exc))
     _check_live_schedule(html, errors)
 
     # 3) LIVE 마커 정확히 1회 · STAGING/승인 전 비공개 부재
@@ -1054,6 +1068,7 @@ def main() -> int:
         html,
         now,
         require_fresh=args.require_fresh,
+        require_schedule=True,
         allow_stale_sources=set(args.allow_stale_source),
     )
     if errors:

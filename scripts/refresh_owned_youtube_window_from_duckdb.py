@@ -399,7 +399,7 @@ def _activity_row(item: dict) -> str:
               <div class="activity-metric metric-trio num"><span class="metric-cell"><b>{esc(fmt_num(item.get('views_total')) if item.get('views_total') is not None else '—')}</b></span><span class="metric-cell"><b>{esc(d7)}</b></span><span class="metric-cell"><b>{esc(pis)}</b></span></div></div>'''
 
 
-def render_main_ledger(*, year: int, month: int, as_of: dt.date, rows: list[dict], snapshot_date: dt.date | None) -> str:
+def render_main_ledger(*, year: int, month: int, as_of: dt.date, rows: list[dict], snapshot_date: dt.date | None, schedule=None) -> str:
     month_end = _month_end(year, month)
     period_end = min(month_end, as_of) if as_of >= dt.date(year, month, 1) else month_end
     elapsed_weeks = max(1, math.ceil(period_end.day / 7))
@@ -414,13 +414,33 @@ def render_main_ledger(*, year: int, month: int, as_of: dt.date, rows: list[dict
         week_start = dt.date(year, month, start_day)
         week_end = dt.date(year, month, end_day)
         items = [row for row in rows if week_start <= ensure_date(row["publish_date"]) <= week_end]
-        item_html = "".join(_activity_row(item) for item in items)
+        rendered_items = []
+        for item in items:
+            activity = _activity_row(item)
+            linked = schedule['by_video'].get(item['video_id']) if schedule else None
+            if linked:
+                activity = activity.replace('<div class="activity-row">', f'<div class="activity-row" data-yt-schedule-key="{linked["key"]}">', 1)
+                planned = f' · 편성 {linked["date"]} {linked["time"]}'
+                activity = activity.replace('</small></span></div>', esc(planned) + '</small></span></div>', 1)
+            rendered_items.append((ensure_date(item['publish_date']), activity))
+        if schedule:
+            from youtube_schedule import extra_activity
+            for item in schedule['extras']:
+                day = dt.date.fromisoformat(item['date'])
+                if week_start <= day <= week_end:
+                    rendered_items.append((day, extra_activity(item)))
+        item_html = ''.join(activity for _, activity in sorted(rendered_items, key=lambda item: item[0]))
         if not item_html:
-            item_html = '<div class="activity-empty">이 주차 발행 없음</div>'
+            item_html = '<div class="activity-empty">이 주차 편성·발행 없음</div>' if schedule else '<div class="activity-empty">이 주차 발행 없음</div>'
         groups.append(f'''<details class="week-group" data-week-group="{month}-{index}" open>
           <summary data-week-toggle="{month}-{index}"><span class="week-label">{month}월 {index}주차 <small>{fmt_range(week_start, week_end)}</small></span>
           <span class="week-chevron" aria-hidden="true"></span></summary>
           <div class="week-items"><div class="activity-column-head" aria-label="지표 칼럼"><div class="activity-metric-head metric-trio"><span>누적조회수</span><span>D7 조회수</span><span>PIS</span></div></div>{item_html}</div></details>''')
+    if schedule:
+        from youtube_schedule import coverage_note
+        schedule_note = coverage_note(schedule)
+    else:
+        schedule_note = ''
     return (
         f'<div class="plan-note" data-yt-main-source-publish-count="{len(rows)}" '
         f'data-yt-main-source-latest-publish-date="{latest_publish.isoformat() if latest_publish else "none"}" '
@@ -428,8 +448,8 @@ def render_main_ledger(*, year: int, month: int, as_of: dt.date, rows: list[dict
         f'data-yt-main-source-elapsed-weeks="{elapsed_weeks}" '
         f'data-yt-main-source-total-weeks="{total_weeks}">'
         f'<b>{month}월 발행 {len(rows)}건</b> · D+7 완료 {completed}건 · {esc(snapshot_label)} public 스냅샷'
-        ' · 발행 콘텐츠 기준(예정 편성 원천 미연결)</div>'
-        + "".join(groups)
+        + (' · 편성은 아래 원천 대조 참조</div>' if schedule else ' · 발행 콘텐츠 기준(예정 편성 원천 미연결)</div>')
+        + schedule_note + "".join(groups)
     )
 
 
@@ -577,6 +597,7 @@ def update_main_youtube_surfaces(
     snapshot_date: dt.date | None,
     rows: list[dict],
     quality_series: dict[int, dict],
+    schedule=None,
 ) -> str:
     start, end = month_block_bounds(html, month)
     block = html[start:end]
@@ -599,8 +620,15 @@ def update_main_youtube_surfaces(
         as_of=as_of,
         rows=rows,
         snapshot_date=snapshot_date,
+        schedule=schedule,
     )
     block = block[:ledger_start] + ledger + block[ledger_end:]
+    if schedule:
+        from youtube_schedule import source_contract, verify_coverage
+        _, source = source_contract()
+        old_url = 'https://docs.google.com/spreadsheets/d/1mMkGwBuWr_L0YXvmDlGtPGzpm9kAgk8VQubjC_w52vg/edit?gid=34722178#gid=34722178'
+        block = block.replace(old_url, source['url'])
+        verify_coverage(ledger, schedule['coverage'])
     return html[:start] + block + html[end:]
 
 
@@ -839,6 +867,10 @@ def update_manifest_sources(
     ).encode()
     manifest["source_payload_sha256"] = hashlib.sha256(payload_bytes).hexdigest()
     manifest.setdefault("stage_payload_sha256", {})["owned_youtube"] = manifest["source_payload_sha256"]
+    fields = manifest.get('public_detail_fields', {}).get('youtube', [])
+    for field in ('scheduled_date', 'scheduled_time', 'ip'):
+        if field not in fields:
+            fields.append(field)
     raw = json.dumps(manifest, ensure_ascii=False, separators=(",", ":"))
     updated = manifest_re.sub(lambda m: m.group(1) + raw + m.group(3), html, count=1)
     return sync_stale_source_markers(updated, manifest)
@@ -875,6 +907,12 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         main_rows, snapshot_date = fetch_main_content(con, current_start, current_end)
         quality_series = fetch_quality_series(con, now.year, now.month, as_of=now.date())
         source_as_of = fetch_source_as_of(con, month["fetched_at"])
+        from youtube_schedule import load_snapshot, reconcile
+        schedule_payload = load_snapshot(con, now=now)
+        known_videos = {str(video_id): {'publish_date': ensure_date(day)} for video_id, day in
+                        con.execute('select video_id, publish_date from dim_video where is_active').fetchall() if day}
+        schedule = reconcile(schedule_payload, main_rows, year=now.year, month=now.month,
+                             as_of=current_end, known_videos=known_videos)
         previous_main = None
         if now.month > 1:
             previous_end = current_start - dt.timedelta(days=1)
@@ -890,6 +928,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         month, weeks, publish_counts, top_content, now, db_path=db_path
     )
     contract["source"]["source_as_of"] = source_as_of
+    contract['schedule_coverage'] = schedule['coverage']
     latest_publish = max((row["publish_date"] for row in main_rows), default=None)
     elapsed_weeks = max(1, math.ceil(now.day / 7))
     current_quality = quality_series.get(now.month, {})
@@ -935,6 +974,8 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         updated = update_main_youtube_surfaces(
             updated, year=now.year, month=previous_end.month, as_of=previous_end,
             snapshot_date=previous_snapshot, rows=previous_rows, quality_series=quality_series,
+            schedule=reconcile(schedule_payload, previous_rows, year=now.year, month=previous_end.month,
+                               as_of=now.date(), known_videos=known_videos),
         )
         if int(quality_series[previous_end.month].get("published", 0)) != len(previous_rows):
             raise RuntimeError("YouTube previous-month quality publish count mismatch")
@@ -953,6 +994,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
         snapshot_date=snapshot_date,
         rows=main_rows,
         quality_series=quality_series,
+        schedule=schedule,
     )
     assert_main_parity(
         updated,

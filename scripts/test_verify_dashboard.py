@@ -370,7 +370,10 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('<span>라이브</span><b><span class="tv"><span>2.15억</span><small class="up">MoM ▲ 16.2%</small>', august)
         september = gauge_tips[9]
         self.assertIn('기존 예측 원천 · 월전체 부킹·계약', september)
-        for amount in ('9.38억', '8,333만', '1.79억'):
+        month_block = vd._month_surface(self.html, 'mvr', 9)
+        amounts = re.findall(r'data-current-forecast-team="[^"]+".*?<div class="bigv num">([^<]+)</div>', month_block, re.S)
+        self.assertEqual(len(amounts), 3)
+        for amount in amounts:
             self.assertIn(amount, september)
         self.assertNotIn('MoM', september)
         self.assertNotIn('8.03억', september)

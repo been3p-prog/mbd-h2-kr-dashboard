@@ -48,9 +48,15 @@ The full schedule count is separate from the positive-GMV performance population
 - A reconciled previous-month ledger also receives late facts without reopening revenue.
   Source snapshot date and the historical month-end classification cutoff stay separate.
 - YouTube includes every active published video through the refresh cutoff, with
-  current cumulative views and available D+7 Analytics. All month weeks are open,
-  including empty future weeks. No future planning table is connected: empty weeks
-  are not proof that nothing is planned. The UI explicitly discloses this limitation.
+  current cumulative views and available D+7 Analytics. Full planning coverage uses
+  the schedule source declared in `data/source_contract.json`: tab
+  `편성/개별 성과 아카이빙`, gid `1570456410`, header row 6, A:G from row 7.
+  Schedule collection, validated cache and rendered coverage require verification;
+  source registration alone is not proof of a live connection. Unassigned slots
+  remain visible or separately counted, and unpublished/unmatched metrics are
+  unavailable. Publication and quality denominators retain their published-only
+  definitions. All month weeks are open; empty weeks imply no plans only after
+  successful schedule-source coverage checks. See `docs/source-of-truth.md`.
 - Public source counts, dates, full-week coverage and Live status counts are guarded.
   This remains the existing daily batch, not realtime; upstream metric delays remain visible.
 

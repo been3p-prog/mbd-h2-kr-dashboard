@@ -150,6 +150,7 @@ public_readback_once() {
 "$PY" - <<'PY'
 import hashlib, json, pathlib, re, sys, time, urllib.request
 from scripts.verify_dashboard import youtube_week_state_ok
+from scripts.youtube_schedule import verify_coverage
 
 url=f'https://been3p-prog.github.io/mbd-h2-kr-dashboard/?daily-refresh={time.time_ns()}'
 local=pathlib.Path('index.html').read_text(encoding='utf-8')
@@ -217,6 +218,7 @@ sf_average_views=int(main['sf_average_views'])
 subscriber_count=main.get('subscriber_count')
 subscriber_source=str(subscriber_count) if subscriber_count is not None else 'none'
 d7_completed=int(main['d7_completed'])
+verify_coverage(public_month, contract['schedule_coverage'])
 checks={
   'public_bytes_match_committed': hashlib.sha256(public.encode()).hexdigest() == hashlib.sha256(local.encode()).hexdigest(),
   'contract_month_matches_manifest': int(main['month']) == month,
