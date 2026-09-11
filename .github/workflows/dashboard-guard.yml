@@ -33,6 +33,8 @@ jobs:
         run: python -m unittest discover -s scripts -p 'test_dashboard_*.py' -v
       - name: Check cron isolation and transport retry contracts
         run: python -m unittest scripts/test_ops_runtime.py -v
+      - name: Check dashboard and bot metric parity contracts
+        run: python -m unittest scripts/test_bot_metric_parity.py -v
       - name: Run dashboard regression tests
         run: python -m unittest scripts/test_verify_dashboard.py -v
       - name: Check daily refresh wrapper syntax
