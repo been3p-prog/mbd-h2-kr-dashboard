@@ -117,6 +117,7 @@ def update_forecast_surfaces(text: str, raw: dict, forecast: dict) -> str:
             f'<b>{fmt_pct(pct)}</b><small>예상 달성</small></span></span></div>'
             f'<div class="rows num"><div class="r"><span>월 목표</span><b>{fmt_won(target)}</b></div>'
             + _raw_team_row(raw[key + '_won'], target, raw['range_label'], team_key=key)
+            + (f'<div class="r" data-live-attribution-warning="true"><span>RAW 귀속 확인</span><b>1P/3P 미기재 {raw["live_unknown_party_count"]}건 · 합계 제외</b></div>' if key == 'live' and raw.get('live_unknown_party_count') else '')
             + f'<div class="r"><span>기준</span><b>{basis[key] if canonical else "확인 필요" if value is None else "월전체 부킹·계약"}</b></div>'
             '<div class="r"><span>전월 대비</span><span class="pill flat num">비교 기준 확인 필요</span></div>'
             '</div></div>')

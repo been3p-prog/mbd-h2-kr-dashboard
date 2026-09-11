@@ -67,6 +67,10 @@ def current_cards(raw: dict, forecast_tip: str = '', *, forecast: dict | None = 
         f'<div class="tr"><span>{name}</span><b>{fmt_won(raw[key + "_won"])}</b></div>'
         for name, key in [('일반광고', 'ad_gen'), ('통광마', 'ad_int'), ('라이브', 'live')])
     raw_tip += '<div class="tn">동일 매출 필터 · 전월은 현재 스냅샷으로 재집계한 동일기간이며 당시 스냅샷은 아님</div>'
+    unknown = raw.get('live_unknown_party_count', 0)
+    if unknown:
+        raw_tip += f'<div class="tn">라이브 1P/3P 미기재 {unknown}건 · AF {fmt_won(raw["live_unknown_party_af_won"])} 귀속 확인 필요. RAW 제외이며 매출 없음이 아닙니다.</div>'
+        note += f' · 라이브 귀속 확인 {unknown}건'
     attrs = f' data-current-as-of="{raw["as_of"]}" data-current-total-won="{raw["total_won"]}"' + comparison_attrs
     if raw['total_won'] == 0:
         attrs += ' data-current-raw-empty="true"'

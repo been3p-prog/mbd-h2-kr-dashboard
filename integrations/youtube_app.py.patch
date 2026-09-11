@@ -1,0 +1,7 @@
+--- a/youtube-copilot/youtube_copilot/app.py
++++ b/youtube-copilot/youtube_copilot/app.py
+@@ -497,0 +498,4 @@
++        from .bot_metrics_adapter import dashboard_answer
++        shared = dashboard_answer(question, 'youtube')
++        if shared is not None:
++            return shared

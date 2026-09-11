@@ -1,0 +1,7 @@
+--- a/live-commerce-bot/app/scripts/answer_engine.py
++++ b/live-commerce-bot/app/scripts/answer_engine.py
+@@ -298,0 +299,4 @@
++        from bot_metrics_adapter import dashboard_answer
++        shared = dashboard_answer(query, 'live')
++        if shared is not None:
++            return DeterministicAnswer(shared)

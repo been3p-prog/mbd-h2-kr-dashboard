@@ -112,6 +112,10 @@ CURRENT_STAGE="live_window_contract"
 "$PY" scripts/verify_live_window_contract.py index.html
 
 if git diff --quiet -- index.html data/live_window_contract.json data/owned_youtube_window_contract.json scripts/verify_dashboard.py scripts/test_verify_dashboard.py scripts/smoke_dashboard.py scripts/refresh_live_daily_from_duckdb.py scripts/refresh_live_window_from_duckdb.py scripts/refresh_owned_youtube_window_from_duckdb.py; then
+  if [[ "$YOUTUBE_SNAPSHOT_READY" == 1 ]]; then
+    CURRENT_STAGE="publish_private_bot_metrics"
+    "$PY" scripts/publish_bot_metrics.py --mbd "$MBD_SNAPSHOT_CACHE" --youtube "$YT_SNAPSHOT_CACHE"
+  fi
   # Healthy no-op: stay silent for no_agent cron.
   if [[ "$YOUTUBE_SNAPSHOT_READY" != 1 ]]; then
     echo "WARNING: YouTube snapshot unavailable; preserved last verified YouTube surfaces" >&4
@@ -276,6 +280,11 @@ PY
 
 CURRENT_STAGE="public_readback"
 mbd_h2_run_with_retry "public_readback" "$LOG" public_readback_once
+
+if [[ "$YOUTUBE_SNAPSHOT_READY" == 1 ]]; then
+  CURRENT_STAGE="publish_private_bot_metrics"
+  "$PY" scripts/publish_bot_metrics.py --mbd "$MBD_SNAPSHOT_CACHE" --youtube "$YT_SNAPSHOT_CACHE"
+fi
 
 if [[ "$YOUTUBE_SNAPSHOT_READY" != 1 ]]; then
   echo "WARNING: YouTube snapshot unavailable; preserved last verified YouTube surfaces" >&4

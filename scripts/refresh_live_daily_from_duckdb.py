@@ -243,6 +243,13 @@ def fetch_current_revenue_snapshot(
             ''',
             [month_start, as_of],
         ).fetchone()[0]
+        unknown_party = con.execute(r'''
+            select count(*), coalesce(sum(try_cast(regexp_replace(coalesce("AF수취액", '0'), '[^0-9.-]', '', 'g') as bigint)), 0)
+            from live.raw_slots
+            where try_cast("온에어 일자" as date) between ? and ?
+              and trim(coalesce("1P/3P", '')) = ''
+              and not regexp_matches(lower(concat_ws(' ', "패키지", "PGM", "비고 (프로모션)")), '무상|무료|free|취소|cancel')
+        ''', [month_start, as_of]).fetchone()
         target_rows = con.execute(
             r'''
             select team, try_cast(value_num as bigint)
@@ -265,6 +272,8 @@ def fetch_current_revenue_snapshot(
         "ad_gen_won": clean_int(ad_gen),
         "ad_int_won": clean_int(ad_int),
         "live_won": clean_int(live),
+        "live_unknown_party_count": int(unknown_party[0]),
+        "live_unknown_party_af_won": clean_int(unknown_party[1]),
         "target_won": effective_target,
         "team_targets_won": team_targets,
     }
@@ -417,6 +426,8 @@ def remove_owned_media_reference_cards(html: str) -> str:
 def _raw_team_row(value: int, target: int, range_label: str, *, team_key: str | None = None) -> str:
     progress = value / target * 100 if target else None
     empty_attr = f' data-current-raw-team-empty="{team_key}"' if value == 0 and team_key else ""
+    if team_key:
+        empty_attr += f' data-current-raw-team="{team_key}" data-current-raw-won="{value}"'
     return (
         f'<div class="r"{empty_attr}><span>RAW 누적 · {range_label}</span><b>{fmt_won(value)} '
         f'<span class="mutpct">진척 {fmt_pct(progress)}</span></b></div>'
@@ -503,7 +514,7 @@ def update_current_raw_surfaces(html: str, snapshot: dict) -> str:
         )
         pattern = re.compile(
             rf'(<span class="nm">{team}</span>.*?<div class="rows num">.*?)'
-            r'<div class="r"(?: data-current-raw-team-empty="[^"]+")?><span>(?:(?:LIVE )?RAW(?: 누적)?|확정 RAW) · [^<]+</span><b>.*?'
+            r'<div class="r"(?: data-current-raw-(?:team-empty|team|won)="[^"]*")*><span>(?:(?:LIVE )?RAW(?: 누적)?|확정 RAW) · [^<]+</span><b>.*?'
             r'<span class="mutpct">진척 [^<]+</span></b></div>',
             re.S,
         )

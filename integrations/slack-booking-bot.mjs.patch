@@ -1,0 +1,17 @@
+--- a/ad-booking-admin/scripts/slack-booking-bot.mjs
++++ b/ad-booking-admin/scripts/slack-booking-bot.mjs
+@@ -3,0 +4 @@
++import { dashboardCandidate, dashboardAnswer } from './bot-metrics-adapter.mjs';
+@@ -807 +808,3 @@
+-    const result = await requester({ slackUserId, slackUserEmail, query: cleanedText }, config, signal);
++    const result = dashboardCandidate(cleanedText)
++      ? {ok:true, text:await (dependencies.dashboardAnswer ?? dashboardAnswer)(cleanedText), kind:'dashboard_metrics'}
++      : await requester({ slackUserId, slackUserEmail, query: cleanedText.replace(/^부킹 기준\s*/, '') }, config, signal);
+@@ -888,0 +892,4 @@
++  if (dashboardCandidate(cleanedText)) {
++    await handleAnalyticsQuestion({event, channel, slackUserId, cleanedText}, config, dependencies, signal);
++    return;
++  }
+@@ -893 +900 @@
+-    analyticsQuery = await classifyAnalyticsQuestion(cleanedText);
++    analyticsQuery = await classifyAnalyticsQuestion(cleanedText.replace(/^부킹 기준\s*/, ''));

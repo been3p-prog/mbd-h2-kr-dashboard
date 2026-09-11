@@ -115,6 +115,17 @@
       "consumer": "scripts/refresh_owned_youtube_window_from_duckdb.py:render_section"
     }
   },
+  "bot_consumers": {
+    "schema": "mbd-bot-metrics-v1",
+    "storage": "private derived cache; never public Pages JSON",
+    "producer": "scripts/export_bot_metrics.py",
+    "consumer": "integrations/dashboard_metrics_client.py",
+    "domains": ["live", "youtube", "ads"],
+    "version_binding": "Exact public index.html byte SHA plus source clock and rendered-value parity",
+    "missing_live_party": "Exclude from strict 3P RAW and disclose attribution unknown; do not infer 3P or claim revenue absent.",
+    "youtube_daily_channel": "Unavailable until a verified daily channel source is connected; publication cohort and D7 are separate.",
+    "test_channel": "C086M0WDKPC"
+  },
   "verification_policy": {
     "source_definition_is_not_live_proof": true,
     "missing_states": ["확인 못 함", "미연결", "검증된 없음"],
