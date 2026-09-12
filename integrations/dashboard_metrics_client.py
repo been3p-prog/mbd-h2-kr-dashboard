@@ -170,6 +170,8 @@ def verified_youtube_answer(api, start, end, form_filter, verbose=False):
             lines+=['• 플랫폼 포맷: '+' / '.join(f'{names[k]} {number(v)}' for k,v in period['formats'].items()),
                     f'• 기간 내 발행 기여 {number(period["new_views"])} + 기발행 {number(period["prior_views"])} + 잔차 {number(period["residual"])} = {number(value)}',
                     f'• 일별 합계와 공식 기간 총계 차이 {period["daily_residual"]:+,}회 · 총계는 공식 기간 조회값 유지']
+        elif not kind and period.get('daily_residual'):
+            lines += [f'• 일별 합계와 공식 기간 총계 차이 {period["daily_residual"]:+,}회']
         previous_start=(start-dt.timedelta(days=1)).replace(day=1) if period['period_type']=='month' else start-dt.timedelta(days=7)
         previous=next((r for r in api['periods'] if r['period_type']==period['period_type'] and r['period_start']==str(previous_start)),None)
         if period['metric_end_date']==period['period_end'] and previous and previous['metric_end_date']==previous['period_end']:
