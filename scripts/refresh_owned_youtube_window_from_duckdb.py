@@ -699,7 +699,11 @@ def kpis_for_period(row: dict, publish_counts: dict | None = None) -> list[dict]
         {"label": "공유", "value": fmt_num(row["shares"]), "em": f"미매칭 {fmt_count(row['unknown_views'])}"},
     ]
     if publish_counts is not None:
-        kpis.insert(1, {"label": "발행", "value": f"{publish_counts.get('total', 0)}건", "em": f"LF {publish_counts.get('LF', 0)} · SF {publish_counts.get('SF', 0)}"})
+        split = f"LF {publish_counts.get('LF', 0)} · SF {publish_counts.get('SF', 0)}"
+        for form, count in sorted(publish_counts.items()):
+            if form not in ("total", "LF", "SF") and count:
+                split += f" · {form} {count}"
+        kpis.insert(1, {"label": "발행", "value": f"{publish_counts.get('total', 0)}건", "em": split})
     return kpis
 
 
@@ -902,6 +906,22 @@ def fetch_source_as_of(con: duckdb.DuckDBPyConnection, monthly_fetched_at: dt.da
     }
 
 
+def assert_publish_cohorts(publish_counts: dict, rows: list[dict], quality: dict) -> None:
+    """Reconcile every published format without folding LIVE into LF/SF."""
+    row_counts: dict[str, int] = {}
+    for row in rows:
+        form = str(row["form"])
+        row_counts[form] = row_counts.get(form, 0) + 1
+    source_counts = {form: int(count) for form, count in publish_counts.items() if form != "total"}
+    if source_counts != row_counts or int(publish_counts.get("total", 0)) != len(rows):
+        raise RuntimeError("YouTube current-month source format counts do not reconcile")
+    if int(quality.get("published", 0)) != len(rows):
+        raise RuntimeError("YouTube current-month quality publish count mismatch")
+    for form in ("LF", "SF"):
+        if int(quality.get(f"{form}_count", 0)) != row_counts.get(form, 0):
+            raise RuntimeError(f"YouTube current-month {form} publish count mismatch")
+
+
 def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = False, *, require_verified: bool = False) -> dict:
     now = dt.datetime.now(KST)
     current_start = dt.date(now.year, now.month, 1)
@@ -947,13 +967,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
     elapsed_weeks = max(1, math.ceil(now.day / 7))
     current_quality = quality_series.get(now.month, {})
     previous_quality = quality_series.get(now.month - 1, {})
-    if int(current_quality.get("published", 0)) != len(main_rows):
-        raise RuntimeError(
-            "YouTube current-month quality publish count mismatch: "
-            f"quality={current_quality.get('published', 0)} rows={len(main_rows)}"
-        )
-    if int(current_quality.get("LF_count", 0)) + int(current_quality.get("SF_count", 0)) != len(main_rows):
-        raise RuntimeError("YouTube current-month LF/SF publish split does not reconcile")
+    assert_publish_cohorts(publish_counts, main_rows, current_quality)
     contract["main_surface"] = {
         "year": now.year,
         "month": now.month,

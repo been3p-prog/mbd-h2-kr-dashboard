@@ -34,8 +34,12 @@ def collect(yt, analytics, con, now):
     requested_end = today-dt.timedelta(days=1)
 
     def query(a, b, metrics='views', **extra):
+        # Match the canonical collector's day-report shape. The API can pad
+        # trailing zero days differently when maxResults is omitted.
+        if 'day' in extra.get('dimensions', '').split(','):
+            extra['maxResults'] = 10000
         return analytics.reports().query(ids='channel=='+CHANNEL, startDate=str(a),
-            endDate=str(b), metrics=metrics, **extra).execute().get('rows', [])
+            endDate=str(b), metrics=metrics, **extra).execute(num_retries=2).get('rows', [])
 
     daily = query(start, requested_end, dimensions='day', sort='day')
     if not daily:

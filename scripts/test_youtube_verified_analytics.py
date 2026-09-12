@@ -1,7 +1,7 @@
 import copy
 import datetime as dt
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from pathlib import Path
 import sys
 import tempfile
@@ -27,6 +27,39 @@ def payload():
 
 class VerifiedTests(unittest.TestCase):
     def setUp(self):self.p=payload()
+    def test_collector_uses_bounded_sdk_retries_without_swallowing_failure(self):
+        yt, analytics = Mock(), Mock()
+        yt.channels().list().execute.return_value = {'items': [{'id': api.CHANNEL}]}
+        request = analytics.reports().query.return_value
+        request.execute.side_effect = RuntimeError('API retries exhausted')
+        with self.assertRaisesRegex(RuntimeError, 'retries exhausted'):
+            api.collect(yt, analytics, Mock(), NOW)
+        request.execute.assert_called_once_with(num_retries=2)
+        self.assertEqual(analytics.reports().query.call_args.kwargs['maxResults'], 10000)
+    def test_d7_uses_canonical_day_query_shape_and_leaves_missing_last_day_pending(self):
+        yt, analytics, con = Mock(), Mock(), Mock()
+        yt.channels().list().execute.return_value = {'items': [
+            {'id': api.CHANNEL, 'contentDetails': {'relatedPlaylists': {'uploads': 'fixture'}}}]}
+        yt.playlistItems().list().execute.return_value = {'items': []}
+        con.execute.return_value.fetchall.side_effect = [
+            [('abcdefghijk', dt.date(2026, 8, 27))], [], [('abcdefghijk',)]]
+        def query(**kwargs):
+            self.assertEqual(kwargs['maxResults'], 10000)
+            start = dt.date.fromisoformat(kwargs['startDate'])
+            end = dt.date(2026, 9, 1) if kwargs.get('filters') else dt.date(2026, 9, 8)
+            if kwargs['dimensions'] == 'day,creatorContentType':
+                rows = [[day, 'shorts', 1] for day in api.dates(start, end)]
+            else:
+                rows = [[day] + [1] * len(kwargs['metrics'].split(',')) for day in api.dates(start, end)]
+            request = Mock()
+            request.execute.return_value = {'rows': rows}
+            return request
+        analytics.reports().query.side_effect = query
+        result = api.collect(yt, analytics, con, NOW)
+        self.assertEqual(len(result['d7']), 1)
+        self.assertFalse(result['d7'][0]['complete'])
+        self.assertEqual(result['d7'][0]['actual_end'], '2026-09-01')
+        self.assertIsNone(result['d7'][0]['views'])
     def test_valid(self):api.validate(self.p,NOW)
     def reject(self):
         with self.assertRaises(ValueError):api.validate(self.p,NOW)

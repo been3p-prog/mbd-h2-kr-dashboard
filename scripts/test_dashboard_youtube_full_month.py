@@ -9,6 +9,35 @@ import refresh_owned_youtube_window_from_duckdb as youtube
 
 
 class YoutubeFullMonthLedgerTest(unittest.TestCase):
+    def test_period_kpi_discloses_live_in_total(self):
+        period = dict.fromkeys(("views", "new_views", "prior_views", "engagement", "likes", "comments", "shares", "unknown_views"), 0)
+        period.update(metric_start_date=dt.date(2026, 9, 1), metric_end_date=dt.date(2026, 9, 9))
+        kpi = youtube.kpis_for_period(period, {"LF": 2, "SF": 21, "LIVE": 1, "total": 24})[1]
+        self.assertEqual(kpi["value"], "24건")
+        self.assertEqual(kpi["em"], "LF 2 · SF 21 · LIVE 1")
+
+    def test_publish_cohorts_include_live_and_unknown_without_inflating_lf_sf(self):
+        for extra in ("LIVE", "확인중"):
+            with self.subTest(extra=extra):
+                youtube.assert_publish_cohorts(
+                    {"LF": 2, "SF": 21, extra: 1, "total": 24},
+                    [{"form": "LF"}] * 2 + [{"form": "SF"}] * 21 + [{"form": extra}],
+                    {"published": 24, "LF_count": 2, "SF_count": 21},
+                )
+
+    def test_publish_cohorts_reject_wrong_format_or_quality_counts(self):
+        rows = [{"form": "LF"}, {"form": "SF"}, {"form": "LIVE"}]
+        counts = {"LF": 1, "SF": 1, "LIVE": 1, "total": 3}
+        quality = {"published": 3, "LF_count": 1, "SF_count": 1}
+        for bad in (dict(counts, LIVE=2), dict(counts, total=2),
+                    {"LF": 2, "SF": 1, "total": 3}):
+            with self.subTest(counts=bad), self.assertRaises(RuntimeError):
+                youtube.assert_publish_cohorts(bad, rows, quality)
+        for bad in (dict(quality, published=2), dict(quality, LF_count=2),
+                    dict(quality, SF_count=2)):
+            with self.subTest(quality=bad), self.assertRaises(RuntimeError):
+                youtube.assert_publish_cohorts(counts, rows, bad)
+
     def render(self, year=2026, month=9, day=10, rows=None):
         return youtube.render_main_ledger(
             year=year, month=month, as_of=dt.date(year, month, day),
