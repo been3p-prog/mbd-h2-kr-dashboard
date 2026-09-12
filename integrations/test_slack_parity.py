@@ -62,7 +62,7 @@ def main():
         if a.group=='rest' and key=='month':continue
         expected=answer(packet,q,domain,dt.datetime.now(KST).date())
         if not expected or expected.startswith('🙏'):raise RuntimeError('invalid local test expectation '+key)
-        sent=api('chat.postMessage',{'channel':CHANNEL,'text':f'<@{BOTS[domain]}> {q}','as_user':True,'unfurl_links':False,'unfurl_media':False},True)
+        sent=api('chat.postMessage',{'channel':CHANNEL,'text':f'<@{BOTS[domain]}> {q}','unfurl_links':False,'unfurl_media':False},True)
         if sent.get('message',{}).get('bot_id') and not a.allow_app_authored:
             print(json.dumps({'channel':CHANNEL,'root_ts':sent['ts'],'reason':'app-authored; stopped without changing bot guard'}),flush=True)
             raise RuntimeError('Test message was app-authored; preserve bot-loop guard and stop')

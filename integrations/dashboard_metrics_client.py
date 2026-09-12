@@ -155,7 +155,7 @@ def validate(packet, now, public_bytes=None):
             raise ValueError('공식 API 집계일 지연')
 
 
-def verified_youtube_answer(api, start, end, form_filter):
+def verified_youtube_answer(api, start, end, form_filter, verbose=False):
     """Standalone period totals take precedence; arbitrary dates use daily basis."""
     kind={'LF':'videoOnDemand','SF':'shorts'}.get(form_filter)
     label={'LF':'일반 동영상(YouTube 분류, 수기 LF와 별도)',
@@ -165,7 +165,7 @@ def verified_youtube_answer(api, start, end, form_filter):
         value=period['formats'].get(kind,0) if kind else period['views']
         lines=[f'• {label} 기간 조회수: {number(value)}회 · 공식 기간 조회',
                f'• 실제 집계: {start}~{period["metric_end_date"]} · '+('완료' if period['metric_end_date']==str(end) else '진행 중')]
-        if not kind:
+        if verbose and not kind:
             names={'shorts':'Shorts','videoOnDemand':'일반 동영상','liveStream':'라이브','posts':'게시물'}
             lines+=['• 플랫폼 포맷: '+' / '.join(f'{names[k]} {number(v)}' for k,v in period['formats'].items()),
                     f'• 기간 내 발행 기여 {number(period["new_views"])} + 기발행 {number(period["prior_views"])} + 잔차 {number(period["residual"])} = {number(value)}',
@@ -333,6 +333,8 @@ def youtube_answer(p, q, start, end, kind):
         rows = [r for r in rows if r['form']==form_filter]
     complete = [r for r in rows if r['d7_complete'] and r['d7_views'] is not None]
     lines = [f'*유튜브 · {start}~{end}*']
+    wants_detail = bool(re.search(r'상세|영상별|콘텐츠별|잘된|상위|top|D7|D\+7|d7|d\+7', q))
+    wants_verbose_period = bool(re.search(r'포맷|구성|기여|잔차|분해|breakdown', q))
     if '편성' in q:
         if form_filter:
             raise ValueError('편성 원천은 전체 월 기준으로 조회해주세요. 폼 조건을 전체 합계로 바꾸지 않습니다.')
@@ -347,11 +349,12 @@ def youtube_answer(p, q, start, end, kind):
         return lines + discovered_lines(yt.get('verified_api',{}),start,end)
     official = next((r for r in yt['periods'] if r['period_start']==start.isoformat() and r['period_end']==end.isoformat()), None)
     if yt.get('verified_api'):
-        lines += verified_youtube_answer(yt['verified_api'],start,end,form_filter)
+        lines += verified_youtube_answer(yt['verified_api'],start,end,form_filter,verbose=wants_verbose_period)
     elif official and official['available'] and not form_filter:
         lines += [f'• 채널 총조회수: {number(official["views"])}회 · '+('마감' if official['period_complete'] else '진행 중'),
-                  f'• 실제 집계: {official["metric_start_date"]}~{official["metric_end_date"]}',
-                  f'• 기간 내 발행 기여 {number(official["new_views"])} + 기발행 {number(official["prior_views"])} + 잔차 {number(official["residual"])} = {number(official["views"])}']
+                  f'• 실제 집계: {official["metric_start_date"]}~{official["metric_end_date"]}']
+        if wants_verbose_period:
+            lines += [f'• 기간 내 발행 기여 {number(official["new_views"])} + 기발행 {number(official["prior_views"])} + 잔차 {number(official["residual"])} = {number(official["views"])}']
         prev_start = (start-dt.timedelta(days=1)).replace(day=1) if kind=='month' else start-dt.timedelta(days=7)
         previous = next((r for r in yt['periods'] if r['period_start']==prev_start.isoformat() and r['period_type']==official['period_type']),None)
         if official['period_complete'] and previous and previous['available'] and previous['period_complete'] and previous['views']:
@@ -361,12 +364,12 @@ def youtube_answer(p, q, start, end, kind):
     forms = {f:sum(r['form']==f for r in rows) for f in ('LF','SF')}
     lines += [f'• 기간 내 등록 발행 {len(rows)}건 (LF {forms["LF"]} / SF {forms["SF"]} / 기타 {len(rows)-sum(forms.values())})']
     lines += [f'• 발행 cohort D+7 완료 {len(complete)}/{len(rows)}건 · 평균 {number(sum(r["d7_views"] for r in complete)/len(complete)) if complete else "—"}회']
-    if not form_filter:
+    if not form_filter and (wants_detail or wants_verbose_period):
         lines += discovered_lines(yt.get('verified_api',{}),start,end)
     sub = [r for r in yt['subscribers'] if r['date'] <= min(end.isoformat(),p['as_of'])]
-    if sub:
+    if sub and wants_detail:
         lines += [f'• 구독자 {number(sub[-1]["count"])}명 · 수집 {sub[-1]["date"]}']
-    if re.search(r'상세|영상별|콘텐츠별|잘된|상위|top|롱폼|숏폼|D7|D\+7|d7|d\+7', q) or kind == 'day':
+    if wants_detail or kind == 'day':
         ranked = sorted(rows, key=lambda r: (r['d7_views'] is not None, r['d7_views'] or 0), reverse=True)
         if re.search(r'잘된|상위|top', q):
             ranked = [next((r for r in ranked if r['form']==f), None) for f in ('LF','SF')] if ('롱폼' in q and '숏폼' in q) else ranked[:5]

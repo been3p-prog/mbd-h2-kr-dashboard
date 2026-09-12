@@ -122,6 +122,11 @@ class ParityTests(unittest.TestCase):
     def test_youtube_answer_starts_with_decision_summary(self):
         lines=self.answer('9월 유튜브 성과','youtube').splitlines()
         self.assertEqual(lines[1],'• 요약: 조회수 100회(2026-09-10까지) · 발행 1건 · D+7 완료 0/1건')
+    def test_youtube_month_answer_stays_compact(self):
+        a=self.answer('9월 유튜브 성과','youtube')
+        self.assertLessEqual(len(a.splitlines()),8)
+        self.assertNotIn('플랫폼 포맷:',a)
+        self.assertNotIn('기간 내 발행 기여',a)
 
 
 if __name__=='__main__':unittest.main()
