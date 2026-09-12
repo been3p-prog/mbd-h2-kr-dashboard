@@ -6,8 +6,8 @@
     "period_complete": false,
     "raw_status": "ok",
     "source_as_of": {
-      "yt_quality": "2026-09-11T15:56:32+09:00",
-      "owned_media": "2026-09-12T08:58:49+09:00"
+      "yt_quality": "2026-09-12T15:56:27+09:00",
+      "owned_media": "2026-09-12T15:56:26+09:00"
     }
   },
   "required_copy": [
@@ -63,7 +63,7 @@
     {
       "label": "공유",
       "value": "1,799",
-      "em": "미매칭 6.2만"
+      "em": "미매칭 6.7만"
     }
   ],
   "weekly_rows": [
@@ -81,9 +81,9 @@
   "content_cards": [],
   "verified_api": {
     "actual_end": "2026-09-09",
-    "captured_at": "2026-09-12T10:46:03.843197+09:00",
+    "captured_at": "2026-09-12T17:49:22.240211+09:00",
     "discovered_count": 1,
-    "sha256": "c0737ddad8f3f6621d685f989ebe7dc490d56217ef1460cfbb2d25de46e100f7"
+    "sha256": "0153665dbd5913028d7784cf53c26ea8c5ade5e4955ca84624e41d071796bfce"
   },
   "schedule_coverage": {
     "source_count": 54,
@@ -93,8 +93,8 @@
     "published_count": 24,
     "empty_slot_count": 10,
     "rendered_count": 54,
-    "captured_at": "2026-09-12T10:46:00+09:00",
-    "source_sha256": "9111b120940af60a05b124bcfdcce223198cded4fb61723bf8eed7b3b5f2d307",
+    "captured_at": "2026-09-12T17:49:19+09:00",
+    "source_sha256": "9865bba8645f9b899e927fcbc77714aeaaa08daf96d28fe1ad2cffababed468e",
     "source_keys": [
       "00e926e9cf50d24d0942ad4a",
       "160c334f0a0fa2f457bb6a47",
@@ -168,26 +168,26 @@
     "elapsed_weeks": 2,
     "quality_basis": "analytics-d7",
     "d7_completed": 7,
-    "average_views": 30989,
-    "lf_average_views": 82657,
-    "sf_average_views": 21404,
+    "average_views": 30708,
+    "lf_average_views": 81457,
+    "sf_average_views": 21267,
     "subscriber_count": 803000,
-    "previous_average_views": 56425
+    "previous_average_views": 56424
   },
   "quality_history": {
     "8": {
       "publish_count": 25,
       "d7_completed": 24,
-      "average_views": 56425,
+      "average_views": 56424,
       "lf_average_views": 144522,
-      "sf_average_views": 27059
+      "sf_average_views": 27058
     },
     "9": {
       "publish_count": 24,
       "d7_completed": 7,
-      "average_views": 30989,
-      "lf_average_views": 82657,
-      "sf_average_views": 21404
+      "average_views": 30708,
+      "lf_average_views": 81457,
+      "sf_average_views": 21267
     }
   }
 }
