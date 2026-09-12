@@ -112,6 +112,16 @@ class ParityTests(unittest.TestCase):
     def test_unit_tokens_not_stripped(self):
         self.assertIn('1D 브랜드 거래액:',self.answer('9월 라이브 1D 거래액'))
         self.assertIn('D+7 완료',self.answer('9월 유튜브 D7 성과','youtube'))
+    def test_live_answer_starts_with_decision_summary(self):
+        lines=self.answer('9월 라이브 성과').splitlines()
+        self.assertTrue(lines[1].startswith('• 요약: 성과 확인 1/2건'))
+        self.assertIn('귀속 미확인 1건 별도',lines[1])
+    def test_ads_answer_starts_with_decision_summary(self):
+        lines=self.answer('9월 10일 일반광고와 통광마 매출','ads').splitlines()
+        self.assertEqual(lines[1],'• 요약: 기간 RAW 0.00억 · 일반광고 + 통광마 · 확정/월전체 예측 아님')
+    def test_youtube_answer_starts_with_decision_summary(self):
+        lines=self.answer('9월 유튜브 성과','youtube').splitlines()
+        self.assertEqual(lines[1],'• 요약: 조회수 100회(2026-09-10까지) · 발행 1건 · D+7 완료 0/1건')
 
 
 if __name__=='__main__':unittest.main()

@@ -35,6 +35,16 @@ def number(value):
     return '—' if value is None else f'{value:,.0f}'
 
 
+def compact_won(value):
+    if value is None:
+        return '확인 못 함'
+    return f'{value / 100_000_000:.2f}억'
+
+
+def bullet_summary(text):
+    return f'• 요약: {text}'
+
+
 def candidate(question, domain):
     q = unicodedata.normalize('NFKC', question).lower()
     if len(q) > 1600:
@@ -248,6 +258,17 @@ def live_answer(p, q, start, end, kind):
         if len(rows)>35:
             lines += [f'• 전체 {len(rows)}건 중 35건 표시. 일별로 조회하면 누락 없이 확인할 수 있습니다.']
     lines += ['• 기준: 취소 제외 · 품질은 무료 제외·양수 1D · 방송별 GMV와 1D는 별개']
+    raw_known = [r["af"] for r in attributed if r["af"] is not None]
+    raw_summary = '해당 기간 실적 행 없음' if not elapsed else compact_won(sum(raw_known)) if raw_known or not attributed else '확인 못 함'
+    summary = (
+        f'성과 확인 {len(quality)}/{len(rows)}건 · 1D {compact_won(sum(r["gmv_1d"] for r in quality)) if quality else "확인된 실적 없음"}'
+        f' · RAW {raw_summary}'
+    )
+    if sum(r["date"] > cutoff for r in rows):
+        summary += f' · 미래 편성 {sum(r["date"] > cutoff for r in rows)}건은 지표 대기'
+    if unknown:
+        summary += f' · 귀속 미확인 {len(unknown)}건 별도'
+    lines.insert(1, bullet_summary(summary))
     return lines
 
 
@@ -263,16 +284,24 @@ def revenue_answer(p, q, start, end, kind):
     if kind == 'month' and month:
         if month.get('closed') and month.get('actual'):
             values = month['actual']
+            lines += [bullet_summary(f'마감확정 {compact_won(sum(values[k] for _,k in selected))} · {" + ".join(label for label,_ in selected)}')]
             lines += ['• 마감확정: ' + won(sum(values[k] for _,k in selected))]
             lines += [f'• {label} 확정: {won(values[key])}' for label,key in selected]
         else:
             f = month.get('forecast')
+            raw = month.get('raw')
+            if f or raw:
+                parts = []
+                if f:
+                    parts.append(f'마감예측 {compact_won(sum(f[k] for _,k in selected))}')
+                if raw:
+                    parts.append(f'RAW {compact_won(sum(raw[k+"_won"] for _,k in selected))}({raw["as_of"]}까지)')
+                lines += [bullet_summary(' · '.join(parts) + f' · {" + ".join(label for label,_ in selected)}')]
             if f:
                 lines += ['• 마감예측(기존 모델): ' + won(sum(f[k] for _,k in selected))]
                 lines += [f'• {label} 예측: {won(f[key])}' for label,key in selected]
                 if len(selected)==3 and f.get('previous_total_won'):
                     lines += [f'• 예측 MoM {(f["total_won"]/f["previous_total_won"]-1)*100:+.1f}% · 전월 확정 대비']
-            raw = month.get('raw')
             if raw:
                 lines += [f'• RAW 누적({raw["as_of"]}까지): ' + won(sum(raw[k+'_won'] for _,k in selected))]
                 lines += [f'• {label} RAW: {won(raw[key+"_won"])}' for label,key in selected]
@@ -286,6 +315,7 @@ def revenue_answer(p, q, start, end, kind):
         if not rows:
             return lines + ['• 해당 기간 수집된 RAW 없음 · 확인 못 함']
         values = {k:sum(r[k+'_won'] for r in rows) for _,k in teams}
+        lines += [bullet_summary(f'기간 RAW {compact_won(sum(values[k] for _,k in selected))} · {" + ".join(label for label,_ in selected)} · 확정/월전체 예측 아님')]
         lines += [f'• 기간 RAW({rows[0]["date"]}~{rows[-1]["date"]}): {won(sum(values[k] for _,k in selected))}']
         lines += [f'• {label} RAW: {won(values[key])}' for label,key in selected]
         lines += ['• 일·주 RAW는 확정 매출이나 월전체 예측이 아닙니다.']
@@ -310,6 +340,7 @@ def youtube_answer(p, q, start, end, kind):
         if kind != 'month' or not schedule:
             return lines + ['• 편성 원천은 월 단위로 조회해주세요. 예: 9월 유튜브 편성']
         c = schedule['coverage']
+        lines += [bullet_summary(f'편성 {c["source_count"]}건 · 발행 연결 {c["matched_count"]}건 · 예정 {c["planned"]}건 · 미매칭 {c["unmatched"]}건')]
         lines += [f'• 편성 원천 {c["source_count"]}건 · 발행 연결 {c["matched_count"]}건 · 예정 {c["planned"]}건 · 미매칭 {c["unmatched"]}건',
                   f'• 커뮤니티 확인 {c["community"]}건 · 콘텐츠 미정 {c["slot"]}건 · 날짜만 있는 빈 구좌 {c["empty_slot_count"]}건(별도)',
                   f'• 시트 조회 {c["captured_at"]} · 주월간 대시보드 / 편성·개별 성과 아카이빙']
@@ -347,6 +378,19 @@ def youtube_answer(p, q, start, end, kind):
             lines += [f'• {r["publish_date"]} {safe(r["form"])} {safe(r["title"])} · D7 {number(r["d7_views"])} / 현재 누적 {number(r["views_total"])} · {link}']
         if len(ranked)>20:
             lines += [f'• 총 {len(ranked)}건 중 20건 표시. 주·일별로 나누어 조회하세요.']
+    period_text = ''
+    api = yt.get('verified_api')
+    if api:
+        api_period = next((r for r in api['periods'] if r['period_start']==str(start) and r['period_end']==str(end)),None)
+        if api_period:
+            kind_key = {'LF':'videoOnDemand','SF':'shorts'}.get(form_filter)
+            value = api_period['formats'].get(kind_key,0) if kind_key else api_period['views']
+            period_text = f'조회수 {number(value)}회({api_period["metric_end_date"]}까지)'
+    elif official and official['available'] and not form_filter:
+        period_text = f'조회수 {number(official["views"])}회({official["metric_end_date"]}까지)'
+    if not period_text:
+        period_text = '기간 조회수 확인 못 함'
+    lines.insert(1, bullet_summary(f'{period_text} · 발행 {len(rows)}건 · D+7 완료 {len(complete)}/{len(rows)}건'))
     return lines
 
 
