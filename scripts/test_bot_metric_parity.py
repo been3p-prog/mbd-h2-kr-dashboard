@@ -45,9 +45,9 @@ class ParityTests(unittest.TestCase):
     def test_month_partial(self):
         a=self.answer('9월 유튜브 성과','youtube');self.assertIn('100회 · 진행 중',a);self.assertIn('2026-09-10',a)
     def test_day_not_month(self):
-        a=self.answer('9월 10일 유튜브 성과','youtube');self.assertIn('채널 기간 조회수: 확인 못 함',a);self.assertNotIn('100회',a)
+        a=self.answer('9월 10일 유튜브 성과','youtube');self.assertIn('채널 조회수: 확인 못 함',a);self.assertNotIn('100회',a)
     def test_lf_not_channel_total(self):
-        a=self.answer('9월 롱폼 조회수','youtube');self.assertIn('LF 기간 조회수: 확인 못 함',a);self.assertNotIn('100회',a)
+        a=self.answer('9월 롱폼 조회수','youtube');self.assertIn('LF 조회수: 확인 못 함',a);self.assertNotIn('100회',a)
     def test_pending_d7_not_zero(self):
         a=self.answer('9월 유튜브 상세','youtube');self.assertIn('D7 —',a);self.assertIn('평균 —',a)
     def test_source_text_cannot_mention(self):
@@ -136,6 +136,9 @@ class ParityTests(unittest.TestCase):
         self.assertLessEqual(len(a.splitlines()),8)
         self.assertNotIn('플랫폼 포맷:',a)
         self.assertNotIn('기간 내 발행 기여',a)
+        self.assertNotIn('발행 cohort',a)
+        self.assertNotIn('공식 기간 조회',a)
+        self.assertNotIn('공식 일별 조회',a)
 
 
 if __name__=='__main__':unittest.main()

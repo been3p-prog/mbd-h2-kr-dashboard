@@ -120,13 +120,15 @@ class VerifiedTests(unittest.TestCase):
         p=fixture();p['youtube']['verified_api']=self.p
         return client.answer(p,q,'youtube',NOW.date())
     def test_bot_month_not_daily_sum(self):
-        a=self.answer('9월 유튜브 조회수');self.assertIn('85회 · 공식 기간 조회',a);self.assertIn('차이 +5회',a)
+        a=self.answer('9월 유튜브 조회수');self.assertIn('조회수: 85회',a);self.assertNotIn('차이 +5회',a)
+        self.assertNotIn('공식 기간 조회',a);self.assertNotIn('잔차',a)
     def test_bot_daily_not_month(self):
-        a=self.answer('9월 8일 유튜브 조회수');self.assertIn('10회 · 공식 일별 조회',a);self.assertNotIn('85회',a)
+        a=self.answer('9월 8일 유튜브 조회수');self.assertIn('조회수: 10회',a);self.assertNotIn('85회',a)
+        self.assertNotIn('공식 일별 조회',a)
     def test_bot_unavailable_day_not_zero(self):
         a=self.answer('9월 10일 유튜브 조회수');self.assertIn('집계 대기',a);self.assertNotIn('조회수: 0',a)
     def test_bot_form_basis_disclosed(self):
-        a=self.answer('9월 숏폼 조회수');self.assertIn('수기 SF와 별도',a);self.assertIn('48회',a);self.assertNotIn('85회',a)
+        a=self.answer('9월 숏폼 조회수');self.assertIn('Shorts 조회수',a);self.assertIn('48회',a);self.assertNotIn('85회',a)
     def test_bot_range_partial(self):
         a=self.answer('9월 7일 9월 10일 유튜브 조회수');self.assertIn('20회',a);self.assertIn('이후 날짜는 집계 대기',a)
     def test_bot_missing_days_fail_closed(self):
