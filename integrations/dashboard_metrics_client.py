@@ -147,12 +147,12 @@ def validate(packet, now, public_bytes=None):
     if api:
         stamp=dt.datetime.fromisoformat(api['captured_at'])
         if api.get('schema')!='youtube-verified-api-v1' or api.get('channel_id')!='UCBKtitA1RwY7F32rCniV1dA':
-            raise ValueError('공식 API 채널 검증 실패')
+            raise ValueError('YouTube Analytics 채널 검증 실패')
         if stamp.tzinfo is None or not -300 <= (now-stamp).total_seconds() <= 48*3600:
-            raise ValueError('공식 API 수집 지연')
+            raise ValueError('YouTube Analytics 수집 지연')
         end=dt.date.fromisoformat(api['actual_end'])
         if not now.date()-dt.timedelta(days=7) <= end <= now.date():
-            raise ValueError('공식 API 집계일 지연')
+            raise ValueError('YouTube Analytics 집계일 지연')
 
 
 def verified_youtube_answer(api, start, end, form_filter, verbose=False):
@@ -183,7 +183,7 @@ def verified_youtube_answer(api, start, end, form_filter, verbose=False):
     coverage=[r['date'] for r in api['daily'] if str(start)<=r['date']<=stop]
     expected=(dt.date.fromisoformat(stop)-start).days+1
     if len(set(coverage))!=expected or len(coverage)!=expected:
-        raise ValueError('공식 일별 데이터에 누락·중복이 있습니다.')
+        raise ValueError('YouTube 일별 데이터에 누락·중복이 있습니다.')
     rows=api['daily_formats'] if kind else api['daily']
     total=sum(r['views'] for r in rows if str(start)<=r['date']<=stop and (not kind or r['form']==kind))
     return [f'• {label} 조회수: {number(total)}회',
