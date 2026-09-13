@@ -52,6 +52,15 @@ class ParityTests(unittest.TestCase):
         a=self.answer('9월 유튜브 상세','youtube');self.assertIn('D7 —',a);self.assertIn('평균 —',a)
     def test_source_text_cannot_mention(self):
         self.assertNotIn('<@everyone>',self.answer('9월 유튜브 상세','youtube'))
+    def test_answers_do_not_emit_source_footer(self):
+        for domain, question in [
+            ('live','9월 라이브 성과'),
+            ('youtube','9월 유튜브 성과'),
+            ('ads','9월 10일 일반광고와 통광마 매출'),
+        ]:
+            with self.subTest(domain=domain):
+                self.assertNotIn('출처:', self.answer(question, domain))
+                self.assertNotIn('대시보드 동일 스냅샷', self.answer(question, domain))
     def test_brand_does_not_become_total(self):
         a=self.answer('9월 시몬스 라이브 성과');self.assertIn('성과 확인 0건',a);self.assertNotIn('200원',a)
     def test_unknown_brand_fails_closed(self):

@@ -413,7 +413,6 @@ def answer(packet, question, domain, today=None):
             check_scope(question,domain)
         renderer = {'live':live_answer,'youtube':youtube_answer,'ads':revenue_answer}[domain]
         lines = renderer(packet,question,start,end,kind)
-        lines += [f'출처: <{URL}#m{start.month}|대시보드 동일 스냅샷> · 기준일 {packet["as_of"]} · 버전 {packet["dashboard_sha256"][:12]}']
         return '\n'.join(lines)
     except (ValueError,KeyError,TypeError) as exc:
         return '🙏 *확인 필요*\n• '+safe(str(exc))+'\n• 검증되지 않은 조건을 전체 합계로 바꾸지 않습니다.'
