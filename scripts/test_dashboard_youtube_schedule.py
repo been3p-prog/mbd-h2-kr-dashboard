@@ -95,7 +95,6 @@ class ScheduleTest(unittest.TestCase):
             [['', '9월 31일', '', 'SF']],
             [['', '', '', 'SF']],
             [['', '2025-09-01', '', 'SF']],
-            [['AAAAAAAAAAA', '9월 1일', '', 'LF']] * 2,
             [['AAAAAAAAAAA', '9월 1일', '', 'LF', '', '', 'https://youtu.be/BBBBBBBBBBB']],
         ):
             with self.subTest(rows=rows), self.assertRaises(RuntimeError):
@@ -125,6 +124,17 @@ class ScheduleTest(unittest.TestCase):
         self.assertEqual(rendered.count('<b>—</b>'),3)
         for url in ('https://evil.test/watch?v=_jxo6RM9-Goo','javascript:alert(1)'):
             with self.assertRaises(RuntimeError):self.payload([['','9월 8일','','SF','','오류',url]])
+
+    def test_duplicate_ids_keep_every_source_row_without_choosing_a_schedule_or_double_counting(self):
+        payload=self.payload([['AAAAAAAAAAA','9월 2일','','LF','','중복 편성']]*3)
+        rendered,result=self.render(payload,[self.published()])
+        self.assertEqual([r['item_id'] for r in payload['rows']],['']*3)
+        self.assertEqual(result['coverage']['issue_count'],3)
+        self.assertEqual((result['coverage']['source_count'],result['coverage']['published_count'],result['coverage']['extra_count']),(3,1,3))
+        self.assertEqual(rendered.count('편성 ID 중복 · 편성 행 확인 필요'),3)
+        self.assertEqual(rendered.count('data-content-link="youtube"'),1)
+        with self.assertRaisesRegex(RuntimeError,'issue coverage'):
+            ys.verify_coverage(rendered.replace('data-yt-schedule-issue="true"','',1),result['coverage'])
 
     def test_coverage_rejects_missing_duplicate_wrong_identity_and_count(self):
         rendered, result = self.render(self.payload([['', '9월 30일 수', '', 'SF', '', '예정']]))

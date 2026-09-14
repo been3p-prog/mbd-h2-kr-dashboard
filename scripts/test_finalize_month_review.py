@@ -165,10 +165,11 @@ class FinalizeMonthReviewTest(unittest.TestCase):
 
     def test_finalized_august_passes_the_release_guard(self):
         _, base_manifest = extract_manifest(self.html)
-        built = max(
-            dt.datetime.fromisoformat(value)
-            for value in base_manifest["source_snapshot_as_of"].values()
-        ) + dt.timedelta(hours=1)
+        # The fixture includes an independently captured live schedule. A source
+        # metric cutoff may predate that capture; never test from an older clock.
+        built = max(dt.datetime.fromisoformat(value) for value in [
+            *base_manifest["source_snapshot_as_of"].values(), base_manifest["built_at_kst"],
+        ]) + dt.timedelta(hours=1)
         result = finalize_month_review(self.html, self.current, self.previous, built_at=built)
         _, manifest = extract_manifest(result)
         now = dt.datetime.fromisoformat(manifest["built_at_kst"]) + dt.timedelta(minutes=15)

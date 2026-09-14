@@ -17,7 +17,7 @@
       "forms": ["LF", "SF", "커뮤니티", "라이브"],
       "public_fields": ["scheduled_date", "scheduled_time", "form", "ip", "title"],
       "link_policy": "Canonical YouTube URL from a validated ID only; no link for an absent or conflicting ID.",
-      "identity_policy": "Match published facts by validated video ID only. Never match by inferred title or create a video ID for an unassigned slot.",
+      "identity_policy": "Match published facts by validated video ID only. Never match by inferred title or create a video ID for an unassigned slot. Retain malformed allowlisted URL rows without an explicit ID, and every duplicate-ID schedule row, as visibly flagged unlinked rows. Keep canonical publication metrics independent and verify issue-row coverage.",
       "row_policy": "Exclude headers and section metadata. Count date-only empty slots separately; show a form-bearing slot without a title as an undetermined slot.",
       "metric_policy": "Do not consume H:O performance cells. Unpublished or unmatched rows have unavailable metrics and never enter publication or quality denominators.",
       "cancellation_status": "확인 못 함: A:G and the inspected headers contain no independent cancellation column; do not infer cancellation.",
