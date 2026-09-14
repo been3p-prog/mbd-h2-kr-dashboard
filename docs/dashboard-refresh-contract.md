@@ -15,6 +15,11 @@ the current-month surfaces. Do not regenerate from an unrelated template.
   Only aggregate forecast columns are copied into the snapshot. Missing teams,
   duplicate rows, non-finite/negative amounts, wrong provenance or total mismatch
   fail the refresh and retain the last-good publication; no RAW/cost fallback is used.
+- Forecast team-card hover details refresh from the corresponding monthly
+  booking/contract sources: general ads show paid, free-support and government-support
+  item/slot rows; attributed ads show contract-type rows; Live shows confirmed-slot
+  package rows. The detail-source subtotal is displayed beside the canonical forecast.
+  Any difference remains visible as a reconciliation item and never changes the card total.
 - Completed revenue remains closed; current and prior-month Live/YouTube quality,
   content metrics, averages and MoM may receive late facts without reopening revenue.
 - Published YouTube D7/PIS rows show the verified accumulating D0-D6 prefix before
@@ -42,6 +47,10 @@ Public Live rows do not publish PD names, cost or margin. The already-visible ho
 measurement is 1H, not 3H; untouched historical 3H columns retain their prior basis.
 Main/detail Live performance count, 1D total and average are cross-checked before deployment.
 The full schedule count is separate from the positive-GMV performance population.
+Completed Live cards may publish the escaped `공식 회고`, `회고 발송`, and
+`타사 라이브 이력` fields in a hover/tap overlay. `내부회고` stays outside the
+public query, rendered HTML, manifest allowlist, and release artifact. Missing
+official reviews show `회고 입력 대기`; they are never filled from another field.
 
 ## Full weekly content visibility (2026-09-10)
 

@@ -56,7 +56,8 @@ LIVE_AVG_GMV_TARGET = 100_000_000
 LIVE_GMV_BASIS = "1D"
 PUBLIC_DETAIL_FIELDS = {
     "live": ["date", "status", "brand", "program", "package", "replay_url",
-             "viewer_count", "gmv_1d", "gmv_3h", "gmv_1h"],
+             "viewer_count", "gmv_1d", "gmv_3h", "gmv_1h",
+             "official_review", "review_sent", "competitor_live_history"],
     "youtube": ["date", "status", "form", "title", "url", "views_total", "views_d7", "pis", "scheduled_date", "scheduled_time", "ip"],
 }
 CONTENT_LINK_RE = re.compile(
@@ -665,9 +666,13 @@ def verify(
         if 'data-live-week-group=' in html:
             errors.append("live empty state conflicts with populated week groups")
     else:
-        for marker in ('data-live-week-group=', 'RAW 수치 readback 전용'):
+        for marker in ('data-live-week-group=', '편성별 회고'):
             if marker not in html:
                 errors.append(f"missing live window marker {marker!r}")
+        if 'data-live-retro="available"' not in html and 'data-live-retro="pending"' not in html:
+            errors.append("missing live window retrospective state")
+        if '내부회고' in html or 'data-live-retro-field="internal"' in html:
+            errors.append('internal Live retrospective leaked into public window')
         if live_card_count < 1:
             errors.append(f"live broadcast cards {live_card_count} < 1")
     for stale in ('aria-label="8월 1주차 라이브 성과 요약"',
@@ -957,10 +962,27 @@ def verify(
                         or f'>{(total-target) / 100000000:+.1f}</div>' not in gauge):
                     raise ValueError('canonical chart visible value mismatch')
                 detail = _month_surface(html, 'mvr', month) or ''
+                require_detail_drilldowns = 'data-forecast-detail-team=' in detail
                 for key, value in teams.items():
                     team = re.search(rf'data-current-forecast-team="{key}"(.*?)(?=<div class="team"|$)', detail, re.S)
                     if not team or f'<div class="bigv num">{forecast_amount(value)}</div>' not in team[1]:
                         raise ValueError('canonical team mismatch')
+                    team_tag = re.search(rf'<div class="team"[^>]*data-current-forecast-team="{key}"[^>]*>', detail)
+                    if require_detail_drilldowns:
+                        if not team_tag:
+                            raise ValueError('missing forecast detail team')
+                        team_attrs = dict(re.findall(r'(data-[\w-]+)="([^"]*)"', team_tag[0]))
+                        detail_total = int(team_attrs['data-forecast-detail-source-total'])
+                        if (team_attrs.get('data-forecast-detail-team') != key
+                                or int(team_attrs['data-forecast-detail-expected']) != value
+                                or detail_total < 0):
+                            raise ValueError('invalid forecast detail metadata')
+                        tooltip = html_lib.unescape(team_attrs.get('data-tip', ''))
+                        expected_note = (f'상세 합계 {forecast_amount(detail_total)} 검증'
+                                         if detail_total == value else
+                                         f'상세 원천 {forecast_amount(detail_total)} / 마감예상 {forecast_amount(value)}')
+                        if expected_note not in tooltip:
+                            raise ValueError('forecast detail reconciliation mismatch')
                     if f'data-forecast-team="{key}" data-forecast-won="{value}"' not in gauge:
                         raise ValueError('canonical segment mismatch')
             except (KeyError, ValueError, OverflowError):
@@ -1058,6 +1080,20 @@ def verify(
                 value = booking_amount(values[key])
                 if f'<div>{label}<b>{value}</b></div>' not in side or f'<span class="nm">{label}</span><div class="bigv num">{value}</div>' not in rest:
                     raise ValueError('next booking component mismatch')
+                if 'data-forecast-detail-team=' in rest:
+                    team = re.search(rf'<div class="team"[^>]*data-forecast-detail-team="{key.replace("-", "_")}"[^>]*>', rest)
+                    if not team:
+                        raise ValueError('next booking detail team missing')
+                    team_attrs = dict(re.findall(r'(data-[\w-]+)="([^"]*)"', team[0]))
+                    detail_total = int(team_attrs['data-forecast-detail-source-total'])
+                    if int(team_attrs['data-forecast-detail-expected']) != values[key]:
+                        raise ValueError('next booking detail expected mismatch')
+                    tooltip = html_lib.unescape(team_attrs.get('data-tip', ''))
+                    expected_note = (f'상세 합계 {booking_amount(detail_total)} 검증'
+                                     if detail_total == values[key] else
+                                     f'상세 원천 {booking_amount(detail_total)} / 마감예상 {booking_amount(values[key])}')
+                    if expected_note not in tooltip:
+                        raise ValueError('next booking detail reconciliation mismatch')
         except (KeyError,ValueError,OverflowError):
             errors.append(f'next booking surfaces invalid: month {current}')
     # A current pending forecast must not imply a complete total in another surface.

@@ -86,6 +86,7 @@
       "date_column": "온에어 일자",
       "basis": "Month-to-cutoff rows with positive 1D GMV; excludes free/cancel tokens. No revenue-only 1P/3P filter.",
       "values": {"viewers": "라이브 시청자 (비로그인 포함)", "gmv_1d": "일 전체 GMV (라이브 브랜드 전체)", "gmv_1h": "라이브 1H GMV"},
+      "retrospective": {"public_columns": ["공식 회고", "회고 발송", "타사 라이브 이력"], "private_columns": ["내부회고"], "display_policy": "Completed broadcast cards show the official retrospective in an escaped hover/tap overlay when present. Internal review is never selected into the public renderer. Missing official reviews remain visibly pending."},
       "average": "Sum of positive 1D brand-daily GMV divided by the included broadcast row count; not forecast revenue or the full schedule count.",
       "consumer": "scripts/refresh_live_daily_from_duckdb.py:fetch_live_rows"
     },

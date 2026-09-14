@@ -12,6 +12,7 @@ from refresh_live_daily_from_duckdb import (
 
 TEAMS = (("일반광고", "ad_gen"), ("통광마", "ad_int"), ("라이브", "live"))
 PENDING = "라이브 예상매출 집계 기준 확인 필요"
+DETAIL_BUCKETS = ("무상지원", "정부지원", "유상")
 
 
 def element_end(text: str, start: int) -> int:
@@ -28,6 +29,146 @@ def replace_div(text: str, opening: str, replacement: str) -> str:
     if start < 0:
         raise RuntimeError(f"missing dashboard surface: {opening}")
     return text[:start] + replacement + text[element_end(text, start):]
+
+
+def _detail_rows(con, query: str, params: list) -> list[tuple]:
+    """Optional drilldown tables must never make the canonical forecast unavailable."""
+    try:
+        return con.execute(query, params).fetchall()
+    except Exception:
+        return []
+
+
+def fetch_forecast_breakdowns(con, as_of: dt.date) -> dict:
+    """Fetch public card drilldowns from the same month/basis as each forecast."""
+    start = as_of.replace(day=1)
+    next_month = (start.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
+    ad_gen_rows = _detail_rows(con, r'''
+        select case
+                 when upper(trim(coalesce(pre_issue, ''))) = 'O' then '정부지원'
+                 when upper(trim(coalesce(cast(is_support as varchar), ''))) in ('O', 'Y', 'TRUE', '1') then '무상지원'
+                 else '유상'
+               end as bucket,
+               concat_ws(' · ', coalesce(nullif(trim(brand_name), ''), '브랜드 미입력'),
+                 coalesce(nullif(trim(slot_type), ''), '구좌 유형 미입력')) as item,
+               count(*) as item_count,
+               coalesce(sum(try_cast(regexp_replace(coalesce(revenue, '0'), '[^0-9.-]', '', 'g') as bigint)), 0) as amount
+        from ad_gen.booking_pred
+        where try_cast(date as date) >= ? and try_cast(date as date) < ?
+          and ad_type = '일반광고'
+          and upper(coalesce(status, '')) not in ('CANCEL', 'CANCELLED')
+        group by 1, 2
+        order by 1, amount desc, item
+    ''', [start, next_month])
+    ad_int_rows = _detail_rows(con, r'''
+        select case
+                 when coalesce("유형", '') like '%정부지원%' then '정부지원'
+                 when coalesce("유형", '') like '%무상%' then '무상지원'
+                 else '유상'
+               end as bucket,
+               concat_ws(' · ', coalesce(nullif(trim("브랜드명"), ''), '브랜드 미입력'),
+                 coalesce(nullif(trim("유형"), ''), '유형 미입력')) as item,
+               count(*) as item_count,
+               coalesce(sum(try_cast(regexp_replace(coalesce("계약 금액", '0'), '[^0-9.-]', '', 'g') as bigint)), 0) as amount
+        from ad_int.contract
+        where try_strptime("계약 시작일", '%Y. %-m. %-d') >= ?
+          and try_strptime("계약 시작일", '%Y. %-m. %-d') < ?
+        group by 1, 2
+        order by 1, amount desc, item
+    ''', [start, next_month])
+    live_rows = _detail_rows(con, r'''
+        select coalesce(nullif(trim("패키지"), ''), '미분류') as package,
+               count(*) as item_count,
+               coalesce(sum(try_cast(regexp_replace(coalesce("패키지 비용", '0'), '[^0-9.-]', '', 'g') as bigint)), 0) as amount
+        from live.raw_slots
+        where try_cast("온에어 일자" as date) >= ? and try_cast("온에어 일자" as date) < ?
+          and not regexp_matches(lower(concat_ws(' ', "패키지", "PGM", "비고 (프로모션)")), '취소|cancel')
+        group by 1
+        order by amount desc, package
+    ''', [start, next_month])
+
+    def bucketed(rows: list[tuple]) -> dict:
+        result = {bucket: [] for bucket in DETAIL_BUCKETS}
+        for bucket, item, count, amount in rows:
+            result.setdefault(str(bucket), []).append({
+                "label": str(item), "count": int(count or 0), "amount": int(amount or 0),
+            })
+        return result
+
+    return {
+        "ad_gen": {"buckets": bucketed(ad_gen_rows)},
+        "ad_int": {"buckets": bucketed(ad_int_rows)},
+        "live": {"packages": [
+            {"label": str(package), "count": int(count or 0), "amount": int(amount or 0)}
+            for package, count, amount in live_rows
+        ]},
+    }
+
+
+def forecast_detail_total(key: str, breakdowns: dict | None) -> int | None:
+    """Return the total represented by a public drilldown, if it has rows."""
+    detail = (breakdowns or {}).get(key, {})
+    if key == "live":
+        rows = detail.get("packages", [])
+    else:
+        rows = [item for bucket in DETAIL_BUCKETS
+                for item in detail.get("buckets", {}).get(bucket, [])]
+    return sum(int(row["amount"]) for row in rows) if rows else None
+
+
+def forecast_team_tip(label: str, key: str, month: int, value: int | None, *, canonical: bool,
+                      breakdowns: dict | None = None) -> str:
+    """Render a compact, scrollable, source-reconciled detail tooltip for one team."""
+    value_text = "확인 필요" if value is None else fmt_won(value)
+    basis = {
+        "ad_gen": "월전체 일반광고 비취소 부킹",
+        "ad_int": "계약 시작월 · 계약 금액",
+        "live": "확정 편성 · 패키지 비용",
+    }
+    note = basis[key] + " · RAW와 분리" if canonical else PENDING if value is None else "월전체 부킹·계약 · RAW와 분리"
+    rows = [f'<div class="th">{label} · {month}월 마감예상 상세</div>',
+            f'<div class="tr"><span>마감예상</span><b>{value_text}</b></div>']
+    detail = (breakdowns or {}).get(key, {})
+    if not canonical or value is None or not detail:
+        rows.append(f'<div class="tn">{note}</div>')
+        return "".join(rows)
+
+    if key == "live":
+        packages = detail.get("packages", [])
+        source_total = forecast_detail_total(key, breakdowns) or 0
+        if packages:
+            rows.append('<div class="isubs"><div class="ititle">확정 편성 · 패키지별</div>')
+            rows.extend(
+                f'<div class="is"><span>{html_lib.escape(row["label"])} <small class="flat">{row["count"]}건</small></span><b>{fmt_won(row["amount"])}</b></div>'
+                for row in packages
+            )
+            rows.append('</div>')
+        else:
+            rows.append('<div class="isubs"><div class="ititle">확정 편성 · 패키지별</div><div class="is"><span>상세 원천 미적재</span><b>—</b></div></div>')
+    else:
+        buckets = detail.get("buckets", {})
+        source_total = forecast_detail_total(key, breakdowns) or 0
+        for bucket in DETAIL_BUCKETS:
+            items = buckets.get(bucket, [])
+            amount = sum(int(item["amount"]) for item in items)
+            count = sum(int(item["count"]) for item in items)
+            rows.append(f'<div class="tr"><span>{bucket}<small>{count}건</small></span><b>{fmt_won(amount)}</b></div>')
+            if items:
+                rows.append(f'<div class="isubs"><div class="ititle">{bucket} 상세</div>')
+                rows.extend(
+                    f'<div class="is"><span>{html_lib.escape(item["label"])} <small class="flat">{item["count"]}건</small></span><b>{fmt_won(item["amount"])}</b></div>'
+                    for item in items
+                )
+                rows.append('</div>')
+    if source_total == value:
+        rows.append(f'<div class="tn">{note} · 상세 합계 {fmt_won(source_total)} 검증</div>')
+    else:
+        difference = int(value) - source_total
+        rows.append(
+            f'<div class="tn">{note} · 상세 원천 {fmt_won(source_total)} / 마감예상 {value_text} · '
+            f'차이 {fmt_won(abs(difference))} {"추가" if difference > 0 else "초과"} 확인 필요</div>'
+        )
+    return "".join(rows)
 
 
 def fetch_forecast(db_path, as_of: dt.date, *, include_next: bool = False) -> dict:
@@ -49,6 +190,7 @@ def fetch_forecast(db_path, as_of: dt.date, *, include_next: bool = False) -> di
                             "where revenue_month=? and include_in_mbd_revenue "
                             "and revenue_team in ('일반광고','통합광고','라이브커머스') group by revenue_team",
                             [previous_month]).fetchall()
+        breakdowns = fetch_forecast_breakdowns(con, as_of)
     finally:
         con.close()
     values = {}
@@ -72,7 +214,8 @@ def fetch_forecast(db_path, as_of: dt.date, *, include_next: bool = False) -> di
             'status': 'canonical', 'source': 'revenue.v_revenue_forecast_monthly',
             'previous_actual': {'as_of': (as_of.replace(day=1) - dt.timedelta(days=1)).isoformat(),
                                 'source': 'revenue.integrated_ssot',
-                                'total_won': previous_total, **{k + '_won': v for k, v in previous_teams.items()}}}
+                                'total_won': previous_total, **{k + '_won': v for k, v in previous_teams.items()}},
+            'breakdowns': breakdowns}
     if include_next:
         from dashboard_next_booking import attach_next_booking
         result = attach_next_booking(db_path, as_of, result)
@@ -113,13 +256,15 @@ def update_forecast_surfaces(text: str, raw: dict, forecast: dict) -> str:
         pct = value / target * 100 if value is not None and target else None
         value_text = display(value)
         basis = {'ad_gen': '월전체 일반광고 비취소 부킹', 'ad_int': '계약 시작월 · 계약 금액', 'live': '확정 편성 · 패키지 비용'}
-        note = basis[key] + ' · RAW와 분리' if canonical else PENDING if value is None else '월전체 비취소 부킹·계약 · RAW와 분리'
-        team_tip = (f'<div class="th">{label} · {month}월 마감예상</div>'
-                    f'<div class="tr"><span>마감예상</span><b>{value_text}</b></div>'
-                    f'<div class="tn">{note}</div>')
+        team_tip = forecast_team_tip(label, key, month, value, canonical=canonical,
+                                     breakdowns=forecast.get('breakdowns'))
+        detail_total = forecast_detail_total(key, forecast.get('breakdowns'))
+        detail_attrs = '' if detail_total is None else (
+            f' data-forecast-detail-team="{key}" data-forecast-detail-source-total="{detail_total}"'
+            f' data-forecast-detail-expected="{value}"')
         team_cards.append(
             f'<div class="team" data-tip="{html_lib.escape(team_tip, quote=True)}" '
-            f'data-current-forecast-team="{key}"><div class="hd2"><div class="team-main">'
+            f'data-current-forecast-team="{key}"{detail_attrs}><div class="hd2"><div class="team-main">'
             f'<span class="nm">{label}</span><div class="bigv num">{value_text}</div></div>'
             f'<span class="achv flat num" data-achievement-ring="채움" style="--p:{min(100, pct or 0):.1f}" '
             f'role="img" aria-label="예상 달성률 {fmt_pct(pct)}"><span class="achv-in">'

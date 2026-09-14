@@ -27,6 +27,16 @@ This contract is the release rule for the MBD H2 KR dashboard Live window. It wa
 | During-live operations | `1H` | `라이브 1H GMV` | Use only for real-time/live-window operational performance. |
 | Generic copy | never `GMV` alone | none | Forbidden. Every GMV/거래액 mention needs a visible basis or an approved label. |
 
+## Per-broadcast retrospective overlay
+
+- A completed broadcast card with `공식 회고` shows `편성별 회고`; hovering the
+  card or activating the button opens an overlay with the official text.
+- The overlay may also show the `회고 발송` state and `타사 라이브 이력`.
+- `내부회고` is private and must never be selected, serialized, or rendered.
+- Missing `공식 회고` stays visible as `회고 입력 대기`.
+- Review text is HTML-escaped. The contract stores its SHA-256 and length, and the
+  release checker compares them with the exact rendered text.
+
 ## Downing incident rule
 
 - Downing row `306` has two different valid values:

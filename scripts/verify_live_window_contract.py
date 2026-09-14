@@ -8,6 +8,7 @@ changing the Live window copy or numbers.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html as html_lib
 import json
 import re
@@ -106,6 +107,26 @@ def check(html: str, contract: dict) -> list[str]:
         # Numeric notes may include 방송별 데이터 GMV for context, but the
         # visible card amount itself must remain the 1D 거래액 metric checked
         # above. Do not forbid raw broadcast-GMV numbers in the note body.
+        retro = spec.get("retrospective", {})
+        if retro.get("available"):
+            require(errors, card, 'data-live-retro="available"', f"card:{card_id}:retrospective")
+            require(errors, card, f'data-live-retro-sha256="{retro["official_sha256"]}"', f"card:{card_id}:retrospective_hash")
+            require(errors, card, 'class="live-retro-trigger"', f"card:{card_id}:retrospective_trigger")
+            sent_label = "발송 완료" if retro.get("sent") else "발송 대기"
+            if f'<span>편성별 회고</span><small>{sent_label}</small></button>' not in card:
+                errors.append(f"RETROSPECTIVE_SENT_MISMATCH[{card_id}]")
+            match = re.search(r'<div class="live-retro-copy" data-live-retro-field="official">([\s\S]*?)</div>', card)
+            rendered = html_lib.unescape(match[1]) if match else ""
+            if hashlib.sha256(rendered.encode("utf-8")).hexdigest() != retro.get("official_sha256"):
+                errors.append(f"RETROSPECTIVE_HASH_MISMATCH[{card_id}]")
+            if len(rendered) != retro.get("official_chars"):
+                errors.append(f"RETROSPECTIVE_LENGTH_MISMATCH[{card_id}]")
+            competitor = re.search(r'<div class="live-retro-copy" data-live-retro-field="competitor">([\s\S]*?)</div>', card)
+            competitor_text = html_lib.unescape(competitor[1]) if competitor else ""
+            if hashlib.sha256(competitor_text.encode("utf-8")).hexdigest() != (retro.get("competitor_sha256") or hashlib.sha256(b"").hexdigest()):
+                errors.append(f"RETROSPECTIVE_COMPETITOR_HASH_MISMATCH[{card_id}]")
+        elif 'data-live-retro="pending"' not in card:
+            errors.append(f"RETROSPECTIVE_STATE_MISSING[{card_id}]")
 
     return errors
 
