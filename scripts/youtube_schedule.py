@@ -20,6 +20,10 @@ KST = dt.timezone(dt.timedelta(hours=9))
 DEFAULT_CREDENTIAL = Path('/Users/sb.lee/automations/slack-digest/credentials/ohouse-drive-cnc-a87f58a854c8.json')
 
 
+class UnresolvableYoutubeURL(RuntimeError):
+    pass
+
+
 def source_contract():
     document = json.loads((ROOT / 'data/source_contract.json').read_text())
     if document.get('schema') != 'mbd-dashboard-sot-v1':
@@ -64,7 +68,7 @@ def identity(raw_id, raw_url, form):
             match = re.fullmatch(r'/(?:shorts|live)/([A-Za-z0-9_-]{11})/?', parsed.path)
             url_id = match[1] if match else ''
         if not re.fullmatch(pattern, url_id):
-            raise RuntimeError('schedule contains an unresolvable YouTube URL')
+            raise UnresolvableYoutubeURL('schedule contains an unresolvable YouTube URL')
     if raw_id and not re.fullmatch(pattern, raw_id):
         raise RuntimeError('schedule contains an invalid source ID')
     if raw_id and url_id and raw_id != url_id:
@@ -93,7 +97,14 @@ def parse_sheet(values, *, captured_at, year, source):
         if day.year != year:
             raise RuntimeError(f'schedule year differs from source contract at row {number}')
         form = str(cells[3] or '').strip() or '미정'
-        item_id = identity(cells[0], cells[6], form)
+        link_issue = ''
+        try:
+            item_id = identity(cells[0], cells[6], form)
+        except UnresolvableYoutubeURL:
+            if str(cells[0] or '').strip():
+                raise  # Never ignore a potentially conflicting source ID.
+            item_id = ''
+            link_issue = '편성 링크 오류 · 영상 ID 확인 필요'
         if item_id and item_id in seen_ids:
             raise RuntimeError('duplicate schedule ID; cannot safely merge separate rows')
         if item_id:
@@ -101,7 +112,7 @@ def parse_sheet(values, *, captured_at, year, source):
         rows.append(dict(key=digest([source['spreadsheet_id'], source['sheet_id'], number])[:24],
                          sheet_row=number, date=day.isoformat(), time=str(cells[2] or '').strip(),
                          form=form, ip=str(cells[4] or '').strip(), title=str(cells[5] or '').strip(),
-                         item_id=item_id, community=form == '커뮤니티'))
+                         item_id=item_id, community=form == '커뮤니티', link_issue=link_issue))
     payload = dict(schema='youtube-schedule-snapshot-v1', year=year,
                    spreadsheet_id=source['spreadsheet_id'], sheet_id=source['sheet_id'],
                    sheet_title=source['sheet_title'], captured_at=captured_at,
@@ -211,7 +222,7 @@ def extra_activity(row):
     labels = {'planned': '편성 예정', 'unmatched': '발행 확인 대기', 'community': '커뮤니티 · 게시 확인 필요',
               'slot': '콘텐츠 미정 구좌', 'other_period': '다른 기간 발행 확인 · ' + str(row.get('actual_date') or '')}
     title = row['title'] or row['ip'] or '콘텐츠 미정'
-    meta = ' · '.join(filter(None, [row['form'], row['ip'], row['time'], labels[row['state']]]))
+    meta = ' · '.join(filter(None, [row['form'], row['ip'], row['time'], labels[row['state']], row.get('link_issue')]))
     day = dt.date.fromisoformat(row['date'])
     return (f'<div class="activity-row" data-yt-schedule-key="{row["key"]}" data-yt-schedule-state="{row["state"]}">'
             f'<time class="activity-date" datetime="{row["date"]}" data-yt-scheduled="true">{day.month}/{day.day}</time>'

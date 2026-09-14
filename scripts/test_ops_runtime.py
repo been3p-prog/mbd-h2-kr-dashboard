@@ -242,6 +242,8 @@ class MbdH2CronRuntimeTest(unittest.TestCase):
             fake_gh.write_text(
                 "#!/usr/bin/env python3\n"
                 "import sys\n"
+                "if sys.argv[1:3] == ['api', 'user']:\n"
+                "    print('been3p-prog')\n"
                 "if sys.argv[1:3] == ['run', 'list']:\n"
                 "    print('123')\n"
                 "raise SystemExit(0)\n",
@@ -399,7 +401,7 @@ class MbdH2CronRuntimeTest(unittest.TestCase):
                         self.assertEqual(process.returncode, expected_rc)
                         self.assertEqual(list(runtime_parent.glob("mbd-h2-pages-refresh.*")), [])
 
-    def test_daily_wrapper_fails_fast_when_github_auth_switch_fails(self):
+    def test_daily_wrapper_fails_fast_when_github_identity_check_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source = root / "source"
@@ -451,7 +453,7 @@ class MbdH2CronRuntimeTest(unittest.TestCase):
             result = self._run(["/bin/bash", str(RUNNER)], env=env, check=False)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("stage=github_auth_context", result.stderr)
-            self.assertEqual(gh_log.read_text(encoding="utf-8").strip(), "auth switch -u been3p-prog")
+            self.assertEqual(gh_log.read_text(encoding="utf-8").strip(), "api user --jq .login")
 
     def _exercise_push_helper(self, mode: str, *, max_attempts: int = 2):
         self.assertTrue(RETRY_LIB.is_file(), f"missing retry library: {RETRY_LIB}")

@@ -50,6 +50,14 @@ class ParityTests(unittest.TestCase):
         a=self.answer('9월 롱폼 조회수','youtube');self.assertIn('LF 조회수: 확인 못 함',a);self.assertNotIn('100회',a)
     def test_pending_d7_not_zero(self):
         a=self.answer('9월 유튜브 상세','youtube');self.assertIn('D7 —',a);self.assertIn('평균 —',a)
+    def test_progressive_d7_is_labeled_and_not_in_completed_average(self):
+        self.p['youtube']['content'][0].update(d7_views=123,pis=7,d7_metric_end='2026-09-10')
+        a=self.answer('9월 유튜브 상세','youtube')
+        self.assertIn('D7 123 · PIS 7 (집계중 · 2026-09-10까지)',a)
+        self.assertIn('D+7 완료 0/1건 · 평균 —',a)
+    def test_top_d7_does_not_rank_incomplete_windows(self):
+        self.p['youtube']['content'][0].update(d7_views=999,title='PARTIAL_TITLE',d7_metric_end='2026-09-10')
+        self.assertNotIn('PARTIAL_TITLE',self.answer('9월 유튜브 상위 상세','youtube'))
     def test_source_text_cannot_mention(self):
         self.assertNotIn('<@everyone>',self.answer('9월 유튜브 상세','youtube'))
     def test_answers_do_not_emit_source_footer(self):

@@ -112,6 +112,20 @@ class ScheduleTest(unittest.TestCase):
                 ys.identity('', url, 'SF')
         self.assertEqual(ys.identity('', 'https://www.youtube.com/post/Ug123abc', '커뮤니티'), 'Ug123abc')
 
+    def test_malformed_allowlisted_link_keeps_row_visible_and_other_metrics_refreshable(self):
+        payload=self.payload([
+            ['', '9월 8일', '', 'SF', '', '링크 오타', 'https://www.youtube.com/watch?v=_jxo6RM9-Goo'],
+            ['AAAAAAAAAAA', '9월 2일', '', 'LF', '', '정상 영상'],
+        ])
+        rendered,result=self.render(payload,[self.published()])
+        self.assertEqual(payload['rows'][0]['item_id'],'')
+        self.assertEqual((result['coverage']['source_count'],result['coverage']['matched_count'],result['coverage']['extra_count']),(2,1,1))
+        self.assertIn('편성 링크 오류 · 영상 ID 확인 필요',rendered)
+        self.assertNotIn('_jxo6RM9-Goo',rendered)
+        self.assertEqual(rendered.count('<b>—</b>'),3)
+        for url in ('https://evil.test/watch?v=_jxo6RM9-Goo','javascript:alert(1)'):
+            with self.assertRaises(RuntimeError):self.payload([['','9월 8일','','SF','','오류',url]])
+
     def test_coverage_rejects_missing_duplicate_wrong_identity_and_count(self):
         rendered, result = self.render(self.payload([['', '9월 30일 수', '', 'SF', '', '예정']]))
         key = result['coverage']['source_keys'][0]

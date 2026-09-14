@@ -479,7 +479,7 @@ class CurrentRawRefreshTest(unittest.TestCase):
             self.assertIn(span, rendered)
         self.assertIn("지난주 콘텐츠", rendered)
         self.assertIn("이번주 콘텐츠", rendered)
-        self.assertIn("D+7 수집중", rendered)
+        self.assertIn("D7 집계 대기", rendered)
         self.assertIn('data-yt-main-source-publish-count="3"', rendered)
         self.assertIn('data-yt-main-source-latest-publish-date="2026-08-24"', rendered)
         self.assertIn('data-yt-main-source-snapshot-date="2026-08-30"', rendered)
@@ -545,7 +545,8 @@ class CurrentRawRefreshTest(unittest.TestCase):
             create table fact_analytics_d7(
                 video_id varchar, fetched_at timestamp, d7_complete boolean,
                 metric_end_date date, view_count bigint, like_count bigint,
-                comment_count bigint, share_count bigint
+                comment_count bigint, share_count bigint,
+                metric_start_date date, requested_end_date date, raw_status varchar
             )
         ''')
         con.execute('''
@@ -1378,6 +1379,10 @@ class TargetYoutubeSnapshotTest(unittest.TestCase):
             avg_view_duration_seconds double
         )""")
         con.execute("insert into fact_analytics_d7 values ('video-1', true, ?, ?, 100, 1, 1, 1, 1000, 10)", [fresh_at, snapshot_date])
+        con.execute('alter table fact_analytics_d7 add column metric_start_date date')
+        con.execute('alter table fact_analytics_d7 add column requested_end_date date')
+        con.execute('alter table fact_analytics_d7 add column raw_status varchar')
+        con.execute("update fact_analytics_d7 set metric_start_date='2026-08-29', requested_end_date='2026-09-04', raw_status='ok'")
         con.execute("""create table v_public_dplusn_video(
             d_plus_n integer, video_id varchar, publish_date date, form varchar,
             ip varchar, title varchar, url varchar, views bigint, complete boolean

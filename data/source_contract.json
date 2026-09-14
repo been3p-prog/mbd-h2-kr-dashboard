@@ -36,7 +36,8 @@
         "MBD_TOTAL": {"source_table": "team_forecast_sources", "source_column": "forecast_revenue", "rule_id": "forecast_mbd_total_v1", "basis": "Sum of the three forecast components."}
       },
       "validation": "Require one row per expected team, exact provenance, finite nonnegative integer amounts and an exact team-to-total reconciliation.",
-      "consumer": "scripts/dashboard_forecast_state.py:fetch_forecast"
+      "consumer": "scripts/dashboard_forecast_state.py:fetch_forecast",
+      "comparison": "Headline and each team compare forecast with prior full-month included integrated_ssot actual by the exact revenue_actual team mapping. Retain components and reconcile their sum; missing teams are unavailable, never zero. Show baseline dates/amounts."
     },
     "revenue_actual": {
       "definition_status": "defined_from_existing_code",
@@ -56,7 +57,7 @@
         "ad_int": "ad_int.contract.미셀 매출액; 매출 귀속월 matches YYYYMM and 계약 시작일 is on or before cutoff.",
         "live": "live.raw_slots.AF수취액; 온에어 일자 within month-to-cutoff, exact 3P, free/cancel tokens excluded from package/program/promotion text."
       },
-      "comparison": "Previous same-day month-to-date with identical filters, clamped to prior month end; restated on the current snapshot, not an archived as-known-then value.",
+      "comparison": "Headline and each team use previous same-day month-to-date with identical filters, clamped to prior month end; restated on the current snapshot, not an archived as-known-then value. Retain team components and reconcile their sum; show baseline dates/amounts, nonpositive denominators have no percentage.",
       "consumer": "scripts/refresh_live_daily_from_duckdb.py:fetch_current_revenue_snapshot"
     },
     "revenue_targets": {
@@ -102,8 +103,8 @@
       "relations": ["v_latest_snapshot", "fact_analytics_d7", "v_channel_daily_subscribers", "fact_snapshot"],
       "join_key": "video_id",
       "cumulative_views": "v_latest_snapshot.cumulative_view_count",
-      "d7": "Latest eligible fact_analytics_d7 row per ID, ordered by completion, fetched_at and metric_end_date. D7 averages use completed published videos only.",
-      "pis": "Published D7 like_count + comment_count + share_count; not sheet H:O or an invented score for a schedule.",
+      "d7": "Published content displays verified available D0-D6 prefix values during collection, with actual cutoff and n/7 days. Exact publication-window rows only. First complete seven-day values are frozen; last-good snapshot carries the verified freeze archive across source-copy refresh and month rollover. D7 averages still use completed published videos only.",
+      "pis": "Same verified D0-D6 prefix or frozen window: like_count + comment_count + share_count. Missing components stay unavailable; not sheet H:O, public lifetime counts or invented schedule metrics.",
       "subscribers": "Latest monthly v_channel_daily_subscribers row; existing current-month carry-forward behavior is preserved.",
       "snapshot_label": "Global max fact_snapshot.snapshot_date remains a metrics clock and does not certify schedule freshness.",
       "consumer": "scripts/refresh_owned_youtube_window_from_duckdb.py"
@@ -121,7 +122,7 @@
       "daily": "YouTube Analytics reports.query dimensions=day metrics=views; actual returned-day coverage, never public snapshot differences",
       "period": "Standalone views for each exact weekly/monthly range; signed daily-vs-period residual retained. Request end is not data availability.",
       "formats": "creatorContentType: shorts, videoOnDemand, liveStream, posts. Platform taxonomy, not an inferred manual LF/SF mapping.",
-      "d7": "Previous/current-month publication cohorts independently queried: require returned D0-D6 coverage for views and engagement. Standalone views and separate likes/comments/shares. Missing days fail closed as pending.",
+      "d7": "Previous/current-month publication cohorts: query combined views,likes,comments,shares daily for the available contiguous prefix of D0-D6, then standalone totals through that actual cutoff. Display progressive values. Once all seven days are verified, freeze values and capture time; reuse the last-good snapshot freeze archive without video re-query. Missing days are not fabricated zeroes. Unavailable entire prefix remains pending. Date changes must not reuse an old window's freeze.",
       "discovery": "Uploads pagination through previous-month boundary; videos.list exact channel, ID, public status and KST publication date. Unknown public videos displayed separately without modifying dim_video or guessing schedule identity/format.",
       "freshness": "API capture <=48h; actual metric cutoff <=7 days old; no same-day availability promise",
       "failure": "Fail candidate collection; retain last-good snapshot/HTML/cache. No authentication file or canonical data writes."

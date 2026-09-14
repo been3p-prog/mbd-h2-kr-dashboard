@@ -60,12 +60,19 @@ def fetch_forecast(db_path, as_of: dt.date, *, include_next: bool = False) -> di
         values[team] = int(value)
     if set(values) != set(expected) or sum(values.get(k, 0) for _, k in TEAMS) != values.get('MBD_TOTAL'):
         raise ValueError('canonical forecast missing teams or total mismatch')
-    previous_total = None
-    if len(prior) == 3 and all(v is not None and math.isfinite(v) and v >= 0 for _, v in prior):
-        previous_total = round(sum(v for _, v in prior))
+    mapping = {'일반광고': 'ad_gen', '통합광고': 'ad_int', '라이브커머스': 'live'}
+    previous_teams = {key: None for _, key in TEAMS}
+    for name, value in prior:
+        if value is not None and math.isfinite(value) and value >= 0:
+            previous_teams[mapping[name]] = round(value)
+    previous_total = (sum(previous_teams.values())
+                      if all(v is not None for v in previous_teams.values()) else None)
     result = {**{k: values[k] for _, k in TEAMS}, 'total_won': values['MBD_TOTAL'],
             'previous_total_won': previous_total, 'as_of': as_of.isoformat(),
-            'status': 'canonical', 'source': 'revenue.v_revenue_forecast_monthly'}
+            'status': 'canonical', 'source': 'revenue.v_revenue_forecast_monthly',
+            'previous_actual': {'as_of': (as_of.replace(day=1) - dt.timedelta(days=1)).isoformat(),
+                                'source': 'revenue.integrated_ssot',
+                                'total_won': previous_total, **{k + '_won': v for k, v in previous_teams.items()}}}
     if include_next:
         from dashboard_next_booking import attach_next_booking
         result = attach_next_booking(db_path, as_of, result)
@@ -94,6 +101,8 @@ def update_forecast_surfaces(text: str, raw: dict, forecast: dict) -> str:
         f'<div class="tr"><span>{label}</span><b>{display(forecast[key])}</b></div>'
         for label, key in TEAMS) + f'<div class="tn">{("기존 예측 원천 · 월전체 부킹·계약" if canonical else PENDING)} · RAW 누적과 분리</div>'
     from dashboard_kpi_cards import current_cards, replace_top
+    from dashboard_team_comparison import validate_comparisons, team_comparisons
+    validate_comparisons(raw, forecast)
     text = replace_top(text, month, current_cards(raw, tip, forecast=forecast if canonical else None))
 
     start, end = _month_bounds(text, "mvr", month)
@@ -119,8 +128,8 @@ def update_forecast_surfaces(text: str, raw: dict, forecast: dict) -> str:
             + _raw_team_row(raw[key + '_won'], target, raw['range_label'], team_key=key)
             + (f'<div class="r" data-live-attribution-warning="true"><span>RAW 귀속 확인</span><b>1P/3P 미기재 {raw["live_unknown_party_count"]}건 · 합계 제외</b></div>' if key == 'live' and raw.get('live_unknown_party_count') else '')
             + f'<div class="r"><span>기준</span><b>{basis[key] if canonical else "확인 필요" if value is None else "월전체 부킹·계약"}</b></div>'
-            '<div class="r"><span>전월 대비</span><span class="pill flat num">비교 기준 확인 필요</span></div>'
-            '</div></div>')
+            + team_comparisons(raw, forecast, key)
+            + '</div></div>')
     block = replace_div(block, '<div class="teams">', '<div class="teams">' + ''.join(team_cards) + '</div>')
     text = text[:start] + block + text[end:]
 

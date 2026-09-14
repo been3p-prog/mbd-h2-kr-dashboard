@@ -44,6 +44,10 @@ class VerifiedTests(unittest.TestCase):
         con.execute.return_value.fetchall.side_effect = [
             [('abcdefghijk', dt.date(2026, 8, 27))], [], [('abcdefghijk',)]]
         def query(**kwargs):
+            if 'dimensions' not in kwargs:
+                request = Mock()
+                request.execute.return_value = {'rows': [[6, 2, 1, 0]]}
+                return request
             self.assertEqual(kwargs['maxResults'], 10000)
             start = dt.date.fromisoformat(kwargs['startDate'])
             end = dt.date(2026, 9, 1) if kwargs.get('filters') else dt.date(2026, 9, 8)
@@ -59,7 +63,7 @@ class VerifiedTests(unittest.TestCase):
         self.assertEqual(len(result['d7']), 1)
         self.assertFalse(result['d7'][0]['complete'])
         self.assertEqual(result['d7'][0]['actual_end'], '2026-09-01')
-        self.assertIsNone(result['d7'][0]['views'])
+        self.assertEqual(result['d7'][0]['views'], 6)
     def test_valid(self):api.validate(self.p,NOW)
     def reject(self):
         with self.assertRaises(ValueError):api.validate(self.p,NOW)
@@ -73,7 +77,7 @@ class VerifiedTests(unittest.TestCase):
     def test_future_cutoff(self):self.p['actual_end']='2026-09-12';self.reject()
     def test_d7_requested_not_actual(self):self.p['d7'][0]['actual_end']='2026-09-06';self.reject()
     def test_d7_after_available(self):self.p['d7'][0].update(end='2026-09-10',actual_end='2026-09-10');self.reject()
-    def test_d7_pending_allowed(self):self.p['d7'][0].update(complete=False,views=None,actual_end=None);api.validate(self.p,NOW)
+    def test_d7_pending_allowed(self):self.p['d7'][0].update(complete=False,views=None,likes=None,comments=None,shares=None,actual_end=None);api.validate(self.p,NOW)
     def test_private_discovery(self):self.p['discovered'][0]['privacy']='private';self.reject()
     def test_wrong_discovery_channel(self):self.p['discovered'][0]['channel_id']='other';self.reject()
     def test_injected_id(self):self.p['discovered'][0]['video_id']='"><script>';self.reject()

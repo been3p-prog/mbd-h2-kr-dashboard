@@ -227,11 +227,17 @@ def fetch_main_content(con: duckdb.DuckDBPyConnection, start: dt.date, end: dt.d
         )
         select d.publish_date, d.video_id, coalesce(d.form, '확인중') as form,
                d.title, d.url, s.cumulative_view_count, s.snapshot_date,
-               case when a.d7_complete then a.view_count end as d7_views,
-               case when a.d7_complete then
-                 coalesce(a.like_count, 0) + coalesce(a.comment_count, 0) + coalesce(a.share_count, 0)
+               case when a.raw_status = 'ok' and a.metric_start_date = d.publish_date
+                         and a.metric_end_date between d.publish_date and d.publish_date + 6
+                         and a.requested_end_date = d.publish_date + 6 then a.view_count end as d7_views,
+               case when a.raw_status = 'ok' and a.metric_start_date = d.publish_date
+                         and a.metric_end_date between d.publish_date and d.publish_date + 6
+                         and a.requested_end_date = d.publish_date + 6 then
+                 a.like_count + a.comment_count + a.share_count
                end as pis,
-               coalesce(a.d7_complete, false) as d7_complete
+               coalesce(a.d7_complete and a.metric_start_date = d.publish_date
+                        and a.metric_end_date = d.publish_date + 6 and a.raw_status = 'ok', false) as d7_complete,
+               a.metric_end_date as d7_metric_end
         from dim_video d
         left join v_latest_snapshot s using(video_id)
         left join latest_d7 a on a.video_id = d.video_id and a.rn = 1
@@ -242,7 +248,7 @@ def fetch_main_content(con: duckdb.DuckDBPyConnection, start: dt.date, end: dt.d
     ).fetchall()
     keys = [
         "publish_date", "video_id", "form", "title", "url", "views_total",
-        "snapshot_date", "d7_views", "pis", "d7_complete",
+        "snapshot_date", "d7_views", "pis", "d7_complete", "d7_metric_end",
     ]
     out: list[dict] = []
     seen: set[str] = set()
@@ -390,10 +396,18 @@ def _activity_row(item: dict) -> str:
     title = item.get("title") or item.get("video_id") or "제목 확인중"
     form = item.get("form") or "확인중"
     d7_complete = bool(item.get("d7_complete"))
-    d7 = fmt_num(item.get("d7_views")) if d7_complete else "—"
-    pis = fmt_num(item.get("pis")) if d7_complete else "—"
-    state = "" if d7_complete else " · D+7 수집중"
-    return f'''<div class="activity-row">
+    d7 = fmt_num(item['d7_views']) if item.get('d7_views') is not None else '—'
+    pis = fmt_num(item['pis']) if item.get('pis') is not None else '—'
+    cutoff = (ensure_date(item['d7_metric_end']) if item.get('d7_metric_end') and item.get('d7_views') is not None
+              else day + dt.timedelta(days=6) if d7_complete else None)
+    status = 'frozen' if d7_complete else 'collecting' if cutoff and item.get('d7_views') is not None else 'pending'
+    state = ' · D7 확정' if d7_complete else (
+        f' · D7 집계중 · {(cutoff-day).days+1}/7일 · {cutoff.month}/{cutoff.day}까지' if status == 'collecting' else ' · D7 집계 대기')
+    metadata = (f' data-yt-video-id="{esc(item["video_id"])}" data-yt-d7-state="{status}"'
+                f' data-yt-d7-end="{cutoff.isoformat() if cutoff else ""}"'
+                f' data-yt-d7-views="{item["d7_views"] if item.get("d7_views") is not None else "unavailable"}"'
+                f' data-yt-pis="{item["pis"] if item.get("pis") is not None else "unavailable"}"')
+    return f'''<div class="activity-row"{metadata}>
               <time class="activity-date" datetime="{day.isoformat()}">{day.month}/{day.day}</time>
               <div class="activity-main activity-main-inline"><span class="activity-title-line"><a class="content-link" data-content-link="youtube" href="{esc(canonical_youtube_url(item.get('video_id'), item.get('url')))}" target="_blank" rel="noopener">{esc(title)}<span aria-hidden="true">↗</span></a><small class="activity-inline-meta">{esc(form + state)}</small></span></div>
               <div class="activity-metric metric-trio num"><span class="metric-cell"><b>{esc(fmt_num(item.get('views_total')) if item.get('views_total') is not None else '—')}</b></span><span class="metric-cell"><b>{esc(d7)}</b></span><span class="metric-cell"><b>{esc(pis)}</b></span></div></div>'''
@@ -419,7 +433,7 @@ def render_main_ledger(*, year: int, month: int, as_of: dt.date, rows: list[dict
             activity = _activity_row(item)
             linked = schedule['by_video'].get(item['video_id']) if schedule else None
             if linked:
-                activity = activity.replace('<div class="activity-row">', f'<div class="activity-row" data-yt-schedule-key="{linked["key"]}">', 1)
+                activity = activity.replace('<div class="activity-row"', f'<div class="activity-row" data-yt-schedule-key="{linked["key"]}"', 1)
                 planned = f' · 편성 {linked["date"]} {linked["time"]}'
                 activity = activity.replace('</small></span></div>', esc(planned) + '</small></span></div>', 1)
             rendered_items.append((ensure_date(item['publish_date']), activity))
@@ -442,7 +456,7 @@ def render_main_ledger(*, year: int, month: int, as_of: dt.date, rows: list[dict
     else:
         schedule_note = ''
     return (
-        f'<div class="plan-note" data-yt-main-source-publish-count="{len(rows)}" '
+        f'<div class="plan-note" data-yt-d7-display="progressive-freeze-v1" data-yt-main-source-publish-count="{len(rows)}" '
         f'data-yt-main-source-latest-publish-date="{latest_publish.isoformat() if latest_publish else "none"}" '
         f'data-yt-main-source-snapshot-date="{snapshot_date.isoformat() if snapshot_date else "none"}" '
         f'data-yt-main-source-elapsed-weeks="{elapsed_weeks}" '
@@ -898,6 +912,11 @@ def _source_iso(value: dt.datetime | None) -> str:
 
 def fetch_source_as_of(con: duckdb.DuckDBPyConnection, monthly_fetched_at: dt.datetime) -> dict[str, str]:
     d7_fetched_at = con.execute("select max(fetched_at) from fact_analytics_d7").fetchone()[0]
+    from youtube_verified_analytics import load_overlay
+    verified = load_overlay(con)
+    if verified:
+        # Collection freshness is separate from the immutable D7 freeze clock.
+        d7_fetched_at = dt.datetime.fromisoformat(verified['captured_at']).astimezone(KST).replace(tzinfo=None)
     subscriber_captured_at = con.execute("select max(captured_at) from fact_channel_snapshot").fetchone()[0]
     public_captured_at = con.execute("select max(captured_at) from fact_snapshot").fetchone()[0]
     return {

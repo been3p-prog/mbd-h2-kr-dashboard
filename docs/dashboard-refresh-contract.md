@@ -17,6 +17,13 @@ the current-month surfaces. Do not regenerate from an unrelated template.
   fail the refresh and retain the last-good publication; no RAW/cost fallback is used.
 - Completed revenue remains closed; current and prior-month Live/YouTube quality,
   content metrics, averages and MoM may receive late facts without reopening revenue.
+- Published YouTube D7/PIS rows show the verified accumulating D0-D6 prefix before
+  completion, labeled with actual coverage. The first complete seven-day metrics
+  freeze and are carried in the last-good snapshot across source-copy replacement
+  and month rollover; later API/public lifetime growth cannot change them. Preserve
+  this cache during recovery. Unpublished/unmatched rows remain unavailable, and
+  partial rows stay outside completed-D7 averages. API processing delay can defer
+  the final freeze beyond the calendar seventh day; it never extends the window.
 - Other YouTube formats (for example LIVE) count in overall publication/performance,
   but not in LF/SF-only denominators. They are disclosed as 기타.
 - Older/future booking surfaces retain their existing snapshot and are not evidence of
@@ -84,6 +91,11 @@ workflow, not a destructive reset of operator worktrees.
 - Current MTD MoM compares the previous calendar month from day 1 to the same day, clamped to that month's end. January crosses into the previous year.
 - Both MTD amounts use identical approved revenue filters on the same read-only snapshot. The comparison is a restated prior period, not an archived “as known then” snapshot.
 - A missing or non-positive comparison denominator is unavailable, not 0%. Forecast MoM compares the canonical forecast total with the prior full-month three-team canonical actual, not prior bookings or prior MTD.
+- Current team cards use those same two comparisons: `마감예상 전월 대비` uses each team's prior full-month canonical actual; `RAW 전월 동일기간` uses each team's prior MTD under identical filters. Both show the baseline period and amount. Missing prior teams remain unavailable, while a verified zero explicitly makes the rate unavailable. Exact team components reconcile to the headline totals and are checked against the visible rates before publication.
 - Closed-month MoM uses the prior full-month canonical actual; target and signed GAP occupy the second card.
 - The surrounding layout and quality sections are preserved. The current-month chart and team cards use the same canonical forecast total/components as the header. The chart fails closed if forecast exceeds the retained annual scale; a larger range requires a separately verified rescale.
 - The current sidebar's `차월 부킹` and the next month's header, team cards and chart are refreshed together from the same canonical forecast snapshot and next-month targets. Missing/invalid next-month team or target data fails the whole refresh before saving, retaining the last-good publication rather than showing missing data as zero or 미편성. December does not fabricate a next-year surface.
+
+## Automatic D7 recovery and regression checks
+
+The existing daily 10:20 KST runner clones main and runs the YouTube progressive/freeze and dashboard baseline/readback regressions before collecting. The verified payload is atomically backed up outside `/tmp` at `~/Library/Application Support/MBD H2 Dashboard/youtube-d7-archive.json` (override: `MBD_H2_D7_ARCHIVE`). Durable freezes take precedence over a replaceable snapshot. API coverage regression, missing registered publication identities, changed freezes, and corrupt archives fail closed; they never erase the last verified YouTube surface. Existing bounded retries and failure notifications remain in effect. GitHub Actions runs the same YouTube regression family before Pages deployment. Public readback checks the current RAW card by its semantic role and exact deployed bytes.

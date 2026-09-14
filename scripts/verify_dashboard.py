@@ -539,6 +539,53 @@ def verify(
                 errors.append('YouTube schedule source link missing')
     except (AssertionError, RuntimeError, ValueError, KeyError, TypeError) as exc:
         errors.append('YouTube schedule coverage invalid: ' + str(exc))
+    for month in range(1, 13):
+        block = _month_surface(html, 'mvr', month) or ''
+        if 'data-yt-d7-display="progressive-freeze-v1"' not in block:
+            continue
+        try:
+            ids = []
+            for match in re.finditer(r'<div class="activity-row"([^>]*)>(.*?)(?=<div class="activity-row"|</details>)', block, re.S):
+                attrs = dict(re.findall(r'(data-yt-[\w-]+)="([^"]*)"', match[1]))
+                if 'data-yt-video-id' not in attrs:
+                    if 'data-content-link="youtube"' in match[2]:
+                        raise ValueError('published D7 row missing metadata')
+                    continue
+                vid, state = attrs['data-yt-video-id'], attrs['data-yt-d7-state']
+                if not re.fullmatch('[A-Za-z0-9_-]{11}', vid) or vid in ids:
+                    raise ValueError('invalid D7 identity')
+                ids.append(vid)
+                if f'https://www.youtube.com/watch?v={vid}' not in match[2]:
+                    raise ValueError('D7 link identity mismatch')
+                pub = dt.date.fromisoformat(re.search(r'<time[^>]*datetime="([^"]+)"', match[2])[1])
+                end = dt.date.fromisoformat(attrs['data-yt-d7-end']) if attrs['data-yt-d7-end'] else None
+                values = [attrs['data-yt-d7-views'], attrs['data-yt-pis']]
+                display = []
+                for value in values:
+                    if value != 'unavailable' and not re.fullmatch(r'\d+', value):
+                        raise ValueError('invalid D7 metric')
+                    display.append('—' if value == 'unavailable' else f'{int(value):,}')
+                metrics = re.findall(r'<span class="metric-cell"><b>([^<]+)</b></span>', match[2])
+                if len(metrics) != 3 or metrics[1:] != display:
+                    raise ValueError('D7 visible amount mismatch')
+                if state == 'frozen':
+                    if end != pub + dt.timedelta(days=6) or 'unavailable' in values or 'D7 확정' not in match[2]:
+                        raise ValueError('D7 invalid freeze')
+                elif state == 'collecting':
+                    if not end or not pub <= end < pub + dt.timedelta(days=6) or values[0] == 'unavailable':
+                        raise ValueError('D7 invalid progressive range')
+                    if f'D7 집계중 · {(end-pub).days+1}/7일 · {end.month}/{end.day}까지' not in match[2]:
+                        raise ValueError('D7 progressive label mismatch')
+                elif state == 'pending':
+                    if end or values != ['unavailable']*2 or 'D7 집계 대기' not in match[2]:
+                        raise ValueError('D7 unavailable state mismatch')
+                else:
+                    raise ValueError('D7 unknown state')
+            count = int(re.search(r'data-yt-main-source-publish-count="(\d+)"', block)[1])
+            if len(ids) != count:
+                raise ValueError('D7 published row coverage mismatch')
+        except (KeyError, ValueError, TypeError, IndexError) as exc:
+            errors.append(f'YouTube D7 display invalid: month {month}: {exc}')
     _check_live_schedule(html, errors)
 
     # 3) LIVE 마커 정확히 1회 · STAGING/승인 전 비공개 부재
@@ -938,6 +985,54 @@ def verify(
                     raise ValueError('amount or MoM does not match source metadata')
             except (KeyError, ValueError, OverflowError):
                 errors.append(f'two-card same-period comparison invalid: month {month}')
+        # Check team comparisons against the same exact amounts as the headline.
+        detail = _month_surface(html, 'mvr', month) or ''
+        if 'data-team-mom=' in detail:
+            from dashboard_team_comparison import comparison_row
+            from dashboard_kpi_cards import element_end, previous_cutoff
+            for kind, card_match in (('forecast', forecast_card), ('raw', raw_card)):
+                if not card_match:
+                    continue
+                try:
+                    a = dict(re.findall(r'(data-[\w-]+)="([^"]*)"', card_match[0]))
+                    prefix = 'forecast' if kind == 'forecast' else 'current'
+                    # Pending forecasts carry no numeric headline components.
+                    if kind == 'forecast' and a.get('data-current-forecast-status') != 'canonical':
+                        continue
+                    cutoff = dt.date.fromisoformat(a[f'data-{prefix}-as-of'])
+                    prior_cutoff = (cutoff.replace(day=1) - dt.timedelta(days=1)
+                                    if kind == 'forecast' else previous_cutoff(cutoff))
+                    current_values, prior_values = [], []
+                    for key in ('ad_gen', 'ad_int', 'live'):
+                        current = int(a[f'data-{prefix}-{key.replace("_", "-")}-won'])
+                        field = f'data-prior-{key.replace("_", "-")}-won'
+                        if a.get('data-team-comparison') == 'v1' and field not in a:
+                            raise ValueError('missing prior component')
+                        previous = None if a.get(field, 'unavailable') == 'unavailable' else int(a[field])
+                        if current < 0 or previous is not None and previous < 0:
+                            raise ValueError('negative comparison')
+                        current_values.append(current)
+                        prior_values.append(previous)
+                        marker = f'data-team-mom="{kind}-{key}"'
+                        expected = comparison_row(kind, key, current, previous, prior_cutoff)
+                        if detail.count(marker) != 1 or expected not in detail:
+                            raise ValueError('team comparison arithmetic/period/label mismatch')
+                        team_marker = re.search(rf'<div class="team"[^>]*data-current-forecast-team="{key}"[^>]*>', detail)
+                        if not team_marker or expected not in detail[team_marker.start():element_end(detail, team_marker.start())]:
+                            raise ValueError('comparison attached to wrong team')
+                    if sum(current_values) != int(a[f'data-{prefix}-total-won']):
+                        raise ValueError('current team total mismatch')
+                    if a.get('data-team-comparison') == 'v1':
+                        total_field = 'data-forecast-previous-won' if kind == 'forecast' else 'data-previous-total-won'
+                        if all(v is not None for v in prior_values):
+                            if sum(prior_values) != int(a[total_field]):
+                                raise ValueError('prior team total mismatch')
+                        elif total_field in a:
+                            raise ValueError('missing prior team with numeric total')
+                except (KeyError, ValueError, OverflowError):
+                    errors.append(f'team {kind} comparison invalid: month {month}')
+        elif 'data-team-comparison="v1"' in top:
+            errors.append(f'team comparison rows missing: month {month}')
     # The current next-month preview must agree with its linked booking surfaces.
     for current in range(1, 12):
         side = _month_surface(html, 'mvs', current) or ''

@@ -36,7 +36,8 @@ class TwoCardContractTest(unittest.TestCase):
         fixture.setUp()
         self.addCleanup(fixture.tearDown)
         previous = daily.fetch_same_period_comparison(fixture.db_path, dt.date(2026, 9, 10))
-        self.assertEqual(previous, {'as_of': '2026-08-10', 'total_won': 245840909})
+        self.assertEqual(previous, {'as_of': '2026-08-10', 'total_won': 245840909,
+                                    'ad_gen_won': 159900000, 'ad_int_won': 29090909, 'live_won': 56850000})
         whole = daily.fetch_current_revenue_snapshot(fixture.db_path, dt.date(2026, 8, 31))
         self.assertLess(previous['total_won'], whole['total_won'])
 
