@@ -132,10 +132,10 @@ def forecast_team_tip(label: str, key: str, month: int, value: int | None, *, ca
     if not canonical or value is None or not detail:
         rows.append(f'<div class="tn">{note}</div>')
         return "".join(rows)
+    source_total = forecast_detail_total(key, breakdowns) or 0
 
     if key == "live":
         packages = detail.get("packages", [])
-        source_total = forecast_detail_total(key, breakdowns) or 0
         if packages:
             rows.append('<div class="isubs"><div class="ititle">확정 편성 · 패키지별</div>')
             rows.extend(
@@ -145,9 +145,18 @@ def forecast_team_tip(label: str, key: str, month: int, value: int | None, *, ca
             rows.append('</div>')
         else:
             rows.append('<div class="isubs"><div class="ititle">확정 편성 · 패키지별</div><div class="is"><span>상세 원천 미적재</span><b>—</b></div></div>')
+    elif key == "ad_gen":
+        # 일반광고는 상품/구좌별 목록이 지나치게 길어지므로, 지원·정부지원
+        # 매출을 무상으로 합산한 유상/무상 두 구분만 공개한다.
+        buckets = detail.get("buckets", {})
+        paid = buckets.get("유상", [])
+        free = [*buckets.get("무상지원", []), *buckets.get("정부지원", [])]
+        for bucket, items in (("유상", paid), ("무상", free)):
+            amount = sum(int(item["amount"]) for item in items)
+            count = sum(int(item["count"]) for item in items)
+            rows.append(f'<div class="tr"><span>{bucket}<small>{count}건</small></span><b>{fmt_won(amount)}</b></div>')
     else:
         buckets = detail.get("buckets", {})
-        source_total = forecast_detail_total(key, breakdowns) or 0
         for bucket in DETAIL_BUCKETS:
             items = buckets.get(bucket, [])
             amount = sum(int(item["amount"]) for item in items)

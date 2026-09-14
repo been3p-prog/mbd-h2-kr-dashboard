@@ -606,8 +606,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertRegex(self.html, r"8월 목표 1\.00억 대비 [0-9.]+%")
         self.assertNotIn("방송 평균 거래액", self.html)
 
-    # [2026-08-07] 일반광고 hover는 보이는 KPI 반복이 아니라 3유형 금액+MoM이어야 한다.
-    def test_all_months_have_three_way_adgen_mix_tooltips(self):
+    # [2026-09-14] 진행·차월 일반광고는 유상/무상만 요약하고, 닫힌 월은 당시 확정 3유형을 보존한다.
+    def test_adgen_mix_tooltips_have_expected_granularity(self):
         attrs = re.findall(r'<div class="team" data-tip="([^"]+)"', self.html)
         adgen_tips = [html_mod.unescape(value) for value in attrs
                       if "일반광고 ·" in html_mod.unescape(value)]
@@ -616,9 +616,11 @@ class DashboardGuardTest(unittest.TestCase):
             if "월전체 일반광고 비취소 부킹" in tip_html:
                 self.assertNotIn("MoM", tip_html)
                 self.assertIn("마감예상", tip_html)
-                self.assertEqual(tip_html.count('class="tr"'), 4)
-                for bucket in ("유상", "무상지원", "정부지원"):
+                self.assertEqual(tip_html.count('class="tr"'), 3)
+                for bucket in ("유상", "무상"):
                     self.assertIn(bucket, tip_html)
+                for hidden_detail in ("무상지원", "정부지원", 'class="isubs"'):
+                    self.assertNotIn(hidden_detail, tip_html)
                 continue
             self.assertEqual(tip_html.count('class="tr"'), 3)
             for bucket in ("유상", "무상", "정부지원"):
@@ -637,8 +639,9 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("TOPS", july)
         self.assertIn("기타 정부지원", july)
         self.assertIn("월전체 일반광고 비취소 부킹", september)
-        self.assertIn('무상지원 상세', september)
-        self.assertIn('헤이홈 · 스토어홈배너', september)
+        self.assertIn('<span>무상<small>60건</small></span><b>8,080만</b>', september)
+        self.assertNotIn('무상지원 상세', september)
+        self.assertNotIn('헤이홈 · 스토어홈배너', september)
         self.assertIn('상세 합계 9.4억 검증', september)
         for raw_comment in ("정부지원사업 TOPS", "경기도 주식회사"):
             self.assertNotIn(raw_comment, "".join(tips))

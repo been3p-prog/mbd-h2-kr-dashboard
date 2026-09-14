@@ -91,7 +91,7 @@ class ForecastStateTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'payload'):
             forecast.update_forecast_surfaces(self.html, self.raw, dict(pred, as_of='2026-08-31'))
 
-    def test_forecast_detail_tooltips_disclose_support_items_and_live_packages(self):
+    def test_forecast_detail_tooltips_compact_adgen_and_disclose_live_packages(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / 'details.duckdb'
             self._canonical_fixture(path)
@@ -121,9 +121,11 @@ class ForecastStateTest(unittest.TestCase):
         self.assertEqual(forecast.forecast_detail_total('ad_int', details), 510_000)
         self.assertEqual(forecast.forecast_detail_total('live', details), 1_500_000)
         ad_tip = forecast.forecast_team_tip('일반광고', 'ad_gen', 9, 1_500_000, canonical=True, breakdowns=details)
-        self.assertIn('무상지원 상세', ad_tip)
-        self.assertIn('무상브랜드 · 카테고리', ad_tip)
-        self.assertIn('정부브랜드 · 홈배너', ad_tip)
+        self.assertIn('<span>유상<small>1건</small></span><b>100만</b>', ad_tip)
+        self.assertIn('<span>무상<small>2건</small></span><b>50만</b>', ad_tip)
+        self.assertNotIn('무상지원 상세', ad_tip)
+        self.assertNotIn('무상브랜드 · 카테고리', ad_tip)
+        self.assertNotIn('정부브랜드 · 홈배너', ad_tip)
         self.assertIn('상세 합계 150만 검증', ad_tip)
         live_tip = forecast.forecast_team_tip('라이브', 'live', 9, 1_600_000, canonical=True, breakdowns=details)
         self.assertIn('확정 편성 · 패키지별', live_tip)
