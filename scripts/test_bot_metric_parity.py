@@ -26,7 +26,19 @@ def fixture():
 
 class ParityTests(unittest.TestCase):
     def setUp(self): self.p=fixture()
-    def answer(self,q,domain='live'): return client.answer(self.p,q,domain,NOW.date())
+    def answer(self,q,domain='live'): return client.answer(self.p,q,domain,NOW.date(),now=NOW)
+    def schedule(self):
+        matched = dict(key='a'*24,date='2026-09-10',time='',form='LF',ip='',title='발행 영상',item_id='abcdefghijk',community=False)
+        extras = [
+            dict(key='b'*24,date='2026-09-14',time='18:00',form='SF',ip='시리즈',title='예정 영상',item_id='',community=False,state='planned',actual_date=None),
+            dict(key='c'*24,date='2026-09-10',time='',form='SF',ip='',title='확인 영상',item_id='',community=False,state='unmatched',actual_date=None),
+            dict(key='d'*24,date='2026-09-12',time='',form='커뮤니티',ip='',title='커뮤니티 공지',item_id='',community=True,state='community',actual_date=None),
+        ]
+        coverage = dict(source_count=4,matched_count=1,extra_count=3,published_unmatched_count=0,
+                        published_count=1,empty_slot_count=2,rendered_count=4,captured_at=NOW.isoformat(),
+                        source_sha256='e'*64,source_keys=[row['key'] for row in [matched]+extras],
+                        planned=1,unmatched=1,community=1,slot=0,other_period=0)
+        return dict(coverage=coverage,extras=extras,by_video={'abcdefghijk':matched})
     def test_valid_public_version(self): client.validate(self.p,NOW,b'html')
     def test_mismatched_public_version(self):
         with self.assertRaises(ValueError):client.validate(self.p,NOW,b'other')
@@ -117,7 +129,108 @@ class ParityTests(unittest.TestCase):
         self.assertNotIn('일반광고 RAW:',a);self.assertIn('라이브 RAW:',a)
     def test_filtered_schedule_not_total(self):
         a=self.answer('9월 롱폼 유튜브 편성','youtube')
-        self.assertIn('폼 조건을 전체 합계로 바꾸지 않습니다',a)
+        self.assertIn('롱폼·숏폼 합계로 바꾸지 않습니다',a)
+    def test_schedule_answer_is_verified_concise_and_user_facing(self):
+        self.p['youtube']['schedules']['2026-09']=self.schedule()
+        self.p['youtube']['verified_api']={'discovered':[dict(published_date='2026-09-11')]}
+        a=self.answer('9월 유튜브 편성','youtube')
+        self.assertIn('총 4건 · 발행 1건 · 예정 1건 · 확인 필요 1건',a)
+        self.assertIn('확인 필요: 발행 확인 1건',a)
+        self.assertIn('그 외: 커뮤니티 1건',a)
+        self.assertIn('최신 반영: 2026년 9월 11일 20:00',a)
+        self.assertIn('예정 1건은 등록 기준 · 취소 상태 미반영',a)
+        self.assertIn('9/14 18:00 예정 영상 · SF · 예정',a)
+        self.assertIn('날짜만 등록된 빈 구좌 2건 별도',a)
+        for internal in ('편성 원천','발행 연결','미매칭','시트 조회','공개 업로드','DB 미연결','출처:'):
+            self.assertNotIn(internal,a)
+    def test_schedule_count_mismatch_fails_closed(self):
+        schedule=self.schedule();schedule['coverage']['source_count']=5
+        self.p['youtube']['schedules']['2026-09']=schedule
+        a=self.answer('9월 유튜브 편성','youtube')
+        self.assertIn('합계가 맞지 않아 답변을 중단',a)
+        self.assertNotIn('총 5건',a)
+    def test_schedule_detail_identity_mismatch_fails_closed(self):
+        schedule=self.schedule();schedule['extras'][0]['key']='f'*24
+        self.p['youtube']['schedules']['2026-09']=schedule
+        self.assertIn('상세와 전체 합계가 맞지 않아',self.answer('9월 유튜브 편성','youtube'))
+    def test_stale_schedule_fails_closed(self):
+        schedule=self.schedule();schedule['coverage']['captured_at']=(NOW-dt.timedelta(days=3)).isoformat()
+        self.p['youtube']['schedules']['2026-09']=schedule
+        self.assertIn('최신 반영 시각을 확인하지 못했습니다',self.answer('9월 유튜브 편성','youtube'))
+    def test_schedule_published_id_mismatch_fails_closed(self):
+        schedule=self.schedule()
+        schedule['by_video']={'zzzzzzzzzzz':dict(schedule['by_video']['abcdefghijk'],item_id='zzzzzzzzzzz')}
+        self.p['youtube']['schedules']['2026-09']=schedule
+        a=self.answer('9월 유튜브 편성','youtube')
+        self.assertIn('발행 영상 연결을 확인하지 못했습니다',a)
+        self.assertNotIn('· 발행 1건',a)
+    def test_schedule_staleness_is_measured_from_answer_time(self):
+        self.p['youtube']['schedules']['2026-09']=self.schedule()
+        a=client.answer(self.p,'9월 유튜브 편성','youtube',NOW.date(),now=NOW+dt.timedelta(hours=49))
+        self.assertIn('최신 반영 시각을 확인하지 못했습니다',a)
+    def test_schedule_capture_is_rendered_in_kst(self):
+        schedule=self.schedule();schedule['coverage']['captured_at']='2026-09-11T11:00:00+00:00'
+        self.p['youtube']['schedules']['2026-09']=schedule
+        self.assertIn('최신 반영: 2026년 9월 11일 20:00',self.answer('9월 유튜브 편성','youtube'))
+    def test_schedule_details_include_upcoming_and_recent(self):
+        schedule=self.schedule()
+        schedule['extras']=[dict(key=str(i)*24,date=f'2026-09-{12+i:02d}',time='18:00',form='SF',
+                                      ip='',title=f'예정 {i}',item_id='',community=False,state='planned',actual_date=None)
+                            for i in range(1,6)]
+        lines=client.schedule_detail_lines(schedule,self.p['youtube']['content'],NOW)
+        self.assertEqual(len(lines),5)
+        self.assertTrue(any('· 발행' in line for line in lines))
+        self.assertTrue(any('예정 1' in line for line in lines))
+        self.assertEqual(lines[-1].split()[1], '9/10')
+    def test_future_neutral_schedule_does_not_displace_recent_rows(self):
+        schedule=self.schedule()
+        schedule['extras'][2].update(date='2026-09-30')
+        lines=client.schedule_detail_lines(schedule,self.p['youtube']['content'],NOW)
+        self.assertTrue(any('9/30' in line and '커뮤니티' in line for line in lines))
+        self.assertTrue(any('9/10' in line and '· 발행' in line for line in lines))
+    def test_same_day_future_schedule_is_not_action_required(self):
+        schedule=self.schedule()
+        schedule['extras'][1].update(date='2026-09-11',time='21:00')
+        self.p['youtube']['schedules']['2026-09']=schedule
+        a=self.answer('9월 유튜브 편성','youtube')
+        self.assertIn('예정 2건 · 확인 필요 0건',a)
+        self.assertIn('9/11 21:00 확인 영상 · SF · 예정',a)
+        self.assertNotIn('확인 필요:',a)
+    def test_same_day_unknown_time_is_neutral(self):
+        schedule=self.schedule()
+        schedule['extras'][1].update(date='2026-09-11',time='')
+        self.p['youtube']['schedules']['2026-09']=schedule
+        a=self.answer('9월 유튜브 편성','youtube')
+        self.assertIn('확인 필요 0건',a)
+        self.assertIn('시간 미정인 오늘 편성 1건',a)
+    def test_schedule_bad_metadata_fails_closed_without_python_error(self):
+        schedule=self.schedule();schedule['coverage']['source_sha256']=None
+        self.p['youtube']['schedules']['2026-09']=schedule
+        a=self.answer('9월 유튜브 편성','youtube')
+        self.assertIn('원본 대조를 확인하지 못했습니다',a)
+        self.assertNotIn('NoneType',a)
+    def test_schedule_unhashable_source_key_fails_closed_without_python_error(self):
+        schedule=self.schedule();schedule['coverage']['source_keys'][0]=[]
+        self.p['youtube']['schedules']['2026-09']=schedule
+        a=self.answer('9월 유튜브 편성','youtube')
+        self.assertIn('원본 대조를 확인하지 못했습니다',a)
+        self.assertNotIn('unhashable',a)
+    def test_schedule_bad_date_fails_closed_without_python_error(self):
+        schedule=self.schedule();schedule['extras'][0]['date']='not-a-date'
+        self.p['youtube']['schedules']['2026-09']=schedule
+        a=self.answer('9월 유튜브 편성','youtube')
+        self.assertIn('날짜 연결을 확인하지 못했습니다',a)
+        self.assertNotIn('Invalid isoformat',a)
+    def test_published_outside_schedule_is_not_double_counted_as_review(self):
+        schedule=self.schedule()
+        self.p['youtube']['content'].append(dict(publish_date='2026-09-11',video_id='lmnopqrstuv',form='SF',
+                                                  title='편성표 밖 영상',d7_views=None,d7_complete=False,views_total=10))
+        schedule['coverage'].update(published_unmatched_count=1,published_count=2,rendered_count=5)
+        self.p['youtube']['schedules']['2026-09']=schedule
+        a=self.answer('9월 유튜브 편성','youtube')
+        self.assertIn('확인 필요 1건',a)
+        self.assertIn('편성표 밖 발행 1건',a)
+        self.assertEqual(a.count('확인 필요'),2)  # summary + review-detail label only
     def test_unit_tokens_not_stripped(self):
         self.assertIn('1D 브랜드 거래액:',self.answer('9월 라이브 1D 거래액'))
         self.assertIn('D+7 완료',self.answer('9월 유튜브 D7 성과','youtube'))

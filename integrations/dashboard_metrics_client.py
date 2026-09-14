@@ -202,6 +202,132 @@ def discovered_lines(api, start, end):
     return lines
 
 
+def verified_schedule(schedule, packet, published_rows, now):
+    """Recheck the exported schedule contract immediately before a Slack answer."""
+    c = schedule['coverage']
+    count_keys = ('source_count','matched_count','extra_count','published_unmatched_count',
+                  'published_count','empty_slot_count','rendered_count','planned','unmatched',
+                  'community','slot','other_period')
+    if any(type(c.get(key)) is not int or c[key] < 0 for key in count_keys):
+        raise ValueError('유튜브 편성 집계 상태를 확인하지 못했습니다.')
+    if (c['source_count'] != c['matched_count'] + c['extra_count'] or
+            c['extra_count'] != sum(c[key] for key in ('planned','unmatched','community','slot','other_period')) or
+            c['published_count'] != c['matched_count'] + c['published_unmatched_count'] or
+            c['rendered_count'] != c['published_count'] + c['extra_count'] or
+            c['published_count'] != len(published_rows)):
+        raise ValueError('유튜브 편성 합계가 맞지 않아 답변을 중단했습니다.')
+    source_keys = c.get('source_keys')
+    source_sha = c.get('source_sha256')
+    if (not isinstance(source_keys,list) or len(source_keys) != c['source_count'] or
+            any(not isinstance(key,str) or not re.fullmatch(r'[0-9a-f]{24}',key) for key in source_keys) or
+            len(set(source_keys)) != len(source_keys) or not isinstance(source_sha,str) or
+            not re.fullmatch(r'[0-9a-f]{64}',source_sha)):
+        raise ValueError('유튜브 편성 원본 대조를 확인하지 못했습니다.')
+    extras, by_video = schedule.get('extras'), schedule.get('by_video')
+    if not isinstance(extras,list) or not isinstance(by_video,dict):
+        raise ValueError('유튜브 편성 상세 연결을 확인하지 못했습니다.')
+    states = ('planned','unmatched','community','slot','other_period')
+    if (len(extras) != c['extra_count'] or len(by_video) != c['matched_count'] or
+            any(not isinstance(row,dict) or row.get('state') not in states for row in extras) or
+            any(sum(row.get('state') == state for row in extras) != c[state] for state in states)):
+        raise ValueError('유튜브 편성 상태별 합계가 맞지 않아 답변을 중단했습니다.')
+    detail_rows = list(by_video.values()) + extras
+    detail_keys = [row.get('key') for row in detail_rows if isinstance(row,dict)]
+    if (len(detail_keys) != c['source_count'] or
+            any(not isinstance(key,str) for key in detail_keys) or set(detail_keys) != set(source_keys)):
+        raise ValueError('유튜브 편성 상세와 전체 합계가 맞지 않아 답변을 중단했습니다.')
+    if any(not isinstance(row,dict) or not isinstance(row.get('video_id'),str) or not row['video_id']
+           for row in published_rows):
+        raise ValueError('유튜브 편성의 발행 영상 연결을 확인하지 못했습니다.')
+    published_ids = [row['video_id'] for row in published_rows]
+    linked_ids = {str(video_id) for video_id in by_video}
+    if (len(set(published_ids)) != len(published_ids) or
+            not linked_ids <= set(published_ids) or
+            len(published_ids) - len(linked_ids) != c['published_unmatched_count'] or
+            any(str(row.get('item_id') or '') != str(video_id) for video_id,row in by_video.items())):
+        raise ValueError('유튜브 편성의 발행 영상 연결을 확인하지 못했습니다.')
+    try:
+        captured = dt.datetime.fromisoformat(c['captured_at'])
+        built = dt.datetime.fromisoformat(packet['built_at'])
+        for row in published_rows:
+            dt.date.fromisoformat(row['publish_date'])
+        for row in extras:
+            dt.date.fromisoformat(row['date'])
+            if row['state'] == 'other_period':
+                dt.date.fromisoformat(row['actual_date'])
+    except (KeyError,TypeError,ValueError):
+        raise ValueError('유튜브 편성 날짜 연결을 확인하지 못했습니다.')
+    if captured.tzinfo is None or built.tzinfo is None or now.tzinfo is None:
+        raise ValueError('유튜브 편성 최신 반영 시각을 확인하지 못했습니다.')
+    captured = captured.astimezone(KST)
+    if (not -300 <= (built-captured).total_seconds() <= 48*3600 or
+            not -300 <= (now-captured).total_seconds() <= 48*3600):
+        raise ValueError('유튜브 편성 최신 반영 시각을 확인하지 못했습니다.')
+    return c, captured
+
+
+def schedule_position(row, now):
+    """Return future (1), elapsed (-1), or same-day unknown-time (0)."""
+    day = dt.date.fromisoformat(row['date'])
+    if day != now.date():
+        return 1 if day > now.date() else -1
+    match = re.fullmatch(r'\s*(\d{1,2}):(\d{2})(?::\d{2})?\s*',str(row.get('time') or ''))
+    if not match:
+        return 0
+    hour,minute = map(int,match.groups())
+    if hour > 23 or minute > 59:
+        return 0
+    scheduled = dt.datetime.combine(day,dt.time(hour,minute),tzinfo=KST)
+    return 1 if scheduled > now.astimezone(KST) else -1
+
+
+def schedule_presentation_state(row, now):
+    """Keep a same-day future slot out of the action-required bucket."""
+    if row['state'] not in ('planned','unmatched'):
+        return row['state']
+    position = schedule_position(row,now)
+    return 'planned' if position > 0 else 'unmatched' if position < 0 else 'today'
+
+
+def schedule_detail_lines(schedule, published_rows, now, limit=5):
+    """Reserve room for both the next planned rows and the latest past rows."""
+    content = {str(row['video_id']): row for row in published_rows}
+    items = []
+    for video_id, row in schedule['by_video'].items():
+        published = content[str(video_id)]
+        day = dt.date.fromisoformat(str(published['publish_date']))
+        items.append((day, '발행', row, published.get('title') or row.get('title') or '제목 미정', False))
+    labels = {'planned':'예정','unmatched':'발행 확인','today':'오늘 편성','community':'커뮤니티',
+              'slot':'콘텐츠 미정','other_period':'발행일 확인'}
+    for row in schedule['extras']:
+        shown_date = row.get('actual_date') if row['state'] == 'other_period' else row['date']
+        day = dt.date.fromisoformat(shown_date)
+        state = schedule_presentation_state(row,now)
+        future = row['state'] != 'other_period' and schedule_position(row,now) > 0
+        items.append((day, labels[state], row, row.get('title') or row.get('ip') or '콘텐츠 미정', future))
+    def key(item):
+        return item[0], str(item[2].get('time') or ''), str(item[2].get('key') or '')
+    upcoming = sorted((item for item in items if item[4]), key=key)
+    recent = sorted((item for item in items if not item[4]), key=key, reverse=True)
+    next_items = upcoming[:3]
+    recent_items = recent[:min(2,limit-len(next_items))]
+    remaining = limit-len(next_items)-len(recent_items)
+    if remaining:
+        next_items += upcoming[len(next_items):len(next_items)+remaining]
+    remaining = limit-len(next_items)-len(recent_items)
+    if remaining:
+        recent_items += recent[len(recent_items):len(recent_items)+remaining]
+    selected = next_items + recent_items
+    lines = []
+    for day, state, row, title, _future in selected:
+        form = str(row.get('form') or '').strip()
+        meta = ' · '.join(dict.fromkeys(value for value in (form,state) if value))
+        clock = '' if row.get('state') == 'other_period' else str(row.get('time') or '').strip()
+        when = f'{day.month}/{day.day}' + (f' {clock}' if clock else '')
+        lines.append(f'└ {when} {safe(title)} · {safe(meta)}')
+    return lines
+
+
 def live_scope(rows, q):
     """Never silently drop a named brand or unsupported scope."""
     brands = sorted({r['brand'] for r in rows if r['brand']}, key=len, reverse=True)
@@ -321,7 +447,7 @@ def revenue_answer(p, q, start, end, kind):
     return lines
 
 
-def youtube_answer(p, q, start, end, kind):
+def youtube_answer(p, q, start, end, kind, now=None):
     yt = p['youtube']
     rows = [r for r in yt['content'] if start.isoformat() <= r['publish_date'] <= end.isoformat()]
     lf = bool(re.search(r'롱폼|\bLF\b|\blf\b',q))
@@ -335,16 +461,42 @@ def youtube_answer(p, q, start, end, kind):
     wants_verbose_period = bool(re.search(r'포맷|구성|분해|breakdown', q))
     if '편성' in q:
         if form_filter:
-            raise ValueError('편성 원천은 전체 월 기준으로 조회해주세요. 폼 조건을 전체 합계로 바꾸지 않습니다.')
+            raise ValueError('편성은 월 전체 기준으로 조회해주세요. 롱폼·숏폼 합계로 바꾸지 않습니다.')
         schedule = yt['schedules'].get(start.strftime('%Y-%m'))
-        if kind != 'month' or not schedule:
-            return lines + ['• 편성 원천은 월 단위로 조회해주세요. 예: 9월 유튜브 편성']
-        c = schedule['coverage']
-        lines += [bullet_summary(f'편성 {c["source_count"]}건 · 발행 연결 {c["matched_count"]}건 · 예정 {c["planned"]}건 · 미매칭 {c["unmatched"]}건')]
-        lines += [f'• 편성 원천 {c["source_count"]}건 · 발행 연결 {c["matched_count"]}건 · 예정 {c["planned"]}건 · 미매칭 {c["unmatched"]}건',
-                  f'• 커뮤니티 확인 {c["community"]}건 · 콘텐츠 미정 {c["slot"]}건 · 날짜만 있는 빈 구좌 {c["empty_slot_count"]}건(별도)',
-                  f'• 시트 조회 {c["captured_at"]} · 주월간 대시보드 / 편성·개별 성과 아카이빙']
-        return lines + discovered_lines(yt.get('verified_api',{}),start,end)
+        if kind != 'month':
+            return lines + ['• 월 단위로 조회해주세요. 예: 9월 유튜브 편성']
+        if not schedule:
+            return lines + ['• 해당 월 편성은 아직 연결되지 않았습니다.']
+        now = now or dt.datetime.now(KST)
+        c, captured = verified_schedule(schedule,p,rows,now)
+        display_states = [schedule_presentation_state(row,now) for row in schedule['extras']]
+        planned = display_states.count('planned')
+        unmatched = display_states.count('unmatched')
+        today_count = display_states.count('today')
+        review = unmatched + c['other_period']
+        lines = [f'*{start.month}월 유튜브 편성*',
+                 bullet_summary(f'총 {c["source_count"]}건 · 발행 {c["matched_count"]}건 · 예정 {planned}건 · 확인 필요 {review}건')]
+        if review:
+            review_parts = []
+            for label,value in (('발행 확인',unmatched),('발행일 확인',c['other_period'])):
+                if value: review_parts.append(f'{label} {value}건')
+            lines += ['• 확인 필요: ' + ' · '.join(review_parts)]
+        neutral = []
+        if c['community']: neutral.append(f'커뮤니티 {c["community"]}건')
+        if c['slot']: neutral.append(f'콘텐츠 미정 {c["slot"]}건')
+        if today_count: neutral.append(f'시간 미정인 오늘 편성 {today_count}건')
+        if neutral: lines += ['• 그 외: ' + ' · '.join(neutral)]
+        if c['published_unmatched_count']:
+            lines += [f'• 편성표 밖 발행 {c["published_unmatched_count"]}건']
+        freshness = f'{captured.month}월 {captured.day}일 {captured:%H:%M}'
+        slot = f' · 날짜만 등록된 빈 구좌 {c["empty_slot_count"]}건 별도' if c['empty_slot_count'] else ''
+        lines += [f'• 최신 반영: {captured.year}년 {freshness}{slot}']
+        if planned:
+            lines += [f'• 예정 {planned}건은 등록 기준 · 취소 상태 미반영']
+        details = schedule_detail_lines(schedule,rows,now)
+        if details:
+            lines += ['• 다음·최근 편성'] + details
+        return lines
     official = next((r for r in yt['periods'] if r['period_start']==start.isoformat() and r['period_end']==end.isoformat()), None)
     if yt.get('verified_api'):
         lines += verified_youtube_answer(yt['verified_api'],start,end,form_filter,verbose=wants_verbose_period)
@@ -408,10 +560,11 @@ def youtube_answer(p, q, start, end, kind):
     return lines
 
 
-def answer(packet, question, domain, today=None):
+def answer(packet, question, domain, today=None, now=None):
     if domain not in ('live','youtube','ads') or not candidate(question,domain):
         return None
-    today = today or dt.datetime.now(KST).date()
+    now = now or dt.datetime.now(KST)
+    today = today or now.date()
     try:
         start,end,kind = period(question,today)
         if start.year != int(packet['as_of'][:4]):
@@ -421,7 +574,10 @@ def answer(packet, question, domain, today=None):
         if domain != 'live':
             check_scope(question,domain)
         renderer = {'live':live_answer,'youtube':youtube_answer,'ads':revenue_answer}[domain]
-        lines = renderer(packet,question,start,end,kind)
+        if domain == 'youtube':
+            lines = renderer(packet,question,start,end,kind,now=now)
+        else:
+            lines = renderer(packet,question,start,end,kind)
         return '\n'.join(lines)
     except (ValueError,KeyError,TypeError) as exc:
         return '🙏 *확인 필요*\n• '+safe(str(exc))+'\n• 검증되지 않은 조건을 전체 합계로 바꾸지 않습니다.'
@@ -452,8 +608,9 @@ def main():
         request = urllib.request.Request(URL+'?metrics='+packet['dashboard_sha256'][:12],headers={'Cache-Control':'no-cache'})
         with urllib.request.urlopen(request,timeout=10) as response:
             public = response.read(MAX_BYTES+1)
-        validate(packet,dt.datetime.now(KST),public)
-        result = answer(packet,q,domain)
+        now = dt.datetime.now(KST)
+        validate(packet,now,public)
+        result = answer(packet,q,domain,now=now)
     except Exception:
         result = '🙏 *확인 필요*\n• 대시보드와 공통 지표의 버전·신선도를 확인하지 못했습니다.\n• 다른 집계나 추정 숫자로 대체하지 않습니다.'
     print(json.dumps({'answer':result},ensure_ascii=False))
