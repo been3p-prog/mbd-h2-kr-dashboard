@@ -17,6 +17,7 @@ from snapshot_transport import describe_transport_exception, describe_transport_
 
 KST = dt.timezone(dt.timedelta(hours=9))
 DEFAULT_OUTPUT = Path("/tmp/mbd_h2_youtube_target_snapshot.duckdb")
+DEFAULT_D7_ARCHIVE = Path.home() / 'Library/Application Support/MBD H2 Dashboard/youtube-d7-archive.json'
 DEFAULT_HOST = "cnc-media@192.168.7.238"
 DEFAULT_KEY = Path("/Users/sb.lee/.ssh/id_ed25519_mbd_server")
 DEFAULT_REMOTE_PYTHON = "/Users/cnc-media/automations/.venvs/mbd/bin/python"
@@ -37,6 +38,7 @@ REQUIRED_COLUMNS = {
     "fact_analytics_d7": {
         "video_id", "d7_complete", "fetched_at", "metric_end_date", "view_count",
         "like_count", "comment_count", "share_count",
+        "metric_start_date", "requested_end_date", "raw_status",
     },
     "fact_channel_snapshot": {"snapshot_date", "captured_at", "subscriber_count"},
     "fact_snapshot": {"snapshot_date", "captured_at", "video_id"},
@@ -200,6 +202,7 @@ def sync_snapshot(
     remote_python: str = DEFAULT_REMOTE_PYTHON,
     remote_db: str = DEFAULT_REMOTE_DB,
     include_schedule: bool = False,
+    archive_path: Path | None = None,
 ) -> dict:
     if not key.is_file():
         raise RuntimeError("target SSH key missing")
@@ -248,9 +251,11 @@ def sync_snapshot(
                 con.close()
             result['schedule_rows'] = payload['source_rows']
             result['schedule_captured_at'] = payload['captured_at']
-            from youtube_verified_analytics import fetch_overlay, apply_overlay
-            verified = fetch_overlay(ssh, remote_python)
+            from youtube_verified_analytics import fetch_overlay, apply_overlay, save_d7_archive
+            archive_path = archive_path or Path(os.environ.get('MBD_H2_D7_ARCHIVE', str(DEFAULT_D7_ARCHIVE)))
+            verified = fetch_overlay(ssh, remote_python, previous_snapshot=output, archive_path=archive_path)
             apply_overlay(partial, verified)
+            save_d7_archive(archive_path, verified)
             result['analytics_actual_end'] = verified['actual_end']
             result['discovered_public_count'] = len(verified['discovered'])
         os.replace(partial, output)

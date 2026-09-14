@@ -20,6 +20,10 @@ KST = dt.timezone(dt.timedelta(hours=9))
 DEFAULT_CREDENTIAL = Path('/Users/sb.lee/automations/slack-digest/credentials/ohouse-drive-cnc-a87f58a854c8.json')
 
 
+class UnresolvableYoutubeURL(RuntimeError):
+    pass
+
+
 def source_contract():
     document = json.loads((ROOT / 'data/source_contract.json').read_text())
     if document.get('schema') != 'mbd-dashboard-sot-v1':
@@ -64,7 +68,7 @@ def identity(raw_id, raw_url, form):
             match = re.fullmatch(r'/(?:shorts|live)/([A-Za-z0-9_-]{11})/?', parsed.path)
             url_id = match[1] if match else ''
         if not re.fullmatch(pattern, url_id):
-            raise RuntimeError('schedule contains an unresolvable YouTube URL')
+            raise UnresolvableYoutubeURL('schedule contains an unresolvable YouTube URL')
     if raw_id and not re.fullmatch(pattern, raw_id):
         raise RuntimeError('schedule contains an invalid source ID')
     if raw_id and url_id and raw_id != url_id:
@@ -76,7 +80,7 @@ def parse_sheet(values, *, captured_at, year, source):
     header_index = source['header_row'] - 1
     if len(values) <= header_index or values[header_index][:7] != source['headers']:
         raise RuntimeError('schedule header missing or changed; absence is not an empty schedule')
-    rows, empty_slots, seen_ids = [], [], set()
+    rows, empty_slots, seen_ids = [], [], {}
     for number, raw in enumerate(values[source['data_start_row'] - 1:], source['data_start_row']):
         cells = (raw + [''] * 7)[:7]
         has_content = any(str(cells[i] or '').strip() for i in (0, 3, 4, 5, 6))
@@ -93,15 +97,26 @@ def parse_sheet(values, *, captured_at, year, source):
         if day.year != year:
             raise RuntimeError(f'schedule year differs from source contract at row {number}')
         form = str(cells[3] or '').strip() or '미정'
-        item_id = identity(cells[0], cells[6], form)
+        link_issue = ''
+        try:
+            item_id = identity(cells[0], cells[6], form)
+        except UnresolvableYoutubeURL:
+            if str(cells[0] or '').strip():
+                raise  # Never ignore a potentially conflicting source ID.
+            item_id = ''
+            link_issue = '편성 링크 오류 · 영상 ID 확인 필요'
         if item_id and item_id in seen_ids:
-            raise RuntimeError('duplicate schedule ID; cannot safely merge separate rows')
-        if item_id:
-            seen_ids.add(item_id)
+            link_issue = '편성 ID 중복 · 편성 행 확인 필요'
+            first = rows[seen_ids[item_id]]
+            first['item_id'] = ''
+            first['link_issue'] = link_issue
+            item_id = ''
+        elif item_id:
+            seen_ids[item_id] = len(rows)
         rows.append(dict(key=digest([source['spreadsheet_id'], source['sheet_id'], number])[:24],
                          sheet_row=number, date=day.isoformat(), time=str(cells[2] or '').strip(),
                          form=form, ip=str(cells[4] or '').strip(), title=str(cells[5] or '').strip(),
-                         item_id=item_id, community=form == '커뮤니티'))
+                         item_id=item_id, community=form == '커뮤니티', link_issue=link_issue))
     payload = dict(schema='youtube-schedule-snapshot-v1', year=year,
                    spreadsheet_id=source['spreadsheet_id'], sheet_id=source['sheet_id'],
                    sheet_title=source['sheet_title'], captured_at=captured_at,
@@ -198,6 +213,7 @@ def reconcile(payload, published, *, year, month, as_of, known_videos=None):
         extras.append(dict(row, state=state, actual_date=other['publish_date'].isoformat() if state == 'other_period' else None))
     counts = {state: sum(r['state'] == state for r in extras) for state in ('planned', 'unmatched', 'community', 'slot', 'other_period')}
     coverage = dict(source_count=len(source_rows), matched_count=len(matched), extra_count=len(extras),
+                    issue_count=sum(bool(r.get('link_issue')) for r in source_rows),
                     published_unmatched_count=len(published_ids - matched), published_count=len(published),
                     empty_slot_count=sum(dt.date.fromisoformat(day).month == month for day in payload['empty_slots']),
                     rendered_count=len(published) + len(extras), captured_at=payload['captured_at'],
@@ -211,9 +227,10 @@ def extra_activity(row):
     labels = {'planned': '편성 예정', 'unmatched': '발행 확인 대기', 'community': '커뮤니티 · 게시 확인 필요',
               'slot': '콘텐츠 미정 구좌', 'other_period': '다른 기간 발행 확인 · ' + str(row.get('actual_date') or '')}
     title = row['title'] or row['ip'] or '콘텐츠 미정'
-    meta = ' · '.join(filter(None, [row['form'], row['ip'], row['time'], labels[row['state']]]))
+    meta = ' · '.join(filter(None, [row['form'], row['ip'], row['time'], labels[row['state']], row.get('link_issue')]))
     day = dt.date.fromisoformat(row['date'])
-    return (f'<div class="activity-row" data-yt-schedule-key="{row["key"]}" data-yt-schedule-state="{row["state"]}">'
+    issue = ' data-yt-schedule-issue="true"' if row.get('link_issue') else ''
+    return (f'<div class="activity-row" data-yt-schedule-key="{row["key"]}" data-yt-schedule-state="{row["state"]}"{issue}>'
             f'<time class="activity-date" datetime="{row["date"]}" data-yt-scheduled="true">{day.month}/{day.day}</time>'
             '<div class="activity-main activity-main-inline"><span class="activity-title-line">'
             f'<b class="content-title">{html.escape(title)}</b><small class="activity-inline-meta">{html.escape(meta)}</small></span></div>'
@@ -229,6 +246,7 @@ def coverage_note(result):
             f' · 콘텐츠 미정 {c["slot"]}건 · 다른 기간 발행 {c["other_period"]}건'
             f' · 시트 당월 편성과 미매칭인 발행 {c["published_unmatched_count"]}건'
             f' · 날짜만 입력된 빈 구좌 {c["empty_slot_count"]}건(편성 건수 제외)'
+            f' · 편성 오류 {c.get("issue_count", 0)}건'
             f' · 시트 조회 {html.escape(c["captured_at"])} · 취소 상태 열 없음(자동 판정 안 함)</div>')
 
 
@@ -253,6 +271,9 @@ def verify_coverage(block, expected=None, *, now=None, require_fresh=False):
         raise RuntimeError('negative schedule count')
     keys = re.findall(r'data-yt-schedule-key="([^"]+)"', block)
     states = re.findall(r'data-yt-schedule-state="([^"]+)"', block)
+    issues = int(values.get('issue-count', '0'))
+    if issues != block.count('data-yt-schedule-issue="true"') or (expected and issues != expected.get('issue_count', 0)):
+        raise RuntimeError('YouTube schedule issue coverage mismatch')
     extra_rows = re.findall(r'<div class="activity-row" [^>]*data-yt-schedule-state="[^"]+"[^>]*>.*?(?=<div class="activity-row"|</details>)', block, re.S)
     if len(extra_rows) != len(states) or any(
             re.findall(r'<span class="metric-cell"><b>(.*?)</b></span>', row, re.S) != ['—'] * 3

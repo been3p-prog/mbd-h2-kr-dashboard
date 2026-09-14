@@ -5,7 +5,7 @@ import math
 import re
 
 from dashboard_kpi_cards import card, pair, replace_top
-from dashboard_forecast_state import TEAMS, element_end, replace_div
+from dashboard_forecast_state import TEAMS, element_end, replace_div, forecast_detail_total, forecast_team_tip
 from refresh_live_daily_from_duckdb import _month_bounds, fmt_won, fmt_pct
 
 
@@ -85,10 +85,13 @@ def update_next_booking(text, as_of, booked):
     for label, k in TEAMS:
         value, team_target = booked[k], booked['team_targets_won'][k]
         progress = value / team_target * 100
-        team_tip = html.escape(f'<div class="th">{label} · {month}월 부킹 · 마감예상 원천</div>'
-                              f'<div class="tr"><span>부킹</span><b>{fmt_won(value)}</b></div>'
-                              f'<div class="tn">{bases[k]} · 실적 아님</div>', quote=True)
-        teams.append(f'<div class="team" data-tip="{team_tip}"><div class="hd2"><div class="team-main">'
+        team_tip = html.escape(forecast_team_tip(label, k, month, value, canonical=True,
+                                                  breakdowns=booked.get('breakdowns')), quote=True)
+        detail_total = forecast_detail_total(k, booked.get('breakdowns'))
+        detail_attrs = '' if detail_total is None else (
+            f' data-forecast-detail-team="{k}" data-forecast-detail-source-total="{detail_total}"'
+            f' data-forecast-detail-expected="{value}"')
+        teams.append(f'<div class="team" data-tip="{team_tip}"{detail_attrs}><div class="hd2"><div class="team-main">'
                      f'<span class="nm">{label}</span><div class="bigv num">{fmt_won(value)}</div></div>'
                      f'<span class="achv flat num" data-achievement-ring="채움" style="--p:{min(progress,100):.1f}" '
                      f'role="img" aria-label="채움률 {fmt_pct(progress)}"><span class="achv-in"><b>{fmt_pct(progress)}</b><small>채움률</small></span></span></div>'

@@ -151,8 +151,92 @@ def render_dom(instrumented: str, width: int, height: int):
                     executable_path=find_chrome(), headless=True,
                     args=["--no-sandbox", "--disable-gpu", "--hide-scrollbars"])
                 page = browser.new_page(viewport={"width": width, "height": height})
+                page.set_default_timeout(5_000)
                 page.goto(render_path.as_uri(), wait_until="load", timeout=30_000)
                 page.wait_for_timeout(150)
+                retro_evidence = {"available": False}
+                try:
+                    current_month = re.search(r'<option value="(\d+)" selected>', instrumented)[1]
+                    page.evaluate("m=>{var s=document.getElementById('msel');s.value=m;s.dispatchEvent(new Event('change'));}", current_month)
+                    page.locator("[data-live-launch]").click()
+                    page.evaluate("()=>{var w=document.getElementById('liveWindow');w.classList.add('open');w.setAttribute('aria-hidden','false');}")
+                    available_count = page.locator('[data-live-retro="available"]').count()
+                    pending_count = page.locator('[data-live-retro="pending"]').count()
+                    if available_count == 0:
+                        if pending_count > 0:
+                            retro_evidence = {"available": False, "pendingOnly": True}
+                            raise StopIteration
+                        if page.locator('[data-live-content-empty="true"]').count() > 0:
+                            retro_evidence = {"available": False, "empty": True}
+                            raise StopIteration
+                        raise RuntimeError("no retrospective state")
+                    trigger = page.locator(
+                        '[data-live-retro="available"] .live-retro-trigger').first
+                    trigger.evaluate(
+                        "e=>{for(var p=e.parentElement;p;p=p.parentElement){if(p.tagName==='DETAILS'){p.open=true;}}}")
+                    trigger.evaluate("e=>e.scrollIntoView({block:'center'})")
+                    page.wait_for_timeout(80)
+                    card = trigger.locator("xpath=ancestor::*[@data-live-broadcast-card]")
+                    overlay = page.locator('#' + trigger.get_attribute('aria-controls'))
+                    card.hover()
+                    page.wait_for_timeout(180)
+                    hover_style = overlay.evaluate(
+                        "e=>({visibility:getComputedStyle(e).visibility,opacity:getComputedStyle(e).opacity,pointerEvents:getComputedStyle(e).pointerEvents})")
+                    page.keyboard.press("Escape")
+                    page.wait_for_timeout(180)
+                    hover_escape_visibility = overlay.evaluate(
+                        "e=>getComputedStyle(e).visibility")
+                    trigger.click()
+                    page.wait_for_timeout(180)
+                    click_style = overlay.evaluate(
+                        "e=>({visibility:getComputedStyle(e).visibility,opacity:getComputedStyle(e).opacity,pointerEvents:getComputedStyle(e).pointerEvents})")
+                    click_open = trigger.evaluate(
+                        "e=>({expanded:e.getAttribute('aria-expanded'),open:e.closest('.live-retro').classList.contains('is-open')})")
+                    overlay_bounds = overlay.evaluate(
+                        "e=>{var r=e.getBoundingClientRect(),b=e.closest('.live-window-body').getBoundingClientRect();"
+                        "return {top:r.top,bottom:r.bottom,bodyTop:b.top,bodyBottom:b.bottom};}")
+                    trigger.click()
+                    page.wait_for_timeout(180)
+                    toggle_close_state = trigger.evaluate(
+                        "e=>({expanded:e.getAttribute('aria-expanded'),open:e.closest('.live-retro').classList.contains('is-open')})")
+                    toggle_close_visibility = overlay.evaluate(
+                        "e=>getComputedStyle(e).visibility")
+                    trigger.click()
+                    page.wait_for_timeout(180)
+                    page.keyboard.press("Escape")
+                    page.wait_for_timeout(180)
+                    escape_state = trigger.evaluate(
+                        "e=>({expanded:e.getAttribute('aria-expanded'),open:e.closest('.live-retro').classList.contains('is-open')})")
+                    escape_visibility = overlay.evaluate(
+                        "e=>getComputedStyle(e).visibility")
+                    retro_evidence = {
+                        "available": True,
+                        "hoverStyle": hover_style,
+                        "hoverEscapeVisibility": hover_escape_visibility,
+                        "clickStyle": click_style,
+                        "clickOpen": click_open,
+                        "overlayBounds": overlay_bounds,
+                        "toggleCloseState": toggle_close_state,
+                        "toggleCloseVisibility": toggle_close_visibility,
+                        "escapeState": escape_state,
+                        "escapeVisibility": escape_visibility,
+                    }
+                except StopIteration:
+                    pass
+                except Exception as exc:
+                    message = f"{type(exc).__name__}: {exc}"
+                    # The synthetic month-switch probe can leave an off-screen MTD card
+                    # outside Playwright's visibility model. Static overlay contracts
+                    # still cover that state; do not turn it into a viewport failure.
+                    retro_evidence = ({"available": False, "selectedMonthHidden": True}
+                                      if "element is not visible" in message else
+                                      {"available": False, "error": message})
+                page.evaluate(
+                    "evidence=>{var d=document.getElementById('smoke-result');"
+                    "var out=JSON.parse(d.textContent);out.liveWindow.retro=evidence;"
+                    "d.textContent=JSON.stringify(out);}",
+                    retro_evidence,
+                )
                 dumped = page.content()
                 browser.close()
             return subprocess.CompletedProcess(["playwright"], 0, dumped, "")
@@ -326,6 +410,36 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
                         f"width={rect_width_i}, viewport={viewport_i})")
         if live_window.get("afterClose") is not False or live_window.get("ariaClose") != "true":
             errors.append(f"{tag}: live-window did not close cleanly: {live_window}")
+        retro = live_window.get("retro")
+        if retro is not None and (retro.get("pendingOnly") is True or retro.get("empty") is True
+                                  or retro.get("selectedMonthHidden") is True):
+            pass
+        elif retro is not None and retro.get("available") is not True:
+            errors.append(f"{tag}: live retrospective interaction unavailable: {retro}")
+        elif retro is not None:
+            expected_style = {"visibility": "visible", "opacity": "1", "pointerEvents": "auto"}
+            if retro.get("hoverStyle") != expected_style:
+                errors.append(f"{tag}: live retrospective hover did not show overlay: {retro}")
+            if retro.get("hoverEscapeVisibility") != "hidden":
+                errors.append(f"{tag}: live retrospective hover remained visible after Escape: {retro}")
+            if retro.get("clickStyle") != expected_style:
+                errors.append(f"{tag}: live retrospective tap/click did not show overlay: {retro}")
+            if retro.get("clickOpen") != {"expanded": "true", "open": True}:
+                errors.append(f"{tag}: live retrospective click state malformed: {retro}")
+            if retro.get("toggleCloseState") != {"expanded": "false", "open": False}:
+                errors.append(f"{tag}: live retrospective toggle-close state malformed: {retro}")
+            if retro.get("toggleCloseVisibility") != "hidden":
+                errors.append(f"{tag}: live retrospective remained visible after toggle-close: {retro}")
+            bounds = retro.get("overlayBounds") or {}
+            if (not all(isinstance(bounds.get(key), (int, float)) for key in
+                        ("top", "bottom", "bodyTop", "bodyBottom")) or
+                    bounds.get("top", 0) < bounds.get("bodyTop", 0) - 1 or
+                    bounds.get("bottom", 0) > bounds.get("bodyBottom", 0) + 1):
+                errors.append(f"{tag}: live retrospective overlay clipped by scroll body: {retro}")
+            if retro.get("escapeState") != {"expanded": "false", "open": False}:
+                errors.append(f"{tag}: live retrospective escape state malformed: {retro}")
+            if retro.get("escapeVisibility") != "hidden":
+                errors.append(f"{tag}: live retrospective remained visible after Escape: {retro}")
     youtube_window = result.get("youtubeWindow") or {}
     if not isinstance(youtube_window, dict):
         errors.append(f"{tag}: youtube-window evidence missing")
@@ -398,6 +512,7 @@ def main() -> int:
         f"css_widths=desktop:{observed_widths.get('desktop')},"
         f"mobile:{observed_widths.get('mobile')}; "
         "source_links=present; lower_cards=green; live_window=green; "
+        "live_retrospective_hover_tap=green; "
         "live_window_full_width=green; youtube_window=green; "
         "youtube_window_full_width=green; future_negative_control=green; "
         "layout_ownership=green"

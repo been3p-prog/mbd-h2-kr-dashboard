@@ -91,6 +91,47 @@ class ForecastStateTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'payload'):
             forecast.update_forecast_surfaces(self.html, self.raw, dict(pred, as_of='2026-08-31'))
 
+    def test_forecast_detail_tooltips_compact_adgen_and_disclose_live_packages(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'details.duckdb'
+            self._canonical_fixture(path)
+            con = duckdb.connect(str(path))
+            con.execute('create schema ad_gen')
+            con.execute('create table ad_gen.booking_pred(date varchar, ad_type varchar, status varchar, pre_issue varchar, is_support varchar, brand_name varchar, slot_type varchar, revenue varchar)')
+            con.executemany('insert into ad_gen.booking_pred values (?, ?, ?, ?, ?, ?, ?, ?)', [
+                ('2026-09-02', '일반광고', 'BOOKED', 'X', 'X', '유상브랜드', '홈배너', '1000000'),
+                ('2026-09-03', '일반광고', 'BOOKED', 'X', 'O', '무상브랜드', '카테고리', '200000'),
+                ('2026-09-04', '일반광고', 'BOOKED', 'O', 'X', '정부브랜드', '홈배너', '300000'),
+                ('2026-09-05', '일반광고', 'CANCELLED', 'X', 'X', '취소브랜드', '홈배너', '9000000')])
+            con.execute('create schema ad_int')
+            con.execute('create table ad_int.contract("계약 시작일" varchar, "브랜드명" varchar, "유형" varchar, "계약 금액" varchar)')
+            con.executemany('insert into ad_int.contract values (?, ?, ?, ?)', [
+                ('2026. 9. 2', '유상계약', '미디어PKG', '400000'),
+                ('2026. 9. 3', '무상계약', '무상지원', '50000'),
+                ('2026. 9. 4', '정부계약', '정부지원 패키지', '60000')])
+            con.execute('create schema live')
+            con.execute('create table live.raw_slots("온에어 일자" varchar, "패키지" varchar, "PGM" varchar, "비고 (프로모션)" varchar, "패키지 비용" varchar)')
+            con.executemany('insert into live.raw_slots values (?, ?, ?, ?, ?)', [
+                ('2026-09-02', '스마트', '일반', '', '700000'),
+                ('2026-09-03', '시그니처', '일반', '', '800000'),
+                ('2026-09-04', '에센셜', '취소', '취소', '9999999')])
+            details = forecast.fetch_forecast_breakdowns(con, dt.date(2026, 9, 9))
+            con.close()
+        self.assertEqual(forecast.forecast_detail_total('ad_gen', details), 1_500_000)
+        self.assertEqual(forecast.forecast_detail_total('ad_int', details), 510_000)
+        self.assertEqual(forecast.forecast_detail_total('live', details), 1_500_000)
+        ad_tip = forecast.forecast_team_tip('일반광고', 'ad_gen', 9, 1_500_000, canonical=True, breakdowns=details)
+        self.assertIn('<span>유상<small>1건</small></span><b>100만</b>', ad_tip)
+        self.assertIn('<span>무상<small>2건</small></span><b>50만</b>', ad_tip)
+        self.assertNotIn('무상지원 상세', ad_tip)
+        self.assertNotIn('무상브랜드 · 카테고리', ad_tip)
+        self.assertNotIn('정부브랜드 · 홈배너', ad_tip)
+        self.assertIn('상세 합계 150만 검증', ad_tip)
+        live_tip = forecast.forecast_team_tip('라이브', 'live', 9, 1_600_000, canonical=True, breakdowns=details)
+        self.assertIn('확정 편성 · 패키지별', live_tip)
+        self.assertIn('스마트', live_tip)
+        self.assertIn('차이 10만 추가 확인 필요', live_tip)
+
     def test_canonical_missing_duplicate_invalid_values_and_wrong_sources_fail_closed(self):
         mutations = ["delete from revenue.v_revenue_forecast_monthly where team_code='live'",
                      "insert into revenue.v_revenue_forecast_monthly select * from revenue.v_revenue_forecast_monthly where team_code='live'",

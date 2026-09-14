@@ -287,7 +287,8 @@ def fetch_same_period_comparison(db_path: Path, as_of: dt.date) -> dict:
     from dashboard_kpi_cards import previous_cutoff
     cutoff = previous_cutoff(as_of)
     prior = fetch_current_revenue_snapshot(db_path, cutoff, include_targets=False)
-    return {"as_of": cutoff.isoformat(), "total_won": prior["total_won"]}
+    return {"as_of": cutoff.isoformat(), "total_won": prior["total_won"],
+            **{key + '_won': prior[key + '_won'] for key in ('ad_gen', 'ad_int', 'live')}}
 
 
 def update_manifest(

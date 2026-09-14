@@ -72,6 +72,8 @@ CURRENT_STAGE="refresh_regression_tests"
 CURRENT_STAGE="dashboard_regression_tests"
 "$PY" -m unittest scripts/test_verify_dashboard.py -v
 "$PY" -m unittest scripts/test_finalize_month_review.py -v
+"$PY" -m unittest discover -s scripts -p 'test_youtube_*.py' -v
+"$PY" -m unittest discover -s scripts -p 'test_dashboard_*.py' -v
 
 CURRENT_STAGE="fetch_target_mbd_snapshot"
 mbd_h2_run_with_retry "fetch_target_mbd_snapshot" "$LOG" \
@@ -124,7 +126,10 @@ if git diff --quiet -- index.html data/live_window_contract.json data/owned_yout
 fi
 
 CURRENT_STAGE="github_auth_context"
-gh auth switch -u been3p-prog >/dev/null 2>&1
+if [[ "$(gh api user --jq .login)" != "been3p-prog" ]]; then
+  echo "ERROR: GitHub account mismatch; authentication unchanged"
+  exit 1
+fi
 
 CURRENT_STAGE="git_commit"
 git add index.html data/live_window_contract.json data/owned_youtube_window_contract.json scripts/verify_dashboard.py scripts/test_verify_dashboard.py scripts/smoke_dashboard.py scripts/refresh_live_daily_from_duckdb.py scripts/refresh_live_window_from_duckdb.py scripts/refresh_owned_youtube_window_from_duckdb.py
@@ -155,6 +160,7 @@ public_readback_once() {
 import hashlib, json, pathlib, re, sys, time, urllib.request
 from scripts.verify_dashboard import youtube_week_state_ok
 from scripts.youtube_schedule import verify_coverage
+from scripts.dashboard_kpi_cards import element_end
 
 url=f'https://been3p-prog.github.io/mbd-h2-kr-dashboard/?daily-refresh={time.time_ns()}'
 local=pathlib.Path('index.html').read_text(encoding='utf-8')
@@ -205,8 +211,10 @@ public_yt_window=segment_between(public, '<section id="youtubeWindow"', '<sectio
 expected_chip=first(r'<span class="chip">((?:LIVE )?RAW [^<]+)</span>', local)
 expected_avg=first(r'<div class="qk2">1D 평균 거래액</div>\s*<div class="qv num">([^<]+)</div>', local_month)
 expected_count=first(rf'data-live-quality-mom="{month}-overall".*?<div class="qm2 num">([^<]+)</div>', local_month)
-expected_raw_value=first(r'현재 RAW 누적 · [^<]+</div><div class="v num">([^<]+)</div>', local_raw_top)
-expected_raw_range=first(r'현재 RAW 누적 · ([^<]+)</div>', local_raw_top)
+raw_start=local_raw_top.index('<div class="kpi" data-kpi-role="current_raw"')
+raw_card=local_raw_top[raw_start:element_end(local_raw_top, raw_start)]
+expected_raw_value=first(r'<div class="v num">([^<]+)</div>', raw_card)
+expected_raw_range=first(r'현재 RAW 누적 · ([^<]+)</small>', raw_card)
 expected_team_raw_rows=re.findall(
     r'RAW 누적 · [^<]+</span><b>[^<]+<span class="mutpct">진척 [^<]+</span>', local_month
 )

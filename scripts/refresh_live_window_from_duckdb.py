@@ -48,6 +48,14 @@ def esc(value) -> str:
     return html_lib.escape(str(value or ""), quote=True)
 
 
+def clean_review_text(value) -> str:
+    """Preserve authored lines while removing spreadsheet padding whitespace."""
+    lines = [line.rstrip() for line in str(value or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines).strip()
+
+
 def fmt_m_d(day: dt.date | None) -> str:
     if not day:
         return "확인중"
@@ -122,8 +130,19 @@ def fetch_rows(db_path: Path, year: int, month: int) -> tuple[list[dict], str | 
     next_month = dt.date(year + (month == 12), 1 if month == 12 else month + 1, 1)
     con = duckdb.connect(str(db_path), read_only=True)
     try:
+        source_columns = {
+            row[0] for row in con.execute(
+                "select column_name from information_schema.columns "
+                "where table_schema='live' and table_name='raw_slots'"
+            ).fetchall()
+        }
+        # These fields were added after the numeric ledger. Older test fixtures
+        # and snapshots remain readable, while the current source names stay exact.
+        review_expr = '"공식 회고"' if "공식 회고" in source_columns else "NULL"
+        sent_expr = '"회고 발송"' if "회고 발송" in source_columns else "NULL"
+        competitor_expr = '"타사 라이브 이력"' if "타사 라이브 이력" in source_columns else "NULL"
         rows = con.execute(
-            r'''
+            f'''
             select
               TRY_CAST("온에어 일자" as date) as d,
               "브랜드명" as brand,
@@ -138,7 +157,10 @@ def fetch_rows(db_path: Path, year: int, month: int) -> tuple[list[dict], str | 
               "방송별 데이터 GMV" as broadcast_gmv,
               "AF수취액" as af,
               "비용" as cost,
-              "마진액" as margin
+              "마진액" as margin,
+              {review_expr} as official_review,
+              {sent_expr} as review_sent,
+              {competitor_expr} as competitor_live_history
             from live.raw_slots
             where TRY_CAST("온에어 일자" as date) >= ?
               and TRY_CAST("온에어 일자" as date) < ?
@@ -155,7 +177,9 @@ def fetch_rows(db_path: Path, year: int, month: int) -> tuple[list[dict], str | 
 
     out: list[dict] = []
     for idx, row in enumerate(rows, start=1):
-        d, brand, package, pgm, pd, viewers, clicks, buyers, gmv_1d, gmv_1h, broadcast_gmv, af, cost, margin = row
+        (d, brand, package, pgm, pd, viewers, clicks, buyers, gmv_1d, gmv_1h,
+         broadcast_gmv, af, cost, margin, official_review, review_sent,
+         competitor_live_history) = row
         out.append({
             "source_index": idx,
             "date": ensure_date(d),
@@ -173,6 +197,9 @@ def fetch_rows(db_path: Path, year: int, month: int) -> tuple[list[dict], str | 
             "af": clean_int(af),
             "cost": clean_int(cost),
             "margin": clean_int(margin),
+            "official_review": clean_review_text(official_review),
+            "review_sent": str(review_sent or "").strip().upper() == "TRUE",
+            "competitor_live_history": clean_review_text(competitor_live_history),
         })
     return out, str(ingest) if ingest else None
 
@@ -286,14 +313,38 @@ def render_card(row: dict, index: int, rank_by_1d: dict[str, int]) -> tuple[str,
         f"방송별 데이터 GMV {fmt_won(row['broadcast_gmv'])} · "
         f"1H {fmt_won(row['gmv_1h']) if row['gmv_1h'] else '—'}"
     )
-    next_action = "해석/PD 회고는 최신 회의노트와 붙여 별도 보강. 이 카드는 RAW 수치 readback 전용."
+    review = row.get("official_review", "").strip()
+    competitor = row.get("competitor_live_history", "").strip()
+    review_hash = hashlib.sha256(review.encode("utf-8")).hexdigest() if review else ""
+    competitor_hash = hashlib.sha256(competitor.encode("utf-8")).hexdigest() if competitor else ""
+    if review:
+        sent_label = "발송 완료" if row.get("review_sent") else "발송 대기"
+        competitor_html = (
+            '<div class="live-retro-section"><b>타사 라이브 이력</b>'
+            f'<div class="live-retro-copy" data-live-retro-field="competitor">{esc(competitor)}</div></div>'
+            if competitor else ""
+        )
+        retro_html = f'''
+          <div class="live-retro" data-live-retro="available" data-live-retro-sha256="{review_hash}" data-live-retro-competitor-sha256="{competitor_hash}">
+            <button class="live-retro-trigger" type="button" aria-expanded="false" aria-controls="{cid}-retro"><span>편성별 회고</span><small>{sent_label}</small></button>
+            <div class="live-retro-overlay" id="{cid}-retro" role="dialog" aria-label="{esc(row['brand'])} 편성별 회고">
+              <div class="live-retro-head"><b>{esc(row['brand'])} · 공식 회고</b><small>{esc(meta)} · {sent_label}</small></div>
+              <div class="live-retro-section"><div class="live-retro-copy" data-live-retro-field="official">{esc(review)}</div></div>
+              {competitor_html}
+            </div>
+          </div>'''
+    else:
+        retro_html = '<div class="live-next-action" data-live-retro="pending"><b>편성별 회고</b> 회고 입력 대기</div>'
     html = f'''
         <article class="live-broadcast-card{cls}" data-live-broadcast-card="{cid}">
           <div class="live-broadcast-title"><div><b>{esc(row['brand'])}</b><small>{esc(meta)}</small></div><span class="live-broadcast-tag">{esc(tag)}</span></div>
           <div class="live-broadcast-metrics num">{metrics_html}</div>
           <div class="live-pd-note"><b>RAW 기준</b> {esc(note)}</div>
-          <div class="live-next-action"><b>회고 상태</b> {esc(next_action)}</div>
+          {retro_html}
         </article>'''
+    # Review text is multiline, so keep its intentional line breaks while
+    # removing template indentation left on otherwise empty HTML lines.
+    html = "\n".join(line.rstrip() for line in html.splitlines())
     contract = {
         "brand": row["brand"],
         "meta": meta,
@@ -302,6 +353,14 @@ def render_card(row: dict, index: int, rank_by_1d: dict[str, int]) -> tuple[str,
             "일 전체 GMV (라이브 브랜드 전체)": row["gmv_1d"],
             "방송별 데이터 GMV": row["broadcast_gmv"],
             "라이브 1H GMV": row["gmv_1h"],
+        },
+        "retrospective": {
+            "available": bool(review),
+            "official_sha256": review_hash,
+            "official_chars": len(review),
+            "sent": bool(row.get("review_sent")),
+            "competitor_sha256": competitor_hash,
+            "competitor_chars": len(competitor),
         },
     }
     return html, contract
@@ -343,6 +402,8 @@ def render_section(
 ) -> tuple[str, dict]:
     completed = [r for r in rows if row_is_completed(r)]
     completed.sort(key=lambda r: (r["date"], r["brand"]))
+    review_available = any(r.get("official_review", "").strip() for r in completed)
+    review_pending = any(not r.get("official_review", "").strip() for r in completed)
     summary = summarize(completed)
     latest = summary["end"]
     month = now.month
@@ -465,6 +526,8 @@ def render_section(
             "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
             "월/주간 효율=`방송별 데이터 GMV`",
             "generic GMV 표기 금지",
+            *(('data-live-retro="available"',) if review_available else ()),
+            *(('data-live-retro="pending"',) if review_pending else ()),
             *(('data-live-content-empty="true"',) if not completed else ()),
         ],
         "forbidden_in_live_window": [
@@ -506,6 +569,10 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
     manifest_re = re.compile(r'(<script type="application/json" id="mbd-public-guard">)(.*?)(</script>)', re.S)
     def stage_hash(match):
         manifest = json.loads(match[2])
+        fields = manifest.setdefault("public_detail_fields", {}).setdefault("live", [])
+        for field in ("official_review", "review_sent", "competitor_live_history"):
+            if field not in fields:
+                fields.append(field)
         payload = json.dumps(contract, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode()
         manifest.setdefault("stage_payload_sha256", {})["live_window"] = hashlib.sha256(payload).hexdigest()
         return match[1] + json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + match[3]

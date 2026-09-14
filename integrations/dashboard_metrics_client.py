@@ -522,13 +522,16 @@ def youtube_answer(p, q, start, end, kind, now=None):
     if wants_detail or kind == 'day':
         ranked = sorted(rows, key=lambda r: (r['d7_views'] is not None, r['d7_views'] or 0), reverse=True)
         if re.search(r'잘된|상위|top', q):
+            ranked = [r for r in ranked if r['d7_complete'] and r['d7_views'] is not None]
             ranked = [next((r for r in ranked if r['form']==f), None) for f in ('LF','SF')] if ('롱폼' in q and '숏폼' in q) else ranked[:5]
             ranked = [r for r in ranked if r is not None]
-        lines += ['• 상세: D+7 Analytics 기준. 최신 누적과 구분합니다.']
+        lines += ['• 상세: 게시일 포함 7일간 집계 후 고정. 최신 누적과 구분합니다.']
         for r in ranked[:20]:
             vid = r['video_id']
             link = f'<https://www.youtube.com/watch?v={vid}|영상>' if re.fullmatch('[A-Za-z0-9_-]{11}',vid) else '링크 확인 필요'
-            lines += [f'• {r["publish_date"]} {safe(r["form"])} {safe(r["title"])} · D7 {number(r["d7_views"])} / 현재 누적 {number(r["views_total"])} · {link}']
+            state = '확정' if r['d7_complete'] else (f'집계중 · {r.get("d7_metric_end") or "기준일 확인 필요"}까지'
+                                                        if r['d7_views'] is not None else '집계 대기')
+            lines += [f'• {r["publish_date"]} {safe(r["form"])} {safe(r["title"])} · D7 {number(r["d7_views"])} · PIS {number(r.get("pis"))} ({state}) / 현재 누적 {number(r["views_total"])} · {link}']
         if len(ranked)>20:
             lines += [f'• 총 {len(ranked)}건 중 20건 표시. 주·일별로 나누어 조회하세요.']
     period_text = ''

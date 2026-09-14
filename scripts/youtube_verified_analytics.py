@@ -23,7 +23,41 @@ def dates(start, end):
     return [(start + dt.timedelta(days=i)).isoformat() for i in range((end-start).days+1)]
 
 
-def collect(yt, analytics, con, now):
+def collect_d7(query, vid, published, cutoff, now):
+    """Accumulate the verified prefix of D0-D6, then freeze the first full window."""
+    end = published + dt.timedelta(days=6)
+    record = dict(video_id=vid, start=str(published), end=str(end), complete=False,
+                  actual_end=None, views=None, likes=None, comments=None, shares=None)
+    through = min(end, cutoff)
+    if through < published:
+        return record
+    metrics = 'views,likes,comments,shares'
+    observed = query(published, through, metrics, dimensions='day', sort='day', filters='video=='+vid)
+    # A combined report has a common processed-through date for all four metrics.
+    # Retain only a contiguous returned prefix, never manufacture missing days/zeroes.
+    expected = dates(published, through)
+    seen = [row[0] for row in observed]
+    if len(set(seen)) != len(seen) or seen != sorted(seen) or any(day not in expected for day in seen):
+        raise ValueError('D7 returned dates invalid')
+    prefix = []
+    for day in expected:
+        if day not in seen:
+            break
+        prefix.append(day)
+    if not prefix:
+        return record
+    actual_end = prefix[-1]
+    total = query(published, actual_end, metrics, filters='video=='+vid)
+    if len(total) != 1 or len(total[0]) != 4:
+        raise ValueError('D7 period totals unavailable')
+    record.update(actual_end=actual_end, views=total[0][0], likes=total[0][1],
+                  comments=total[0][2], shares=total[0][3], complete=actual_end == str(end))
+    if record['complete']:
+        record['frozen_at'] = now.isoformat()
+    return record
+
+
+def collect(yt, analytics, con, now, frozen=None):
     channels = yt.channels().list(part='id,contentDetails', mine=True).execute().get('items', [])
     if len(channels) != 1 or channels[0]['id'] != CHANNEL:
         raise ValueError('YouTube target channel mismatch')
@@ -84,26 +118,21 @@ def collect(yt, analytics, con, now):
             shares=engagement[0][2], formats=dict(formats),
             daily_residual=headline[0][0]-sum(r[1] for r in daily if str(a)<=r[0]<=str(end))))
 
+    frozen = frozen or []
+    frozen_by_key = {(r['video_id'], r['start']): r for r in frozen}
+    if len(frozen_by_key) != len(frozen):
+        raise ValueError('duplicate frozen D7 identity')
+    frozen_by_key = {key: r for key, r in frozen_by_key.items()
+                     if known.get(key[0]) == dt.date.fromisoformat(key[1])}
     d7 = []
     for vid, published in sorted(known.items()):
         if not previous <= published <= today:
             continue
-        end = published+dt.timedelta(days=6)
-        # Incomplete windows remain unavailable. No optimistic source flag survives.
-        record = dict(video_id=vid, start=str(published), end=str(end), complete=False,
-                      actual_end=None, views=None, likes=None, comments=None, shares=None)
-        if end <= quality_cutoff:
-            observed = query(published, end, dimensions='day', sort='day', filters='video=='+vid)
-            observed_engagement = query(published, end, 'likes,comments,shares',
-                dimensions='day', sort='day', filters='video=='+vid)
-            record['actual_end'] = observed[-1][0] if observed else None
-            # Missing/zero-suppressed days are conservative pending, never fabricated zeroes.
-            if [r[0] for r in observed] == dates(published, end) and [r[0] for r in observed_engagement] == dates(published, end):
-                total = query(published, end, filters='video=='+vid)
-                engagement = query(published, end, 'likes,comments,shares', filters='video=='+vid)
-                if len(total) == len(engagement) == 1:
-                    record.update(complete=True, views=total[0][0], likes=engagement[0][0],
-                                  comments=engagement[0][1], shares=engagement[0][2])
+        record = frozen_by_key.get((vid, str(published)))
+        if record is None:
+            record = collect_d7(query, vid, published, quality_cutoff, now)
+            if record['complete']:
+                frozen_by_key[(vid, str(published))] = record
         d7.append(record)
 
     playlist = channels[0]['contentDetails']['relatedPlaylists']['uploads']
@@ -147,7 +176,8 @@ def collect(yt, analytics, con, now):
         coverage_start=str(start),requested_end=str(requested_end),actual_end=str(cutoff),
         quality_cutoff=str(quality_cutoff), daily=[dict(date=d,views=v) for d,v in daily],
         daily_formats=[dict(date=d,form=f,views=v) for d,f,v in split], periods=periods,
-        d7=d7,discovered=sorted(discovered,key=lambda x:(x['published_date'],x['video_id'])))
+        d7=d7, frozen_d7=list(frozen_by_key.values()),
+        discovered=sorted(discovered,key=lambda x:(x['published_date'],x['video_id'])))
 
 
 def validate(payload, now=None):
@@ -201,16 +231,122 @@ def validate(payload, now=None):
         if any(f not in FORMS for f in r['formats']):
             raise ValueError('unknown creator content type')
         for v in r['formats'].values():integer(v)
-    seen_d7=set()
-    for r in payload['d7']:
+    def check_d7(r, *, archived=False):
         if r['video_id'] in seen_d7 or not re.fullmatch('[A-Za-z0-9_-]{11}',r['video_id']) or type(r['complete']) is not bool:
             raise ValueError('D7 identity invalid')
         seen_d7.add(r['video_id'])
+        first, last = dt.date.fromisoformat(r['start']), dt.date.fromisoformat(r['end'])
+        if (last-first).days != 6 or first > captured.date():
+            raise ValueError('D7 window invalid')
+        values = [r[k] for k in ('views','likes','comments','shares')]
+        frozen_at = r.get('frozen_at')
+        if frozen_at:
+            stamp = dt.datetime.fromisoformat(frozen_at)
+            if stamp.tzinfo is None or stamp > captured or stamp.date() < last or not r['complete']:
+                raise ValueError('D7 freeze clock invalid')
+        if archived and not (frozen_at and r['complete']):
+            raise ValueError('D7 archive must be frozen')
+        if r['actual_end'] is None:
+            if r['complete'] or any(v is not None for v in values):
+                raise ValueError('D7 unavailable metrics have values')
+            return
+        if not r['start'] <= r['actual_end'] <= r['end'] or (not frozen_at and r['actual_end'] > payload['quality_cutoff']):
+            raise ValueError('D7 available prefix invalid')
+        for v in values: integer(v)
         if r['complete']:
-            if r['end']!=r['actual_end'] or r['end']>payload['quality_cutoff'] or (dt.date.fromisoformat(r['end'])-dt.date.fromisoformat(r['start'])).days!=6:
+            if r['end']!=r['actual_end']:
                 raise ValueError('D7 window not verified')
-            for key in ('views','likes','comments','shares'):integer(r[key])
+        elif r['actual_end'] == r['end']:
+            raise ValueError('D7 full window must be complete')
+    seen_d7=set()
+    for r in payload['d7']:
+        check_d7(r)
+    seen_d7=set()
+    for r in payload.get('frozen_d7', []):
+        check_d7(r, archived=True)
+    archive = {(r['video_id'], r['start']): r for r in payload.get('frozen_d7', [])}
+    for r in payload['d7']:
+        prior = archive.get((r['video_id'], r['start']))
+        if prior is not None and prior != r:
+            raise ValueError('D7 frozen value changed')
     return payload
+
+
+def load_previous_payload(path):
+    """Read only previously verified history, including partial coverage."""
+    import duckdb
+    path = Path(path)
+    if not path.exists():
+        return None
+    con = duckdb.connect(str(path), read_only=True)
+    try:
+        if not con.execute("select count(*) from information_schema.tables where table_name='dashboard_verified_youtube'").fetchone()[0]:
+            return None
+        rows = con.execute('select payload from dashboard_verified_youtube').fetchall()
+        if len(rows) != 1:
+            raise ValueError('D7 previous snapshot ambiguous')
+        payload = json.loads(rows[0][0])
+        frozen_from_payload(payload)
+        return payload
+    finally:
+        con.close()
+
+
+def load_frozen_d7(path):
+    """Carry verified freezes across source-copy replacement and month rollover."""
+    payload = load_previous_payload(path)
+    return frozen_from_payload(payload) if payload else []
+
+
+def frozen_from_payload(payload):
+    if 'frozen_d7' not in payload:
+        # The old collector recorded a last returned day while discarding
+        # every partial metric. This is not an available progressive value.
+        for r in payload['d7']:
+            if not r['complete'] and all(r[k] is None for k in ('views','likes','comments','shares')):
+                r['actual_end'] = None
+    captured = dt.datetime.fromisoformat(payload['captured_at'])
+    if captured > dt.datetime.now(KST) + dt.timedelta(minutes=5):
+        raise ValueError('D7 previous snapshot is future')
+    # Historical freezes have their own clock; do not relabel them as fresh API calls.
+    validate(payload, now=captured)
+    frozen = {r['video_id']: dict(r) for r in payload.get('frozen_d7', [])}
+    for r in payload['d7']:
+        if r['complete']:
+            rec = dict(r)
+            rec.setdefault('frozen_at', payload['captured_at'])
+            frozen[rec['video_id']] = rec
+    return list(frozen.values())
+
+
+def load_d7_archive(path):
+    path = Path(path)
+    if not path.exists():
+        return []
+    return frozen_from_payload(json.loads(path.read_text()))
+
+
+def save_d7_archive(path, payload):
+    """Durable, atomic last-good backup; never persist a failed API response."""
+    import os
+    import tempfile
+    validate(payload)
+    path = Path(path)
+    prior = {(r['video_id'], r['start']): r for r in load_d7_archive(path)}
+    for r in frozen_from_payload(payload):
+        old = prior.get((r['video_id'], r['start']))
+        if old is not None and old != r:
+            raise ValueError('D7 durable freeze changed; archive retained')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=path.name + '.', dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            json.dump(payload, stream, ensure_ascii=False)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def apply_overlay(path, payload):
@@ -223,6 +359,14 @@ def apply_overlay(path, payload):
     con=duckdb.connect(str(path))
     try:
         con.execute('begin')
+        today = dt.datetime.fromisoformat(payload['captured_at']).date()
+        previous = (today.replace(day=1)-dt.timedelta(days=1)).replace(day=1)
+        expected = {(vid, str(day)) for vid, day in con.execute(
+            'select video_id,publish_date from dim_video where is_active and publish_date between ? and ?',
+            [previous, today]).fetchall()}
+        received = {(r['video_id'], r['start']) for r in payload['d7']}
+        if expected != received:
+            raise ValueError('D7 publication coverage mismatch; previous snapshot retained')
         for r in payload['periods']:
             if con.execute('select count(*) from fact_period_analytics where period_type=? and period_start=? and period_end=?',
                            [r['period_type'],r['period_start'],r['period_end']]).fetchone()[0]!=1:
@@ -235,9 +379,15 @@ def apply_overlay(path, payload):
                  r['likes']+r['comments']+r['shares'],r['new_views'],r['prior_views'],r['residual'],
                  dt.datetime.fromisoformat(payload['captured_at']).astimezone(KST).replace(tzinfo=None),
                  'YouTube Analytics verified returned-day cutoff; channel_views=standalone; canonical publication-ID cohorts; signed residual',r['period_type'],r['period_start']])
-        # Remove all competing old completion flags within the refreshed cohort.
-        for r in payload['d7']:
+        # Restore archived freezes as well as this month's progressive rows after
+        # each disposable source copy. Match the exact publication window only.
+        records = {r['video_id']: r for r in payload.get('frozen_d7', [])}
+        records.update({r['video_id']: r for r in payload['d7']})
+        active_ids = {r['video_id'] for r in payload['d7']}
+        for r in records.values():
             if con.execute('select count(*) from dim_video where is_active and video_id=? and publish_date=?',[r['video_id'],r['start']]).fetchone()[0]!=1:
+                if r['video_id'] not in active_ids:
+                    continue  # Deleted/re-dated publications do not reuse an old freeze.
                 raise ValueError('snapshot publication identity differs from API collection')
             con.execute('update fact_analytics_d7 set d7_complete=false where video_id=?',[r['video_id']])
             con.execute('''insert into fact_analytics_d7(video_id,metric_start_date,metric_end_date,requested_end_date,
@@ -248,9 +398,10 @@ def apply_overlay(path, payload):
                 comment_count=excluded.comment_count,share_count=excluded.share_count,api_rows=excluded.api_rows,
                 d7_complete=excluded.d7_complete,source=excluded.source,raw_status=excluded.raw_status,error=excluded.error''',
                 [r['video_id'],r['start'],r['actual_end'],r['end'],
-                 dt.datetime.fromisoformat(payload['captured_at']).astimezone(KST).replace(tzinfo=None),
-                 r['views'],r['likes'],r['comments'],r['shares'],7 if r['complete'] else 0,r['complete'],
-                 'YouTube Analytics verified day coverage; views standalone', 'ok' if r['complete'] else 'not_due',''])
+                 dt.datetime.fromisoformat(r.get('frozen_at', payload['captured_at'])).astimezone(KST).replace(tzinfo=None),
+                 r['views'],r['likes'],r['comments'],r['shares'],
+                 (dt.date.fromisoformat(r['actual_end'])-dt.date.fromisoformat(r['start'])).days+1 if r['actual_end'] else 0,r['complete'],
+                 'YouTube Analytics verified D0-D6 prefix; standalone totals; frozen on completion', 'ok' if r['actual_end'] else 'not_due',''])
         con.execute('create table if not exists dashboard_verified_youtube(payload varchar)')
         con.execute('delete from dashboard_verified_youtube')
         con.execute('insert into dashboard_verified_youtube values (?)',[json.dumps(payload,ensure_ascii=False)])
@@ -269,8 +420,18 @@ def load_overlay(con, required=False):
     return validate(json.loads(rows[0][0]))
 
 
-def fetch_overlay(ssh, remote_python):
-    script=Path(__file__).read_text()+'''\n
+def fetch_overlay(ssh, remote_python, *, previous_snapshot=None, archive_path=None):
+    previous = load_previous_payload(previous_snapshot) if previous_snapshot is not None else None
+    frozen = frozen_from_payload(previous) if previous else []
+    history = [previous] if previous else []
+    # Durable freezes take precedence over a replaceable source-copy cache.
+    by_key = {(r['video_id'], r['start']): r for r in frozen}
+    if archive_path is not None:
+        by_key.update({(r['video_id'], r['start']): r for r in load_d7_archive(archive_path)})
+        if Path(archive_path).exists():
+            history.append(json.loads(Path(archive_path).read_text()))
+    frozen = list(by_key.values())
+    script=Path(__file__).read_text()+'\nFROZEN_RECORDS = '+repr(frozen)+'''\n
 if __name__ == '__main__':
     import duckdb,sys
     from google.oauth2.credentials import Credentials
@@ -282,7 +443,7 @@ if __name__ == '__main__':
     yt=build('youtube','v3',credentials=credentials,cache_discovery=False)
     analytics=build('youtubeAnalytics','v2',credentials=credentials,cache_discovery=False)
     con=duckdb.connect('/Users/cnc-media/automations/youtube-view-snapshot/youtube_views.duckdb',read_only=True)
-    try:print(json.dumps(collect(yt,analytics,con,dt.datetime.now(KST)),ensure_ascii=False))
+    try:print(json.dumps(collect(yt,analytics,con,dt.datetime.now(KST),frozen=FROZEN_RECORDS),ensure_ascii=False))
     finally:con.close()
 '''
     result=subprocess.run(ssh+[remote_python,'-B','-'],input=script,text=True,capture_output=True,timeout=900)
@@ -290,7 +451,17 @@ if __name__ == '__main__':
         # Never relay provider errors that might include credential material.
         raise RuntimeError('verified YouTube API collection failed; previous snapshot retained')
     if len(result.stdout)>8_000_000:raise ValueError('API overlay too large')
-    return validate(json.loads(result.stdout))
+    payload = validate(json.loads(result.stdout))
+    for r in payload['d7']:
+        prior = by_key.get((r['video_id'], r['start']))
+        if prior is not None and prior != r:
+            raise ValueError('D7 collector changed a frozen value')
+        for old_payload in history:
+            for old in old_payload['d7']:
+                if (old['video_id'], old['start']) == (r['video_id'], r['start']):
+                    if old['actual_end'] and (not r['actual_end'] or r['actual_end'] < old['actual_end']):
+                        raise ValueError('D7 API coverage regressed; previous snapshot retained')
+    return payload
 
 
 def render_overlay(payload, month, *, daily=False):

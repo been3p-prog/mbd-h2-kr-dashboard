@@ -53,6 +53,7 @@ def previous_cutoff(as_of: dt.date) -> dt.date:
 
 def current_cards(raw: dict, forecast_tip: str = '', *, forecast: dict | None = None) -> str:
     from refresh_live_daily_from_duckdb import fmt_won, fmt_pct
+    from dashboard_team_comparison import baseline_attrs
     month = dt.date.fromisoformat(raw['as_of']).month
     previous = raw.get('previous_same_period')
     comparison = mom(raw['total_won'], previous['total_won'] if previous else None)
@@ -72,6 +73,9 @@ def current_cards(raw: dict, forecast_tip: str = '', *, forecast: dict | None = 
         raw_tip += f'<div class="tn">라이브 1P/3P 미기재 {unknown}건 · AF {fmt_won(raw["live_unknown_party_af_won"])} 귀속 확인 필요. RAW 제외이며 매출 없음이 아닙니다.</div>'
         note += f' · 라이브 귀속 확인 {unknown}건'
     attrs = f' data-current-as-of="{raw["as_of"]}" data-current-total-won="{raw["total_won"]}"' + comparison_attrs
+    attrs += baseline_attrs(previous)
+    attrs += ''.join(f' data-current-{key.replace("_", "-")}-won="{raw[key + "_won"]}"'
+                     for key in ('ad_gen', 'ad_int', 'live'))
     if raw['total_won'] == 0:
         attrs += ' data-current-raw-empty="true"'
     forecast_value, forecast_sub = '확인 필요', 'MoM — · 예상 달성률 —'
@@ -88,6 +92,7 @@ def current_cards(raw: dict, forecast_tip: str = '', *, forecast: dict | None = 
             forecast_attrs += f' data-forecast-{key.replace("_", "-")}-won="{forecast[key]}"'
         if forecast.get('previous_total_won') is not None:
             forecast_attrs += f' data-forecast-previous-won="{forecast["previous_total_won"]}"'
+        forecast_attrs += baseline_attrs(forecast.get('previous_actual'))
     return pair(
         card('forecast', f'{month}월 마감예측치', forecast_value,
              f'{forecast_sub}<small>전월 확정치 대비 · 월 목표 {fmt_won(raw["target_won"])}</small>',

@@ -70,12 +70,14 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertEqual(vd.MANIFEST_SCOPE, ["ad_gen", "ad_int", "live"])
 
     def test_public_html_contains_approved_sanitized_weekly_content(self):
-        # [2026-08-08] 승인 지표와 allowlisted player 링크만 공개하고 내부 회고/raw ID는 차단한다.
+        # 공식 편성별 회고는 공개하되 내부회고/raw ID는 계속 차단한다.
         self.assertNotIn('class="livetbl"', self.html)
         self.assertNotIn("시트 인사이트 전문", self.html)
         self.assertNotIn("콘텐츠별 성과", self.html)
         self.assertNotIn('"review_full"', self.html)
         self.assertNotIn('"live_id"', self.html)
+        self.assertNotIn('data-live-retro-field="internal"', self.html)
+        self.assertNotIn('내부회고', self.html)
         self.assertEqual(self.html.count('data-content-ledger="live"'), 12)
         self.assertEqual(self.html.count('data-content-ledger="youtube"'), 12)
         for marker in ("월간 보고 흐름", "MONTHLY BRIEFING", "data-report-flow",
@@ -243,7 +245,9 @@ class DashboardGuardTest(unittest.TestCase):
             self.assertNotIn('data-live-week-group=', self.html)
         else:
             self.assertIn('data-live-week-group=', self.html)
-            self.assertIn('RAW 수치 readback 전용', self.html)
+            self.assertIn('data-live-retro="available"', self.html)
+            self.assertIn('class="live-retro-trigger"', self.html)
+            self.assertIn('편성별 회고', self.html)
             self.assertGreaterEqual(self.html.count('data-live-broadcast-card='), 1)
         self.assertNotIn('data-live-weekly-analysis=', self.html)
         self.assertNotIn('원본 rows 302–308', self.html)
@@ -602,8 +606,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertRegex(self.html, r"8월 목표 1\.00억 대비 [0-9.]+%")
         self.assertNotIn("방송 평균 거래액", self.html)
 
-    # [2026-08-07] 일반광고 hover는 보이는 KPI 반복이 아니라 3유형 금액+MoM이어야 한다.
-    def test_all_months_have_three_way_adgen_mix_tooltips(self):
+    # [2026-09-14] 진행·차월 일반광고는 유상/무상만 요약하고, 닫힌 월은 당시 확정 3유형을 보존한다.
+    def test_adgen_mix_tooltips_have_expected_granularity(self):
         attrs = re.findall(r'<div class="team" data-tip="([^"]+)"', self.html)
         adgen_tips = [html_mod.unescape(value) for value in attrs
                       if "일반광고 ·" in html_mod.unescape(value)]
@@ -612,6 +616,11 @@ class DashboardGuardTest(unittest.TestCase):
             if "월전체 일반광고 비취소 부킹" in tip_html:
                 self.assertNotIn("MoM", tip_html)
                 self.assertIn("마감예상", tip_html)
+                self.assertEqual(tip_html.count('class="tr"'), 3)
+                for bucket in ("유상", "무상"):
+                    self.assertIn(bucket, tip_html)
+                for hidden_detail in ("무상지원", "정부지원", 'class="isubs"'):
+                    self.assertNotIn(hidden_detail, tip_html)
                 continue
             self.assertEqual(tip_html.count('class="tr"'), 3)
             for bucket in ("유상", "무상", "정부지원"):
@@ -630,7 +639,10 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("TOPS", july)
         self.assertIn("기타 정부지원", july)
         self.assertIn("월전체 일반광고 비취소 부킹", september)
-        self.assertNotIn('class="gsubs"', september)  # stale unsupported breakdown removed
+        self.assertIn('<span>무상<small>60건</small></span><b>8,080만</b>', september)
+        self.assertNotIn('무상지원 상세', september)
+        self.assertNotIn('헤이홈 · 스토어홈배너', september)
+        self.assertIn('상세 합계 9.4억 검증', september)
         for raw_comment in ("정부지원사업 TOPS", "경기도 주식회사"):
             self.assertNotIn(raw_comment, "".join(tips))
 
@@ -643,6 +655,8 @@ class DashboardGuardTest(unittest.TestCase):
             if "계약 시작월 · 계약 금액" in tip_html:
                 self.assertNotIn("MoM", tip_html)
                 self.assertIn("마감예상", tip_html)
+                self.assertEqual(tip_html.count('class="tr"'), 4)
+                self.assertIn('유상 상세', tip_html)
                 continue
             self.assertEqual(tip_html.count('class="tr"'), 3)
             self.assertEqual(tip_html.count("MoM "), 3)
@@ -659,7 +673,18 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("샤크닌자 · 미디어PKG", august)
         self.assertIn("익산원예농협", august)
         self.assertIn("계약 시작월 · 계약 금액", september)
-        self.assertNotIn("4,333만", september)
+        self.assertIn("아망떼 · 미디어PKG", september)
+        self.assertIn("헬로우슬립 · 컴팩트PKG", september)
+        self.assertIn("마틸라 · 컴팩트PKG", september)
+
+    def test_current_forecast_live_tooltip_has_package_breakdown_and_reconciliation(self):
+        attrs = re.findall(r'<div class="team" data-tip="([^"]+)"', self.html)
+        september = next(html_mod.unescape(value) for value in attrs
+                         if "라이브 · 9월 마감예상" in html_mod.unescape(value))
+        self.assertIn("확정 편성 · 패키지별", september)
+        for package in ("에센셜", "스마트", "시그니처"):
+            self.assertIn(package, september)
+        self.assertIn("상세 원천 1.78억 / 마감예상 1.79억 · 차이 100만 추가 확인 필요", september)
 
     def test_pages_workflow_uploads_index_only(self):
         workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /

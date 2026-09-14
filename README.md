@@ -17,3 +17,5 @@ The guard verifies selected-period diagnosis wiring, RAW/forecast semantic separ
 ## Live data contract
 
 Live-window numeric copy is governed by `docs/live-data-contract.md` and `data/live_window_contract.json`. Broadcast-card visible `거래액` must use `[DB]구좌 RAW` `일 전체 GMV (라이브 브랜드 전체)` as `1D ...`; weekly efficiency surfaces may use `방송별 데이터 GMV` only when explicitly labeled as `방송별 GMV` / `방당 GMV`. The contract checker blocks ambiguous `GMV` copy and the Downing `6,045만` incident marker from the Live window.
+
+Completed Live cards also expose the source `공식 회고` through a hover/tap overlay. `회고 발송` and `타사 라이브 이력` are allowlisted; `내부회고` remains private and is blocked from the public artifact.
