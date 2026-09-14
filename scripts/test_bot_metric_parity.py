@@ -81,8 +81,10 @@ class ParityTests(unittest.TestCase):
             with self.subTest(domain=domain):
                 self.assertNotIn('출처:', self.answer(question, domain))
                 self.assertNotIn('대시보드 동일 스냅샷', self.answer(question, domain))
+                self.assertNotIn('revenue.v_revenue_forecast_monthly', self.answer(question, domain))
+                self.assertNotIn('integrated_ssot', self.answer(question, domain))
     def test_brand_does_not_become_total(self):
-        a=self.answer('9월 시몬스 라이브 성과');self.assertIn('성과 확인 0건',a);self.assertNotIn('200원',a)
+        a=self.answer('9월 시몬스 라이브 성과');self.assertIn('성과 0/1건',a);self.assertNotIn('200원',a)
     def test_unknown_brand_fails_closed(self):
         a=self.answer('9월 없는브랜드 라이브 성과');self.assertIn('조건을 확정하지 못했습니다',a);self.assertNotIn('200원',a)
     def test_day_live(self):
@@ -93,12 +95,12 @@ class ParityTests(unittest.TestCase):
         a=self.answer('9월 시몬스 라이브 성과');self.assertIn('지표 —',a);self.assertIn('미래 편성 1건',a)
     def test_free_excluded_quality(self):
         self.p['live'][0]['free']=True
-        self.assertIn('성과 확인 0건',self.answer('9월 라이브 성과'))
+        self.assertIn('성과 0/2건',self.answer('9월 라이브 성과'))
     def test_week_not_month_week(self):
         self.assertEqual(client.period('지난주 라이브 성과',NOW.date())[:2],(dt.date(2026,8,31),dt.date(2026,9,6)))
         self.assertEqual(client.period('9월 1주차 라이브 성과',NOW.date())[:2],(dt.date(2026,9,1),dt.date(2026,9,7)))
     def test_day_ads_supported(self):
-        a=self.answer('9월 10일 광고 매출','ads');self.assertIn('50원',a);self.assertIn('기간 RAW',a)
+        a=self.answer('9월 10일 광고 매출','ads');self.assertIn('50원',a);self.assertIn('기간 누적',a)
     def test_not_admin_mutation(self):
         for q in ['9월 부킹 취소해','9월 광고 매출 메모 수정해','부킹 기준 8월 광고 매출','9월 전면배너 부킹률']:
             self.assertIsNone(self.answer(q,'ads'))
@@ -123,10 +125,10 @@ class ParityTests(unittest.TestCase):
         self.assertEqual(client.period('2025년 9월 1주차',NOW.date())[0],dt.date(2025,9,1))
     def test_missing_gmv_not_zero(self):
         self.p['live'][0]['gmv']=None
-        self.assertIn('방송별 GMV: 확인 못 함',self.answer('9월 라이브 성과'))
+        self.assertIn('*방송 GMV*: 확인 못 함',self.answer('9월 라이브 성과'))
     def test_missing_af_not_zero(self):
         self.p['live'][0].update(af=None,attributed=True,unknown_party=False)
-        self.assertIn('RAW 귀속 매출(3P AF): 확인 못 함',self.answer('9월 라이브 성과'))
+        self.assertIn('*귀속 매출(확인분)*: 확인 못 함',self.answer('9월 라이브 성과'))
     def test_month_week_answer_not_just_parser(self):
         self.assertIn('월내 1~7일',self.answer('9월 1주차 라이브 성과'))
     def test_multiple_revenue_teams(self):
@@ -134,7 +136,8 @@ class ParityTests(unittest.TestCase):
         self.assertIn('50원',a);self.assertNotIn('라이브 RAW:',a)
     def test_live_only_revenue(self):
         a=self.answer('9월 10일 라이브 매출','ads')
-        self.assertNotIn('일반광고 RAW:',a);self.assertIn('라이브 RAW:',a)
+        self.assertTrue(a.startswith('*라이브 매출'))
+        self.assertNotIn('일반광고',a);self.assertIn('기간 누적',a)
     def test_filtered_schedule_not_total(self):
         a=self.answer('9월 롱폼 유튜브 편성','youtube')
         self.assertIn('롱폼·숏폼 합계로 바꾸지 않습니다',a)
@@ -240,15 +243,16 @@ class ParityTests(unittest.TestCase):
         self.assertIn('편성표 밖 발행 1건',a)
         self.assertEqual(a.count('확인 필요'),2)  # summary + review-detail label only
     def test_unit_tokens_not_stripped(self):
-        self.assertIn('1D 브랜드 거래액:',self.answer('9월 라이브 1D 거래액'))
+        self.assertIn('1D 거래액',self.answer('9월 라이브 1D 거래액'))
         self.assertIn('D+7 완료',self.answer('9월 유튜브 D7 성과','youtube'))
     def test_live_answer_starts_with_decision_summary(self):
         lines=self.answer('9월 라이브 성과').splitlines()
-        self.assertTrue(lines[1].startswith('• 요약: 성과 확인 1/2건'))
-        self.assertIn('귀속 미확인 1건 별도',lines[1])
+        self.assertTrue(lines[1].startswith('• *1D 거래액*:'))
+        self.assertIn('성과 1/2건',lines[1])
+        self.assertIn('귀속 확인 필요',self.answer('9월 라이브 성과'))
     def test_ads_answer_starts_with_decision_summary(self):
         lines=self.answer('9월 10일 일반광고와 통광마 매출','ads').splitlines()
-        self.assertEqual(lines[1],'• 요약: 기간 RAW 0.00억 · 일반광고 + 통광마 · 확정/월전체 예측 아님')
+        self.assertEqual(lines[1],'• *기간 누적*: 0.00억 (50원)')
     def test_youtube_answer_starts_with_decision_summary(self):
         lines=self.answer('9월 유튜브 성과','youtube').splitlines()
         self.assertEqual(lines[1],'• 요약: 조회수 100회(2026-09-10까지) · 발행 1건 · D+7 완료 0/1건')
@@ -260,6 +264,20 @@ class ParityTests(unittest.TestCase):
         self.assertNotIn('발행 cohort',a)
         self.assertNotIn('공식 기간 조회',a)
         self.assertNotIn('공식 일별 조회',a)
+    def test_live_and_ads_answers_stay_compact_and_user_facing(self):
+        live=self.answer('9월 라이브 성과')
+        self.p['revenue']['months']['2026-09']={
+            'closed':False,
+            'forecast':{'ad_gen':100,'ad_int':200,'live':300,'total_won':600,'previous_total_won':500},
+            'raw':{'ad_gen_won':10,'ad_int_won':20,'live_won':30,'as_of':'2026-09-11','target_won':1000},
+        }
+        ads=self.answer('9월 통광마 매출','ads')
+        self.assertLessEqual(len(live.splitlines()),6)
+        self.assertLessEqual(len(ads.splitlines()),3)
+        self.assertIn('*현황 누적*',ads)
+        for internal in ('RAW', 'revenue.v_', 'integrated_ssot', '대시보드 동일'):
+            self.assertNotIn(internal,live)
+            self.assertNotIn(internal,ads)
 
 
 if __name__=='__main__':unittest.main()

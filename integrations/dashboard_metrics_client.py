@@ -362,17 +362,20 @@ def live_answer(p, q, start, end, kind):
         suffix = f' · 미기입 {len(items)-len(known)}건 제외' if len(known)<len(items) else ''
         return won(sum(known))+suffix
     label = safe(brand) if brand else '전체'
+    future = sum(r["date"] > cutoff for r in rows)
+    one_day = won(sum(r["gmv_1d"] for r in quality)) if quality else "확인된 실적 없음"
+    average = won(sum(r["gmv_1d"] for r in quality)/len(quality)) if quality else None
     lines = [f'*라이브 {label} · {start}~{end}*',
-             f'• 전체 편성 {len(rows)}건 · 성과 확인 {len(quality)}건 · 미래 편성 {sum(r["date"] > cutoff for r in rows)}건',
-             f'• 1D 브랜드 거래액: {won(sum(r["gmv_1d"] for r in quality)) if quality else "확인된 실적 없음"}',
-             f'• 방송별 GMV: {total_metric(quality,"gmv") if quality else "확인된 실적 없음"}',
-             f'• RAW 귀속 매출(3P AF): {total_metric(attributed,"af") if elapsed else "해당 기간 실적 행 없음"}']
+             f'• *1D 거래액*: {one_day} · 성과 {len(quality)}/{len(rows)}건'
+             + (f' · 방당 {average}' if average else ''),
+             f'• *방송 GMV*: {total_metric(quality,"gmv") if quality else "확인된 실적 없음"}',
+             f'• *귀속 매출(확인분)*: {total_metric(attributed,"af") if elapsed else "해당 기간 실적 행 없음"}']
+    if future:
+        lines += [f'• 미래 편성 {future}건 · 지표 대기']
     if unknown:
-        lines += [f'⚠️ 1P/3P 미기재 {len(unknown)}건 · AF {total_metric(unknown,"af")} 귀속 확인 필요. 위 RAW 합계에서 제외되며 매출 없음이 아닙니다.']
+        lines += [f'⚠️ 1P/3P 미기재 {len(unknown)}건 · AF {total_metric(unknown,"af")} 귀속 확인 필요. 위 귀속 매출 합계에서 제외되며 매출 없음이 아닙니다.']
     if kind in ('week','month_week'):
         lines += ['• 주 기준: ' + ('월~일' if kind == 'week' else '대시보드 월내 1~7일/8~14일 구간')]
-    if quality:
-        lines += [f'• 방당 1D 평균: {won(sum(r["gmv_1d"] for r in quality)/len(quality))}']
     if brand or kind == 'day' or re.search(r'상세|브랜드별|패키지별|편성', q):
         for r in rows[:35]:
             measured = r['date'] <= cutoff and (r['gmv_1d'] or 0)>0
@@ -381,18 +384,6 @@ def live_answer(p, q, start, end, kind):
                       + (' · 무료(품질 합계 제외)' if r['free'] else '')]
         if len(rows)>35:
             lines += [f'• 전체 {len(rows)}건 중 35건 표시. 일별로 조회하면 누락 없이 확인할 수 있습니다.']
-    lines += ['• 기준: 취소 제외 · 품질은 무료 제외·양수 1D · 방송별 GMV와 1D는 별개']
-    raw_known = [r["af"] for r in attributed if r["af"] is not None]
-    raw_summary = '해당 기간 실적 행 없음' if not elapsed else compact_won(sum(raw_known)) if raw_known or not attributed else '확인 못 함'
-    summary = (
-        f'성과 확인 {len(quality)}/{len(rows)}건 · 1D {compact_won(sum(r["gmv_1d"] for r in quality)) if quality else "확인된 실적 없음"}'
-        f' · RAW {raw_summary}'
-    )
-    if sum(r["date"] > cutoff for r in rows):
-        summary += f' · 미래 편성 {sum(r["date"] > cutoff for r in rows)}건은 지표 대기'
-    if unknown:
-        summary += f' · 귀속 미확인 {len(unknown)}건 별도'
-    lines.insert(1, bullet_summary(summary))
     return lines
 
 
@@ -404,46 +395,43 @@ def revenue_answer(p, q, start, end, kind):
     teams = [('일반광고','ad_gen'),('통광마','ad_int'),('라이브','live')]
     requested = {'ad_gen': '일반광고' in q, 'ad_int': bool(re.search('통광마|통합광고',q)), 'live': '라이브' in q}
     selected = [(label,key) for label,key in teams if requested[key]] or teams
-    lines = [f'*대시보드 매출(3팀 구분) · {start}~{end}*']
+    team_names = ' + '.join(label for label,_ in selected)
+    title = '매출' if len(selected) == len(teams) else f'{team_names} 매출'
+    lines = [f'*{title} · {start}~{end}*']
     if kind == 'month' and month:
         if month.get('closed') and month.get('actual'):
             values = month['actual']
-            lines += [bullet_summary(f'마감확정 {compact_won(sum(values[k] for _,k in selected))} · {" + ".join(label for label,_ in selected)}')]
-            lines += ['• 마감확정: ' + won(sum(values[k] for _,k in selected))]
-            lines += [f'• {label} 확정: {won(values[key])}' for label,key in selected]
+            lines += ['• *마감확정*: ' + won(sum(values[k] for _,k in selected))]
+            if len(selected) > 1:
+                lines += ['• 팀별 확정: ' + ' / '.join(f'{label} {compact_won(values[key])}' for label,key in selected)]
         else:
             f = month.get('forecast')
             raw = month.get('raw')
-            if f or raw:
-                parts = []
-                if f:
-                    parts.append(f'마감예측 {compact_won(sum(f[k] for _,k in selected))}')
-                if raw:
-                    parts.append(f'RAW {compact_won(sum(raw[k+"_won"] for _,k in selected))}({raw["as_of"]}까지)')
-                lines += [bullet_summary(' · '.join(parts) + f' · {" + ".join(label for label,_ in selected)}')]
             if f:
-                lines += ['• 마감예측(기존 모델): ' + won(sum(f[k] for _,k in selected))]
-                lines += [f'• {label} 예측: {won(f[key])}' for label,key in selected]
+                forecast_line = '• *마감예측*: ' + won(sum(f[k] for _,k in selected))
                 if len(selected)==3 and f.get('previous_total_won'):
-                    lines += [f'• 예측 MoM {(f["total_won"]/f["previous_total_won"]-1)*100:+.1f}% · 전월 확정 대비']
+                    forecast_line += f' · MoM {(f["total_won"]/f["previous_total_won"]-1)*100:+.1f}%'
+                if raw and raw['target_won'] and len(selected)==3:
+                    forecast_line += f' · 목표 달성 {f["total_won"]/raw["target_won"]*100:.1f}%'
+                lines += [forecast_line]
+                if len(selected) > 1:
+                    lines += ['• 팀별 예측: ' + ' / '.join(f'{label} {compact_won(f[key])}' for label,key in selected)]
             if raw:
-                lines += [f'• RAW 누적({raw["as_of"]}까지): ' + won(sum(raw[k+'_won'] for _,k in selected))]
-                lines += [f'• {label} RAW: {won(raw[key+"_won"])}' for label,key in selected]
-                if f and raw['target_won'] and len(selected)==3:
-                    lines += [f'• 월 목표 {won(raw["target_won"])} · 예상 달성률 {f["total_won"]/raw["target_won"]*100:.1f}%']
+                lines += [f'• *현황 누적*: {won(sum(raw[k+"_won"] for _,k in selected))} · {raw["as_of"]}까지']
+                if len(selected) > 1:
+                    lines += ['• 팀별 누적: ' + ' / '.join(f'{label} {compact_won(raw[key+"_won"])}' for label,key in selected)]
                 unknown = [r for r in p['live'] if start.isoformat() <= r['date'] <= min(end.isoformat(),p['as_of']) and r['unknown_party'] and not r['free']]
                 if unknown and any(k=='live' for _,k in selected):
-                    lines += [f'⚠️ 라이브 귀속 미확인 {len(unknown)}건은 RAW 합계에서 제외. 매출 없음으로 해석하지 마세요.']
+                    lines += [f'⚠️ 라이브 귀속 미확인 {len(unknown)}건은 누적에서 제외. 매출 없음으로 해석하지 마세요.']
     else:
         rows = [r for r in p['revenue']['days'] if start.isoformat() <= r['date'] <= end.isoformat()]
         if not rows:
-            return lines + ['• 해당 기간 수집된 RAW 없음 · 확인 못 함']
+            return lines + ['• 해당 기간 수집된 현황 없음 · 확인 못 함']
         values = {k:sum(r[k+'_won'] for r in rows) for _,k in teams}
-        lines += [bullet_summary(f'기간 RAW {compact_won(sum(values[k] for _,k in selected))} · {" + ".join(label for label,_ in selected)} · 확정/월전체 예측 아님')]
-        lines += [f'• 기간 RAW({rows[0]["date"]}~{rows[-1]["date"]}): {won(sum(values[k] for _,k in selected))}']
-        lines += [f'• {label} RAW: {won(values[key])}' for label,key in selected]
-        lines += ['• 일·주 RAW는 확정 매출이나 월전체 예측이 아닙니다.']
-    lines += ['• 예측=revenue.v_revenue_forecast_monthly · 확정=integrated_ssot · RAW=대시보드 동일 귀속·취소 필터']
+        lines += [f'• *기간 누적*: {won(sum(values[k] for _,k in selected))}']
+        if len(selected) > 1:
+            lines += ['• 팀별 누적: ' + ' / '.join(f'{label} {compact_won(values[key])}' for label,key in selected)]
+        lines += ['• 참고: 일·주 누적은 월 마감예측/확정 매출이 아닙니다.']
     return lines
 
 
