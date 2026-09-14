@@ -475,7 +475,7 @@ def youtube_answer(p, q, start, end, kind, now=None):
         today_count = display_states.count('today')
         review = unmatched + c['other_period']
         lines = [f'*{start.month}월 유튜브 편성*',
-                 bullet_summary(f'총 {c["source_count"]}건 · 발행 {c["matched_count"]}건 · 예정 {planned}건 · 확인 필요 {review}건')]
+                 bullet_summary(f'총 {c["source_count"]}건 · 편성 내 발행 {c["matched_count"]}건 · 예정 {planned}건 · 확인 필요 {review}건')]
         if review:
             review_parts = []
             for label,value in (('발행 확인',unmatched),('발행일 확인',c['other_period'])):

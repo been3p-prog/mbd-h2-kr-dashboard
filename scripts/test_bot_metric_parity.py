@@ -142,7 +142,7 @@ class ParityTests(unittest.TestCase):
         self.p['youtube']['schedules']['2026-09']=self.schedule()
         self.p['youtube']['verified_api']={'discovered':[dict(published_date='2026-09-11')]}
         a=self.answer('9월 유튜브 편성','youtube')
-        self.assertIn('총 4건 · 발행 1건 · 예정 1건 · 확인 필요 1건',a)
+        self.assertIn('총 4건 · 편성 내 발행 1건 · 예정 1건 · 확인 필요 1건',a)
         self.assertIn('확인 필요: 발행 확인 1건',a)
         self.assertIn('그 외: 커뮤니티 1건',a)
         self.assertIn('최신 반영: 2026년 9월 11일 20:00',a)
@@ -171,7 +171,7 @@ class ParityTests(unittest.TestCase):
         self.p['youtube']['schedules']['2026-09']=schedule
         a=self.answer('9월 유튜브 편성','youtube')
         self.assertIn('발행 영상 연결을 확인하지 못했습니다',a)
-        self.assertNotIn('· 발행 1건',a)
+        self.assertNotIn('· 편성 내 발행 1건',a)
     def test_schedule_staleness_is_measured_from_answer_time(self):
         self.p['youtube']['schedules']['2026-09']=self.schedule()
         a=client.answer(self.p,'9월 유튜브 편성','youtube',NOW.date(),now=NOW+dt.timedelta(hours=49))
