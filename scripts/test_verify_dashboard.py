@@ -23,6 +23,13 @@ def _load_dashboard_html():
     return path.read_text(encoding="utf-8"), str(path)
 
 
+# [2026-09-18] dashboard_forecast_state 가 내는 두 가지 대사 문구(금액은 fmt_won 형식: 9.46억 · 8,180만 · 300만).
+FORECAST_RECONCILIATION_NOTE_RE = (
+    r"상세 합계 [\d,.]+(?:만|억) 검증"
+    r"|상세 원천 [\d,.]+(?:만|억) / 마감예상 [\d,.]+(?:만|억) · 차이 [\d,.]+(?:만|억) (?:추가|초과) 확인 필요"
+)
+
+
 class DashboardGuardTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -639,10 +646,13 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("TOPS", july)
         self.assertIn("기타 정부지원", july)
         self.assertIn("월전체 일반광고 비취소 부킹", september)
-        self.assertIn('<span>무상<small>60건</small></span><b>8,080만</b>', september)
+        # [2026-09-18] 9월은 진행 중인 달이라 건수·금액이 매일 바뀐다. 9/14 실값(60건·8,080만, 9.4억)을 박아둔 단언이
+        #   데이터가 바뀌자마자 CI 를 깨서 일일 갱신의 Actions 단계가 실패했고, 그 뒤의 봇 지표 게시가 4일간 멈췄다
+        #   (세 슬랙봇이 성과 질문에 '확인 필요'만 답함). 진행·차월은 값이 아니라 형식과 분기만 검증한다.
+        self.assertRegex(september, r'<span>무상<small>\d+건</small></span><b>[\d,.]+(?:만|억)</b>')
         self.assertNotIn('무상지원 상세', september)
         self.assertNotIn('헤이홈 · 스토어홈배너', september)
-        self.assertIn('상세 합계 9.4억 검증', september)
+        self.assertRegex(september, FORECAST_RECONCILIATION_NOTE_RE)
         for raw_comment in ("정부지원사업 TOPS", "경기도 주식회사"):
             self.assertNotIn(raw_comment, "".join(tips))
 
@@ -684,7 +694,8 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn("확정 편성 · 패키지별", september)
         for package in ("에센셜", "스마트", "시그니처"):
             self.assertIn(package, september)
-        self.assertIn("상세 원천 1.78억 / 마감예상 1.79억 · 차이 100만 추가 확인 필요", september)
+        # [2026-09-18] 위와 같은 이유 — 일치하면 '상세 합계 … 검증', 다르면 '상세 원천 … / 마감예상 … · 차이 … 확인 필요' 둘 중 하나다.
+        self.assertRegex(september, FORECAST_RECONCILIATION_NOTE_RE)
 
     def test_pages_workflow_uploads_index_only(self):
         workflow = (Path(__file__).resolve().parents[1] / ".github" / "workflows" /
