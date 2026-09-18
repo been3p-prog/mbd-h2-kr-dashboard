@@ -3,16 +3,16 @@
   "source": {
     "duckdb": "read-only MBD snapshot",
     "schema_table": "live.raw_slots",
-    "period": "2026-09-01~2026-09-15",
-    "latest_completed_date": "2026-09-15",
-    "completed_row_count": 20,
+    "period": "2026-09-01~2026-09-16",
+    "latest_completed_date": "2026-09-16",
+    "completed_row_count": 22,
     "sheet_rows": []
   },
   "quality_summary": {
     "month": 9,
-    "count": 20,
-    "gmv_1d": 2035458310,
-    "average": 101772915.5
+    "count": 22,
+    "gmv_1d": 2413413370,
+    "average": 109700607.72727273
   },
   "rules": {
     "broadcast_card_amount": {
@@ -40,7 +40,7 @@
     "data-live-period=\"mtd\"",
     "data-live-window-latest-date=",
     "9월 금월 누적",
-    "완료 20건",
+    "완료 22건",
     "미집계/0원 편성은 누적 성과에서 제외",
     "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
@@ -62,64 +62,64 @@
   "hero_kpis": [
     {
       "label": "진행",
-      "value": "20건",
-      "em": "9/1–9/15 완료"
+      "value": "22건",
+      "em": "9/1–9/16 완료"
     },
     {
       "label": "1D 거래액",
-      "value": "20.35억",
+      "value": "24.13억",
       "em": "브랜드 일거래액 누적"
     },
     {
       "label": "방송별 GMV",
-      "value": "12.06억",
+      "value": "12.95억",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "6,029만",
+      "value": "5,887만",
       "em": "방송별 GMV 평균"
     },
     {
       "label": "시청",
-      "value": "104만",
-      "em": "평균 5.2만"
+      "value": "125만",
+      "em": "평균 5.7만"
     },
     {
       "label": "클릭률",
-      "value": "5.4%",
-      "em": "클릭 55,759"
+      "value": "6.9%",
+      "em": "클릭 85,951"
     },
     {
       "label": "구매",
-      "value": "3,284",
-      "em": "구매율 0.32%"
+      "value": "3,635",
+      "em": "구매율 0.29%"
     },
     {
       "label": "1H 거래액",
-      "value": "11.47억",
+      "value": "13.02억",
       "em": "방송 중 거래액 누적"
     }
   ],
   "required_narrative": [
     "월 누적과 주간을 분리",
     "상단은 금월 누적, 아래는 주차별 완료 방송",
-    "최신 완료일 9/15까지 갱신",
+    "최신 완료일 9/16까지 갱신",
     "카드 거래액은 1D 브랜드 일거래액",
     "월/주간 효율은 방송별 데이터 GMV"
   ],
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 32.3% / 방송별 GMV 17.8% · 2건"
+      "value": "시청 41.9% / 방송별 GMV 21.3% · 3건"
     },
     {
       "label": "스마트",
-      "value": "시청 7.1% / 방송별 GMV 51.1% · 7건"
+      "value": "시청 7.5% / 방송별 GMV 49.7% · 8건"
     },
     {
       "label": "에센셜",
-      "value": "시청 60.5% / 방송별 GMV 31.1% · 11건"
+      "value": "시청 50.7% / 방송별 GMV 29.0% · 11건"
     }
   ],
   "broadcast_cards": {
@@ -575,10 +575,56 @@
         "라이브 1H GMV": 15622750
       },
       "retrospective": {
+        "available": true,
+        "official_sha256": "84d379fcd48067a1a99fd96dcf2f3a26546700aace8fc75819157d363b6edcc9",
+        "official_chars": 900,
+        "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20260916-21": {
+      "brand": "LG전자",
+      "meta": "9/16 · 시그니처 · 일반",
+      "metrics": {
+        "시청": "18만",
+        "클릭률": "1.2%",
+        "구매": "42",
+        "거래액": "1D 3.18억"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 318323360,
+        "방송별 데이터 GMV": 61293600,
+        "라이브 1H GMV": 119142410
+      },
+      "retrospective": {
         "available": false,
         "official_sha256": "",
         "official_chars": 0,
         "sent": false,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20260916-22": {
+      "brand": "위글위글",
+      "meta": "9/16 · 스마트 · 디자인어워드",
+      "metrics": {
+        "시청": "1.9만",
+        "클릭률": "150.4%",
+        "구매": "309",
+        "거래액": "1D 5,963만"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 59631700,
+        "방송별 데이터 GMV": 27975100,
+        "라이브 1H GMV": 35820200
+      },
+      "retrospective": {
+        "available": true,
+        "official_sha256": "f026d879ad26bf5444c66e7c7783f092c0620b0a160125af7303abf2753b0a2d",
+        "official_chars": 823,
+        "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
       }
