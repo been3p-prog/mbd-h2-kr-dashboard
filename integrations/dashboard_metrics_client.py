@@ -123,7 +123,15 @@ def period(question, today):
     return start, end, kind
 
 
-def validate(packet, now, public_bytes=None):
+def source_fresh(packet, key, now):
+    try:
+        stamp = dt.datetime.fromisoformat(packet['source_as_of'][key])
+        return stamp.tzinfo is not None and -300 <= (now-stamp).total_seconds() <= 48*3600
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+def validate(packet, now, public_bytes=None, domain=None):
     if packet.get('schema') != SCHEMA or not re.fullmatch('[0-9a-f]{64}', packet.get('dashboard_sha256','')):
         raise ValueError('공통 지표 형식 검증 실패')
     built = dt.datetime.fromisoformat(packet['built_at'])
@@ -136,15 +144,21 @@ def validate(packet, now, public_bytes=None):
         raise ValueError('대시보드 배포본과 지표 버전 불일치')
     if not all(k in packet for k in ('revenue','live','youtube','source_as_of')):
         raise ValueError('공통 지표 필수 필드 누락')
-    for key in ('revenue_mirror','live_quality','yt_quality','owned_media'):
+    # A delayed YouTube mirror must not disable independently fresh Live/revenue.
+    required = {'live': ('live_quality',), 'ads': ('revenue_mirror','live_quality'),
+                'youtube': (() if packet['youtube'].get('verified_api') else ('yt_quality','owned_media'))}
+    for key in required.get(domain, ('revenue_mirror','live_quality','yt_quality','owned_media')):
         stamp = packet['source_as_of'].get(key)
         if not stamp:
             raise ValueError('원천 수집시각 누락')
         source_time = dt.datetime.fromisoformat(stamp)
-        if source_time.tzinfo is None or not -300 <= (now-source_time).total_seconds() <= 48*3600:
-            raise ValueError('원천 수집 갱신 지연')
+        if source_time.tzinfo is None:
+            raise ValueError('원천 수집시각의 시간대를 확인하지 못했습니다.')
+        if not -300 <= (now-source_time).total_seconds() <= 48*3600:
+            label = {'revenue_mirror':'매출', 'live_quality':'라이브', 'yt_quality':'유튜브', 'owned_media':'유튜브 발행'}[key]
+            raise ValueError(f'{label} 데이터 갱신이 지연됐습니다. 마지막 수집: {source_time.astimezone(KST):%m/%d %H:%M}')
     api = packet['youtube'].get('verified_api')
-    if api:
+    if api and domain in (None, 'youtube'):
         stamp=dt.datetime.fromisoformat(api['captured_at'])
         if api.get('schema')!='youtube-verified-api-v1' or api.get('channel_id')!='UCBKtitA1RwY7F32rCniV1dA':
             raise ValueError('YouTube Analytics 채널 검증 실패')
@@ -328,6 +342,12 @@ def schedule_detail_lines(schedule, published_rows, now, limit=5):
     return lines
 
 
+def normalize_question(question):
+    """Remove only standalone presentation requests, never a brand/metric filter."""
+    q = unicodedata.normalize('NFKC', question)
+    return re.sub(r'(?<![\w])(?:핵심만|핵심|간단히|간략히|간결하게|간단하게|짧게|요약해서|요약해줘|요약해주세요|요약|정리해서)(?![\w])', ' ', q).strip()
+
+
 def live_scope(rows, q):
     """Never silently drop a named brand or unsupported scope."""
     brands = sorted({r['brand'] for r in rows if r['brand']}, key=len, reverse=True)
@@ -369,7 +389,7 @@ def live_answer(p, q, start, end, kind):
              f'• *1D 거래액*: {one_day} · 성과 {len(quality)}/{len(rows)}건'
              + (f' · 방당 {average}' if average else ''),
              f'• *방송 GMV*: {total_metric(quality,"gmv") if quality else "확인된 실적 없음"}',
-             f'• *귀속 매출(확인분)*: {total_metric(attributed,"af") if elapsed else "해당 기간 실적 행 없음"}']
+             f'• *귀속 매출(확인분)*: {"귀속 확인 중" if unknown and not attributed else total_metric(attributed,"af") if elapsed else "해당 기간 실적 행 없음"}']
     if future:
         lines += [f'• 미래 편성 {future}건 · 지표 대기']
     if unknown:
@@ -437,6 +457,7 @@ def revenue_answer(p, q, start, end, kind):
 
 def youtube_answer(p, q, start, end, kind, now=None):
     yt = p['youtube']
+    now = now or dt.datetime.now(KST)
     rows = [r for r in yt['content'] if start.isoformat() <= r['publish_date'] <= end.isoformat()]
     lf = bool(re.search(r'롱폼|\bLF\b|\blf\b',q))
     sf = bool(re.search(r'숏폼|\bSF\b|\bsf\b',q))
@@ -447,6 +468,22 @@ def youtube_answer(p, q, start, end, kind, now=None):
     lines = [f'*유튜브 · {start}~{end}*']
     wants_detail = bool(re.search(r'상세|영상별|콘텐츠별|잘된|상위|top|D7|D\+7|d7|d\+7', q))
     wants_verbose_period = bool(re.search(r'포맷|구성|분해|breakdown', q))
+    content_fresh = all(source_fresh(p, key, now) for key in ('yt_quality','owned_media'))
+    if '구독자' in q and not re.search(r'성과|상세|조회수', q):
+        sub = [r for r in yt['subscribers'] if r['date'] <= min(end.isoformat(),p['as_of'])]
+        if not content_fresh:
+            return lines + ['• 구독자 수는 데이터 갱신 지연으로 확인 중입니다.']
+        if not sub:
+            return lines + ['• 해당 기간 구독자 수는 아직 집계되지 않았습니다.']
+        latest = max(sub, key=lambda r: r['date'])
+        return lines + [f'• 구독자 {number(latest["count"])}명 · {latest["date"]} 기준']
+    if not content_fresh and yt.get('verified_api') and '편성' not in q:
+        # API views have their own verified collection/coverage clocks. Publication
+        # cohorts from an old mirror cannot be presented as current alongside them.
+        lines += verified_youtube_answer(yt['verified_api'], start, end, form_filter,
+                                         verbose=wants_verbose_period)
+        lines += ['• 발행·D7·구독자 지표는 갱신 지연으로 확인 중입니다.']
+        return lines
     if '편성' in q:
         if form_filter:
             raise ValueError('편성은 월 전체 기준으로 조회해주세요. 롱폼·숏폼 합계로 바꾸지 않습니다.')
@@ -556,6 +593,7 @@ def answer(packet, question, domain, today=None, now=None):
         return None
     now = now or dt.datetime.now(KST)
     today = today or now.date()
+    question = normalize_question(question)
     try:
         start,end,kind = period(question,today)
         if start.year != int(packet['as_of'][:4]):
@@ -569,21 +607,29 @@ def answer(packet, question, domain, today=None, now=None):
             lines = renderer(packet,question,start,end,kind,now=now)
         else:
             lines = renderer(packet,question,start,end,kind)
+        if domain == 'live' and kind != 'day':
+            lines[0] += f' · {min(end.isoformat(), packet["as_of"])}까지 집계'
         return '\n'.join(lines)
     except (ValueError,KeyError,TypeError) as exc:
         return '🙏 *확인 필요*\n• '+safe(str(exc))+'\n• 검증되지 않은 조건을 전체 합계로 바꾸지 않습니다.'
 
 
 def check_scope(q, domain):
-    clean = unicodedata.normalize('NFKC',q).lower()
+    clean = normalize_question(q).lower()
     clean = re.sub(r'\d{4}[-년.]|\d{1,2}(?:주차|[월일주/.-])|이번\s*달|이번\s*주|지난\s*주|지난\s*달|오늘|어제|금월|금주|전월|차월|다음\s*달|저번\s*주|저번\s*달', '', clean)
     terms = ('유튜브|채널|광고주별|브랜드별|지면별|구좌별|일반광고|통합광고|통광마|라이브|광고|mbd|대시보드|'
-             '성과|실적|매출|조회수|구독자|마감예측치|마감예측|마감|예측|확정|raw|누적|현황|상세|지표|편성|전체|월간|주간|일간|'
+             '성과|실적|매출|조회수|구독자\\s*수|구독자|마감예측치|마감예측|마감|예측|확정|raw|누적|현황|상세|지표|편성|전체|월간|주간|일간|'
              '합계|총|건수|발행|영상별|콘텐츠별|가장|잘된|롱폼|숏폼|lf|sf|d\\+?7|상위|top|하나씩|하나|각각|랑|'
              '알려줘|알려주세요|보여줘|보여주세요|어때|얼마|알려|는|은|을|를|의|과|와|좀|해줘|있어|몇|개|명')
     clean = re.sub(terms,'',clean)
     if re.sub(r'[\s?.,!~·()+0-9]+','',clean):
         raise ValueError('요청한 브랜드·범위·조건을 확정하지 못했습니다. 지원 기준을 명시해주세요.')
+
+
+def verified_answer(packet, question, domain, now, public_bytes):
+    """The same boundary is exercised by CLI, regression tests and Slack probes."""
+    validate(packet, now, public_bytes, domain=domain)
+    return answer(packet, question, domain, now=now)
 
 
 def main():
@@ -600,8 +646,9 @@ def main():
         with urllib.request.urlopen(request,timeout=10) as response:
             public = response.read(MAX_BYTES+1)
         now = dt.datetime.now(KST)
-        validate(packet,now,public)
-        result = answer(packet,q,domain,now=now)
+        result = verified_answer(packet,q,domain,now,public)
+    except ValueError as exc:
+        result = '🙏 *확인 필요*\n• '+safe(str(exc))
     except Exception:
         result = '🙏 *확인 필요*\n• 대시보드와 공통 지표의 버전·신선도를 확인하지 못했습니다.\n• 다른 집계나 추정 숫자로 대체하지 않습니다.'
     print(json.dumps({'answer':result},ensure_ascii=False))

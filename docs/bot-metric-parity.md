@@ -27,8 +27,16 @@ the same read-only MBD/YouTube snapshots used by the HTML refresh.
   month-week (days 1–7). Answers show exact start/end dates.
 - Unsupported brand/period constraints are rejected, never dropped.
 - Source freshness and cache freshness are separately checked (48h), along with
-  the live public HTML hash. Failed checks return unavailable, never legacy or LLM
-  numeric fallback. Source memo, PD, cost, margin and credentials are excluded.
+  the live public HTML hash. Source checks follow the answering domain: a delayed
+  YouTube mirror does not block fresh Live/revenue. Fresh verified YouTube API
+  views remain answerable with their actual cutoff while stale publication/D7/
+  subscriber fields are explicitly pending. Failed checks never trigger legacy
+  or LLM numeric fallback. Source memo, PD, cost, margin and credentials are excluded.
+- The deployed YouTube weekly lane precedes the dashboard adapter. Its versioned
+  deployment source is `integrations/youtube_weekly_rules.py`; it uses the same
+  scope normalizer and preserves the existing D5/D7 rules. Schedule completeness
+  is independent of authenticated Analytics totals. Default weekly answers are
+  compact; detailed requests retain cohort arithmetic. See `bot-answer-acceptance.md`.
 
 ## Runtime
 

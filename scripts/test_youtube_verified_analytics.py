@@ -122,7 +122,7 @@ class VerifiedTests(unittest.TestCase):
         self.assertNotIn('data-yt-api-day="2026-09-10"',h)
     def answer(self,q):
         p=fixture();p['youtube']['verified_api']=self.p
-        return client.answer(p,q,'youtube',NOW.date())
+        return client.answer(p,q,'youtube',NOW.date(),now=NOW)
     def test_bot_month_not_daily_sum(self):
         a=self.answer('9월 유튜브 조회수');self.assertIn('조회수: 85회',a);self.assertNotIn('차이 +5회',a)
         self.assertNotIn('공식 기간 조회',a);self.assertNotIn('잔차',a)
