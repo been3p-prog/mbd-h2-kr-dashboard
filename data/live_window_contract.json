@@ -3,16 +3,16 @@
   "source": {
     "duckdb": "read-only MBD snapshot",
     "schema_table": "live.raw_slots",
-    "period": "2026-09-01~2026-09-17",
-    "latest_completed_date": "2026-09-17",
-    "completed_row_count": 24,
+    "period": "2026-09-01~2026-09-20",
+    "latest_completed_date": "2026-09-20",
+    "completed_row_count": 25,
     "sheet_rows": []
   },
   "quality_summary": {
     "month": 9,
-    "count": 24,
-    "gmv_1d": 2546703981,
-    "average": 106112665.875
+    "count": 25,
+    "gmv_1d": 2586422781,
+    "average": 103456911.24
   },
   "rules": {
     "broadcast_card_amount": {
@@ -40,7 +40,7 @@
     "data-live-period=\"mtd\"",
     "data-live-window-latest-date=",
     "9월 금월 누적",
-    "완료 24건",
+    "완료 25건",
     "미집계/0원 편성은 누적 성과에서 제외",
     "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
@@ -61,64 +61,64 @@
   "hero_kpis": [
     {
       "label": "진행",
-      "value": "24건",
-      "em": "9/1–9/17 완료"
+      "value": "25건",
+      "em": "9/1–9/20 완료"
     },
     {
       "label": "1D 거래액",
-      "value": "25.47억",
+      "value": "25.86억",
       "em": "브랜드 일거래액 누적"
     },
     {
       "label": "방송별 GMV",
-      "value": "13.79억",
+      "value": "13.93억",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "5,747만",
+      "value": "5,573만",
       "em": "방송별 GMV 평균"
     },
     {
       "label": "시청",
-      "value": "125만",
-      "em": "평균 5.2만"
+      "value": "126만",
+      "em": "평균 5만"
     },
     {
       "label": "클릭률",
-      "value": "7.3%",
-      "em": "클릭 91,935"
+      "value": "7.5%",
+      "em": "클릭 94,499"
     },
     {
       "label": "구매",
-      "value": "3,872",
+      "value": "3,893",
       "em": "구매율 0.31%"
     },
     {
       "label": "1H 거래액",
-      "value": "13.9억",
+      "value": "14억",
       "em": "방송 중 거래액 누적"
     }
   ],
   "required_narrative": [
     "월 누적과 주간을 분리",
     "상단은 금월 누적, 아래는 주차별 완료 방송",
-    "최신 완료일 9/17까지 갱신",
+    "최신 완료일 9/20까지 갱신",
     "카드 거래액은 1D 브랜드 일거래액",
     "월/주간 효율은 방송별 데이터 GMV"
   ],
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 41.6% / 방송별 GMV 20.0% · 3건"
+      "value": "시청 41.3% / 방송별 GMV 19.8% · 3건"
     },
     {
       "label": "스마트",
-      "value": "시청 7.4% / 방송별 GMV 46.7% · 8건"
+      "value": "시청 7.4% / 방송별 GMV 46.2% · 8건"
     },
     {
       "label": "에센셜",
-      "value": "시청 51.0% / 방송별 GMV 33.3% · 13건"
+      "value": "시청 51.3% / 방송별 GMV 34.0% · 14건"
     }
   ],
   "broadcast_cards": {
@@ -600,7 +600,7 @@
         "available": true,
         "official_sha256": "58776251a73467a6083256410d8f0f3e2eb1fdeefde149718388b45a7887919c",
         "official_chars": 707,
-        "sent": false,
+        "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
       }
@@ -646,7 +646,7 @@
         "available": true,
         "official_sha256": "53aef060e0b80f06b495bace023b27afdbcdc58f6e49f6cf99e93d6b04412225",
         "official_chars": 256,
-        "sent": false,
+        "sent": true,
         "competitor_sha256": "25643852b03dc05cbdbde2cefac2438368e9e057310fb66de5417f22ab0b990c",
         "competitor_chars": 59
       }
@@ -669,9 +669,32 @@
         "available": true,
         "official_sha256": "e0d3e27faae7b68c000a0602fc69b22e8a47ffaa26e183f9b8b2c41b1d4aaffd",
         "official_chars": 367,
-        "sent": false,
+        "sent": true,
         "competitor_sha256": "10f44860cd36b6e3a73d05f97c0cd802fe69dde71ca752f15621d1cd628e8286",
         "competitor_chars": 55
+      }
+    },
+    "mtd-20260920-25": {
+      "brand": "레어로우",
+      "meta": "9/20 · 에센셜 · 디자인어워드",
+      "metrics": {
+        "시청": "6,898",
+        "클릭률": "37.2%",
+        "구매": "21",
+        "거래액": "1D 3,972만"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 39718800,
+        "방송별 데이터 GMV": 14052400,
+        "라이브 1H GMV": 10296800
+      },
+      "retrospective": {
+        "available": true,
+        "official_sha256": "a31ef5bed0cc469d587f592adc3c0c75bd5de013954086ff63a3fa534bd2171d",
+        "official_chars": 762,
+        "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
       }
     }
   }
