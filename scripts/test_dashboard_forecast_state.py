@@ -76,7 +76,7 @@ class ForecastStateTest(unittest.TestCase):
         top = guard._month_surface(updated, 'mvk', 9)
         for marker in ('12억', 'MoM ▲ 7.9%', '예상 달성률 93.9%'):
             self.assertIn(marker, top)
-        self.assertEqual(guard.verify(updated, dt.datetime.now(daily.KST)), [])
+        self.assertEqual(guard.verify(updated, dt.datetime.now(daily.KST), allow_stale_sources=guard.OPTIONAL_STALE_SOURCES), [])
         self.assertEqual(updated, forecast.update_forecast_surfaces(updated, self.raw, pred))
         for before, after in [('<div class="v num">12억</div>','<div class="v num">99억</div>'),
                               ('예상 달성률 93.9%','예상 달성률 99.9%'),
@@ -160,7 +160,7 @@ class ForecastStateTest(unittest.TestCase):
         self.assertIn('data-phase="pending_close"', guard._month_surface(text, "mvk", 9))
         _, manifest = guard.extract_manifest(text)
         now = dt.datetime.fromisoformat(manifest["built_at_kst"])
-        self.assertEqual(guard.verify(text, now), [])
+        self.assertEqual(guard.verify(text, now, allow_stale_sources=guard.OPTIONAL_STALE_SOURCES), [])
         for marker in ('data-live-progress-count=', 'data-live-package-count=', '시그니처 하위'):
             with self.subTest(missing=marker):
                 bad = text.replace(marker, 'removed-marker=', 1)

@@ -66,11 +66,11 @@ class DashboardGuardTest(unittest.TestCase):
 
     # ── 승인 골격 GREEN ─────────────────────────────────────────────
     def test_live_candidate_is_clean(self):
-        self.assertEqual(vd.verify(self.html, self.now), [],
+        self.assertEqual(vd.verify(self.html, self.now, allow_stale_sources=vd.OPTIONAL_STALE_SOURCES), [],
                          f"base artifact ({self.path}) must be a clean LIVE build")
 
     def test_live_candidate_passes_require_fresh(self):
-        self.assertEqual(vd.verify(self.html, self.now, require_fresh=True), [])
+        self.assertEqual(vd.verify(self.html, self.now, require_fresh=True, allow_stale_sources=vd.OPTIONAL_STALE_SOURCES), [])
 
     def test_scope_excludes_ogam(self):
         self.assertNotIn("ogam", vd.ALLOWED_REVENUE_TEAMS)
@@ -783,13 +783,14 @@ class DashboardGuardTest(unittest.TestCase):
             '<span class="chip warn" data-stale-source="yt_quality">'
             '유튜브 성과 원천 지연 · 마지막 확인 08-04 13:00</span>'
         )
+        bad = re.sub(r'<span[^>]*data-stale-source="yt_quality"[^>]*>.*?</span>', "", bad)
         bad = bad.replace('<div class="chips num">', '<div class="chips num">' + marker, 1)
         self.assertEqual(
             vd.verify(
                 bad,
                 self.now,
                 require_fresh=True,
-                allow_stale_sources={"yt_quality"},
+                allow_stale_sources=vd.OPTIONAL_STALE_SOURCES,
             ),
             [],
         )
@@ -844,7 +845,7 @@ class DashboardGuardTest(unittest.TestCase):
     # ── freshness SLA (negative control) ────────────────────────────
     def test_stale_snapshot_only_fails_under_require_fresh(self):
         # require_fresh=False → 노후여도 통과(다른 위반 없음), True → stale RED
-        self.assertEqual(vd.verify(self.html, self.stale_now, require_fresh=False), [])
+        self.assertEqual(vd.verify(self.html, self.stale_now, require_fresh=False, allow_stale_sources=vd.OPTIONAL_STALE_SOURCES), [])
         stale_errors = vd.verify(self.html, self.stale_now, require_fresh=True)
         self.assertTrue(any("stale snapshot" in e for e in stale_errors))
 

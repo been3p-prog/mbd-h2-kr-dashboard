@@ -195,7 +195,7 @@ class D7ProgressTest(unittest.TestCase):
     def test_static_guard_rejects_changed_d7_value_state_and_coverage(self):
         html=(Path(__file__).resolve().parents[1]/'index.html').read_text()
         row=re.search(r'<div class="activity-row"[^>]*data-yt-video-id="[^"]+"[^>]*data-yt-d7-state="frozen"[^>]*>.*?(?=<div class="activity-row"|</details>)',html,re.S)[0]
-        self.assertEqual(guard.verify(html,dt.datetime.now(api.KST)),[])
+        self.assertEqual(guard.verify(html,dt.datetime.now(api.KST), allow_stale_sources=guard.OPTIONAL_STALE_SOURCES),[])
         for bad_row in (
             re.sub(r'data-yt-d7-views="\d+"','data-yt-d7-views="999999999"',row),
             row.replace('data-yt-d7-state="frozen"','data-yt-d7-state="collecting"'),

@@ -36,7 +36,7 @@ class TeamComparisonTest(unittest.TestCase):
             self.assertIn(expected, detail)
         self.assertNotIn('비교 기준 확인 필요', detail)
         self.assertLess(detail.index('data-team-mom="raw-ad_gen"'), detail.index('data-team-mom="forecast-ad_gen"'))
-        self.assertEqual(guard.verify(rendered, dt.datetime.now(daily.KST)), [])
+        self.assertEqual(guard.verify(rendered, dt.datetime.now(daily.KST), allow_stale_sources=guard.OPTIONAL_STALE_SOURCES), [])
         self.assertEqual(rendered, forecast.update_forecast_surfaces(rendered, self.raw, self.pred))
         for group in ('mvk', 'mvr', 'mvs'):
             self.assertEqual(guard._month_surface(self.html, group, 8), guard._month_surface(rendered, group, 8))
@@ -65,7 +65,7 @@ class TeamComparisonTest(unittest.TestCase):
         self.assertIsNone(pred['previous_total_won'])
         self.assertEqual(pred['previous_actual']['ad_gen_won'], 868200000)
         rendered = forecast.update_forecast_surfaces(self.html, self.raw, pred)
-        self.assertEqual(guard.verify(rendered, dt.datetime.now(daily.KST)), [])
+        self.assertEqual(guard.verify(rendered, dt.datetime.now(daily.KST), allow_stale_sources=guard.OPTIONAL_STALE_SOURCES), [])
         detail = guard._month_surface(rendered, 'mvr', 9)
         self.assertIn('MoM ▲ 8.0%', detail)
         self.assertIn('확정치 · 비교값 없음', detail)

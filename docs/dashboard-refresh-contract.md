@@ -108,3 +108,15 @@ workflow, not a destructive reset of operator worktrees.
 ## Automatic D7 recovery and regression checks
 
 The existing daily 10:20 KST Hermes job clones main and invokes its installed orchestration wrapper, which uses the repository’s current collection/rendering code and validates the generated artifact. The repository runner also executes the YouTube progressive/freeze and dashboard baseline/readback regressions before collecting; GitHub Actions enforces these regressions before either path can publish to Pages. The verified payload is atomically backed up outside `/tmp` at `~/Library/Application Support/MBD H2 Dashboard/youtube-d7-archive.json` (override: `MBD_H2_D7_ARCHIVE`). Durable freezes take precedence over a replaceable snapshot. API coverage regression, missing registered publication identities, changed freezes, and corrupt archives fail closed; they never erase the last verified YouTube surface. Existing bounded retries and failure notifications remain in effect. GitHub Actions runs the same YouTube regression family before Pages deployment. Public readback checks the current RAW card by its semantic role and exact deployed bytes.
+
+## Degraded publication policy (2026-09-24)
+
+The daily wrapper and every Pages static/freshness guard explicitly allow only
+`yt_quality` and `owned_media` to retain last-good values with `stale` status and
+exactly one visible disclosure per source. Revenue, Live and targets must still
+meet the 48-hour freshness limit, including push deployments. The verifier's default
+remains strict; whole-artifact regression tests explicitly opt into the same
+optional-source policy instead of assuming the checked-in YouTube feed is current.
+Negative controls cover missing/duplicate disclosures, unavailable feeds, mandatory
+source staleness and a stale clock incorrectly labeled current. No D7 freeze,
+channel validation, metric parity, payload hash or source timestamp is bypassed.

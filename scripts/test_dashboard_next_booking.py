@@ -44,7 +44,7 @@ class NextBookingTest(unittest.TestCase):
         self.assertIn('7.92억',guard._month_surface(text,'mvk',10))
         self.assertIn('2.26억',guard._month_surface(text,'mvr',10))
         self.assertIn('7.9',guard._gauge_surface(text,10))
-        self.assertEqual(guard.verify(text,dt.datetime.now().astimezone()),[])
+        self.assertEqual(guard.verify(text,dt.datetime.now().astimezone(), allow_stale_sources=guard.OPTIONAL_STALE_SOURCES),[])
         for group, selected, before, after in [
             ('mvs',9,'<div>라이브<b>2.26억</b></div>','<div>라이브<b>미편성</b></div>'),
             ('mvk',10,'<div class="v num">7.92억</div>','<div class="v num">3.54억</div>'),

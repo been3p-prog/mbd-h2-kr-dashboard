@@ -51,7 +51,7 @@ class TwoCardContractTest(unittest.TestCase):
         self.assertIn('MoM ▲ 21.4%', top)
         self.assertIn('전월 동일기간 8/1~8/9', top)
         self.assertNotIn('예상 달성률 0', top)
-        self.assertEqual(guard.verify(text, dt.datetime.now(daily.KST)), [])
+        self.assertEqual(guard.verify(text, dt.datetime.now(daily.KST), allow_stale_sources=guard.OPTIONAL_STALE_SOURCES), [])
         for bad in [text.replace('data-previous-as-of="2026-08-09"', 'data-previous-as-of="2026-08-31"'),
                     text.replace('MoM ▲ 21.4%', 'MoM ▲ 99.9%', 1)]:
             self.assertTrue(any('same-period' in error for error in guard.verify(bad, dt.datetime.now(daily.KST))))

@@ -45,7 +45,9 @@ jobs:
           bash -n ops/mbd_h2_pages_cron_runner.sh
           bash -n ops/mbd_h2_pages_retry.sh
       - name: Check scope, selected-period rendering, and RAW semantics
-        run: python scripts/verify_dashboard.py index.html
+        run: >-
+          python scripts/verify_dashboard.py index.html --require-fresh
+          --allow-stale-source yt_quality --allow-stale-source owned_media
       - name: Render the dashboard in headless Chrome
         run: python scripts/smoke_dashboard.py index.html
       - name: Verify Live-window numeric/data-basis contract

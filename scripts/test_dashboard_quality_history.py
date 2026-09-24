@@ -100,7 +100,7 @@ class QualityHistoryTest(unittest.TestCase):
         self.assertIn('9월 마감확정치', result)
         _, manifest = guard.extract_manifest(result)
         now = dt.datetime.fromisoformat(manifest["built_at_kst"])
-        self.assertEqual(guard.verify(result, now), [])
+        self.assertEqual(guard.verify(result, now, allow_stale_sources=guard.OPTIONAL_STALE_SOURCES), [])
         for marker in ('data-live-progress-count=', 'data-live-package-count=', '시그니처 하위'):
             with self.subTest(missing=marker):
                 damaged = result[:start] + result[start:end].replace(marker, 'removed-marker=', 1) + result[end:]

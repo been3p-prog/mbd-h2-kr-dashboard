@@ -75,6 +75,8 @@ MANIFEST_OPTIONAL_KEYS = frozenset({"stage_payload_sha256", "snapshot_captured_a
 MANIFEST_SOURCE_KEYS = (
     "revenue_mirror", "live_quality", "yt_quality", "okr_targets", "owned_media")
 MANIFEST_STATUS_KEYS = ("live_quality", "yt_quality", "okr_targets", "owned_media")
+# Explicit publication exception; verify() remains strict unless a caller opts in.
+OPTIONAL_STALE_SOURCES = frozenset({"yt_quality", "owned_media"})
 MANIFEST_FORBIDDEN_TOKENS = (
     '"packages"', '"forms"', '"rows"', '"review_full"', '"teams"',
     '"series_12m"', '"months"', '"by_month"', '"token"',
