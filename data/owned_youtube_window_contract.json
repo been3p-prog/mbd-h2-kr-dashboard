@@ -2,12 +2,12 @@
   "contract_id": "owned-youtube-window-2026-09-mtd-v1",
   "source": {
     "duckdb": "read-only YouTube snapshot",
-    "monthly_period": "2026-09-01~2026-09-22",
+    "monthly_period": "2026-09-01~2026-09-23",
     "period_complete": false,
     "raw_status": "ok",
     "source_as_of": {
-      "yt_quality": "2026-09-24T22:13:41+09:00",
-      "owned_media": "2026-09-24T22:13:39+09:00"
+      "yt_quality": "2026-09-25T22:13:41+09:00",
+      "owned_media": "2026-09-25T22:13:39+09:00"
     }
   },
   "required_copy": [
@@ -32,38 +32,38 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "332만",
-      "em": "9/1–9/22"
+      "value": "346만",
+      "em": "9/1–9/23"
     },
     {
       "label": "발행",
-      "value": "40건",
-      "em": "LF 6 · SF 33 · LIVE 1"
+      "value": "41건",
+      "em": "LF 6 · SF 34 · LIVE 1"
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "86만",
+      "value": "88만",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "233만",
+      "value": "244만",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "18,151",
+      "value": "18,864",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "14,043",
-      "em": "댓글 535"
+      "value": "14,641",
+      "em": "댓글 558"
     },
     {
       "label": "공유",
-      "value": "3,573",
-      "em": "미매칭 13만"
+      "value": "3,665",
+      "em": "미매칭 14만"
     }
   ],
   "weekly_rows": [
@@ -84,7 +84,7 @@
     },
     {
       "period": "9/21–9/27",
-      "views": 277851,
+      "views": 409318,
       "complete": false
     }
   ],
@@ -97,22 +97,22 @@
     "_nXE2ZWZV-I"
   ],
   "verified_api": {
-    "actual_end": "2026-09-22",
-    "captured_at": "2026-09-25T10:21:06.649870+09:00",
+    "actual_end": "2026-09-23",
+    "captured_at": "2026-09-26T10:20:12.087259+09:00",
     "discovered_count": 1,
-    "sha256": "4d16d7fb388bcef565eebd879d1c87b24461cf0667f290f1ab9e9549d6f97a90"
+    "sha256": "12b94be5aa89798c5685f2e1e863c16eb57f6e14b7cc8bf28ebdaadcea89c9a5"
   },
   "schedule_coverage": {
     "source_count": 59,
-    "matched_count": 40,
-    "extra_count": 19,
+    "matched_count": 41,
+    "extra_count": 18,
     "issue_count": 0,
     "published_unmatched_count": 0,
-    "published_count": 40,
+    "published_count": 41,
     "empty_slot_count": 1,
     "rendered_count": 59,
-    "captured_at": "2026-09-25T10:21:05+09:00",
-    "source_sha256": "812d94814513c18f18c4ba45e3d4aae0281765e08061172c82ec60a68f0077b9",
+    "captured_at": "2026-09-26T10:20:12+09:00",
+    "source_sha256": "2e0f09d4290f11605d5788c92f59133ef36aaf7731d08d6183695cb8dd9392e3",
     "source_keys": [
       "041df4186e57435d16a213e4",
       "046e9ae86978ec443a14a477",
@@ -174,25 +174,25 @@
       "fb8b94f9a4bc50f751a7dbde",
       "fd8e3865806f5fe77415a0d7"
     ],
-    "planned": 7,
+    "planned": 5,
     "unmatched": 1,
-    "community": 10,
+    "community": 11,
     "slot": 1,
     "other_period": 0
   },
   "main_surface": {
     "year": 2026,
     "month": 9,
-    "publish_count": 40,
+    "publish_count": 41,
     "lf_publish_count": 6,
-    "sf_publish_count": 33,
-    "latest_publish_date": "2026-09-24",
-    "snapshot_date": "2026-09-24",
+    "sf_publish_count": 34,
+    "latest_publish_date": "2026-09-25",
+    "snapshot_date": "2026-09-25",
     "elapsed_weeks": 4,
     "quality_basis": "analytics-d7",
-    "d7_completed": 32,
-    "average_views": 19478,
-    "lf_average_views": 71231,
+    "d7_completed": 33,
+    "average_views": 21188,
+    "lf_average_views": 72396,
     "sf_average_views": 13661,
     "subscriber_count": 803000,
     "previous_average_views": 54901
@@ -206,10 +206,10 @@
       "sf_average_views": 27058
     },
     "9": {
-      "publish_count": 40,
-      "d7_completed": 32,
-      "average_views": 19478,
-      "lf_average_views": 71231,
+      "publish_count": 41,
+      "d7_completed": 33,
+      "average_views": 21188,
+      "lf_average_views": 72396,
       "sf_average_views": 13661
     }
   }
