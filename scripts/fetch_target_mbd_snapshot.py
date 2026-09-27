@@ -28,6 +28,7 @@ REQUIRED_COLUMNS = {
     },
     ("ad_gen", "booking_pred"): {"date", "status", "ad_type", "party_type", "revenue"},
     ("ad_int", "contract"): {"계약 시작일", "매출 귀속월", "미셀 매출액"},
+    ("live", "booking_confirmed"): {"진행월", "패키지", "패키지 비용"},
     ("live", "raw_slots"): {
         "온에어 일자", "브랜드명", "1P/3P", "패키지", "PGM", "비고 (프로모션)",
         "PD", "라이브 시청자 (비로그인 포함)", "상품 클릭수", "라이브 구매자수",
@@ -77,6 +78,9 @@ try:
             + (" as select ym, team_code, forecast_revenue, source_table, source_column, rule_id from source."
                if table == "v_revenue_forecast_monthly" else " as select * from source.") + schema + "." + table
         )
+    # Match forecast drilldowns to the canonical source, without private booking fields.
+    con.execute('create table target.live.booking_confirmed as '
+                'select "진행월", "패키지", "패키지 비용" from source.live.booking_confirmed')
     captured = dt.datetime.now(dt.timezone.utc)
     source_mtime = dt.datetime.fromtimestamp(os.stat(source).st_mtime, dt.timezone.utc)
     con.execute(

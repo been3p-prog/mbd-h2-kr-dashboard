@@ -80,12 +80,11 @@ def fetch_forecast_breakdowns(con, as_of: dt.date) -> dict:
         select coalesce(nullif(trim("패키지"), ''), '미분류') as package,
                count(*) as item_count,
                coalesce(sum(try_cast(regexp_replace(coalesce("패키지 비용", '0'), '[^0-9.-]', '', 'g') as bigint)), 0) as amount
-        from live.raw_slots
-        where try_cast("온에어 일자" as date) >= ? and try_cast("온에어 일자" as date) < ?
-          and not regexp_matches(lower(concat_ws(' ', "패키지", "PGM", "비고 (프로모션)")), '취소|cancel')
+        from live.booking_confirmed
+        where lpad(regexp_extract("진행월", '([0-9]{1,2})월', 1), 2, '0') = ?
         group by 1
         order by amount desc, package
-    ''', [start, next_month])
+    ''', [as_of.strftime("%m")])
 
     def bucketed(rows: list[tuple]) -> dict:
         result = {bucket: [] for bucket in DETAIL_BUCKETS}

@@ -115,6 +115,12 @@ class ForecastStateTest(unittest.TestCase):
                 ('2026-09-02', '스마트', '일반', '', '700000'),
                 ('2026-09-03', '시그니처', '일반', '', '800000'),
                 ('2026-09-04', '에센셜', '취소', '취소', '9999999')])
+            con.execute('create table live.booking_confirmed("진행월" varchar, "패키지" varchar, "패키지 비용" varchar)')
+            con.executemany('insert into live.booking_confirmed values (?, ?, ?)', [
+                ('09월', '스마트', '700000'), ('9월', '시그니처', '800000'),
+                ('10월', '스마트', '9999999')])
+            # RAW may disagree with confirmed fees; it must not define forecast detail.
+            con.execute("update live.raw_slots set \"패키지 비용\"='400000' where \"패키지\"='스마트'")
             details = forecast.fetch_forecast_breakdowns(con, dt.date(2026, 9, 9))
             con.close()
         self.assertEqual(forecast.forecast_detail_total('ad_gen', details), 1_500_000)

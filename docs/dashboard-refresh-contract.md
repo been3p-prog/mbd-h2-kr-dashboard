@@ -120,3 +120,13 @@ optional-source policy instead of assuming the checked-in YouTube feed is curren
 Negative controls cover missing/duplicate disclosures, unavailable feeds, mandatory
 source staleness and a stale clock incorrectly labeled current. No D7 freeze,
 channel validation, metric parity, payload hash or source timestamp is bypassed.
+
+
+## Live forecast package detail (2026-09-27)
+
+The Live forecast popup reads `live.booking_confirmed` by `진행월`, using the
+same package fees and month filter as the canonical forecast. RAW schedule fees
+can differ and are not the forecast drilldown source. The disposable transport
+copies only `진행월`, `패키지`, and `패키지 비용` from confirmed bookings; staff,
+links and other booking fields stay outside this new transport. RAW recognized
+revenue, schedule coverage and performance populations retain their existing basis.

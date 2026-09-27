@@ -1204,6 +1204,9 @@ class TargetMbdSnapshotTest(unittest.TestCase):
             "방송별 데이터 GMV" varchar, "AF수취액" varchar, "비용" varchar, "마진액" varchar
         )''')
         con.execute("insert into live.raw_slots values ('2026-09-01','A','3P','스마트','일반','','Minnie','1','1','1','1','1','1','1','1','1')")
+        con.execute('create table live.booking_confirmed("진행월" varchar, "패키지" varchar, "패키지 비용" varchar, "PD" varchar)')
+        con.execute("insert into live.booking_confirmed values ('09월','스마트','7000000','private fixture')")
+
         con.execute('''create table meta.targets(
             team varchar, metric varchar, ym varchar, kind varchar, value_num double
         )''')
@@ -1272,6 +1275,16 @@ class TargetMbdSnapshotTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "missing columns in revenue.v_revenue_forecast_monthly"):
                 self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 1))
 
+    def test_target_mbd_snapshot_requires_confirmed_booking_details(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'target.duckdb'
+            self._fixture(path, source_time='2026-09-01 00:01:00')
+            con = duckdb.connect(str(path))
+            con.execute('drop table live.booking_confirmed')
+            con.close()
+            with self.assertRaisesRegex(RuntimeError, 'live.booking_confirmed'):
+                self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+
     def test_target_mbd_copy_preserves_canonical_forecast(self):
         with tempfile.TemporaryDirectory() as tmp:
             source, target = Path(tmp) / "source.duckdb", Path(tmp) / "target.duckdb"
@@ -1283,6 +1296,10 @@ class TargetMbdSnapshotTest(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
             con = duckdb.connect(str(target), read_only=True)
             try:
+                self.assertEqual([r[0] for r in con.execute('describe live.booking_confirmed').fetchall()],
+                                 ['진행월', '패키지', '패키지 비용'])
+                self.assertEqual(con.execute('select * from live.booking_confirmed').fetchall(),
+                                 [('09월', '스마트', '7000000')])
                 rows = con.execute(
                     "select team_code, forecast_revenue, source_table, source_column, rule_id "
                     "from revenue.v_revenue_forecast_monthly where ym = '2026-09' order by team_code"
