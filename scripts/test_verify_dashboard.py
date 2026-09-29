@@ -178,7 +178,10 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('data-current-forecast-status="canonical"', self.html)
         current = vd._month_surface(self.html, "mvr", 9)
         self.assertIn("확정 편성 · 패키지 비용", html_mod.unescape(current))
-        self.assertNotIn("1.74억", current)
+        # [2026-09-29] 값 대신 옛 부킹시트 표식으로 차단 — 9/29 라이브 RAW 누적이 우연히 정확히 1.74억(174,200,000원)이 되어
+        #   assertNotIn("1.74억") 이 실데이터에 오탐, 일일 갱신 Actions 가 실패하고 봇 지표 게시가 멈췄다(9/18 과 같은 유형).
+        #   막으려던 것은 9월 신청 시트 패키지비(1.74억)를 라이브 마감예상으로 쓰던 옛 렌더링이며, 그 렌더링의 라벨로 검사한다.
+        self.assertNotIn("패키지별 부킹", html_mod.unescape(current))
         self.assertIn("data-week-toggle=", self.html)
         self.assertIn('data-content-link="live"', self.html)
         self.assertIn('data-content-link="youtube"', self.html)
