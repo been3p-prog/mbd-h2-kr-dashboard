@@ -157,10 +157,13 @@ def fetch_weeks(con: duckdb.DuckDBPyConnection, month_start: dt.date, month_end:
                unknown_publish_view_count, raw_status
         from v_youtube_weekly_analytics
         where period_start <= ? and period_end >= ?
+          and coalesce(raw_status, '') <> 'not_due'
         order by period_start
         """,
         [month_end, month_start],
     ).fetchall()
+    # [2026-09-29] not_due 주 행 제외 — 새 주가 시작된 날 오후 export 가 metric_end_date=NULL 인 not_due 행을 먼저 적재해
+    #   ensure_date(None) 이 ValueError 로 일일 갱신을 중단시켰다. 아직 집계 전인 주는 적재 전과 똑같이 창에서 빠진다.
     keys = [
         "period_start", "period_end", "metric_start_date", "metric_end_date",
         "period_complete", "views", "likes", "comments", "shares", "engagement",

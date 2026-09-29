@@ -38,6 +38,22 @@ class YoutubeFullMonthLedgerTest(unittest.TestCase):
             with self.subTest(quality=bad), self.assertRaises(RuntimeError):
                 youtube.assert_publish_cohorts(counts, rows, bad)
 
+    def test_weekly_window_skips_not_due_week_without_metric_end(self):
+        # [2026-09-29] 새 주의 not_due 행(metric_end_date NULL)이 일일 갱신을 ValueError 로 멈추게 한 회귀.
+        import duckdb
+        con = duckdb.connect()
+        con.execute("""create table v_youtube_weekly_analytics(period_start date, period_end date,
+            metric_start_date date, metric_end_date date, period_complete boolean,
+            channel_view_count bigint, channel_like_count bigint, channel_comment_count bigint,
+            channel_share_count bigint, channel_engagement_count bigint, new_published_view_count bigint,
+            prior_published_view_count bigint, unknown_publish_view_count bigint, raw_status varchar)""")
+        con.execute("""insert into v_youtube_weekly_analytics values
+            ('2026-09-21','2026-09-27','2026-09-21','2026-09-26',false,1203365,0,0,0,0,0,0,0,'ok'),
+            ('2026-09-28','2026-10-04','2026-09-28',null,false,null,null,null,null,null,null,null,null,'not_due')""")
+        weeks = youtube.fetch_weeks(con, dt.date(2026, 9, 1), dt.date(2026, 9, 30))
+        self.assertEqual([w["period_start"] for w in weeks], [dt.date(2026, 9, 21)])
+        self.assertEqual(weeks[0]["metric_end_date"], dt.date(2026, 9, 26))
+
     def render(self, year=2026, month=9, day=10, rows=None):
         return youtube.render_main_ledger(
             year=year, month=month, as_of=dt.date(year, month, day),
