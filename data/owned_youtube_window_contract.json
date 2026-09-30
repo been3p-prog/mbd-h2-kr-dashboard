@@ -2,7 +2,7 @@
   "contract_id": "owned-youtube-window-2026-09-mtd-v1",
   "source": {
     "duckdb": "read-only YouTube snapshot",
-    "monthly_period": "2026-09-01~2026-09-26",
+    "monthly_period": "2026-09-01~2026-09-27",
     "period_complete": false,
     "raw_status": "ok",
     "source_as_of": {
@@ -32,8 +32,8 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "425만",
-      "em": "9/1–9/26"
+      "value": "496만",
+      "em": "9/1–9/27"
     },
     {
       "label": "발행",
@@ -42,28 +42,28 @@
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "114만",
+      "value": "182만",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "280만",
+      "value": "297만",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "24,471",
+      "value": "30,210",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "19,329",
-      "em": "댓글 704"
+      "value": "24,320",
+      "em": "댓글 759"
     },
     {
       "label": "공유",
-      "value": "4,438",
-      "em": "미매칭 31만"
+      "value": "5,131",
+      "em": "미매칭 17만"
     }
   ],
   "weekly_rows": [
@@ -84,23 +84,23 @@
     },
     {
       "period": "9/21–9/27",
-      "views": 1203365,
-      "complete": false
+      "views": 1909747,
+      "complete": true
     }
   ],
   "content_cards": [
+    "v3GhhMIo_rk",
     "3PXSIXGzkQE",
     "ByRQnxmxja0",
     "XvBX_UxVLlo",
     "sjbo43JFgUk",
-    "qaflACNo3G4",
-    "e1Azv66OE3A"
+    "qaflACNo3G4"
   ],
   "verified_api": {
-    "actual_end": "2026-09-26",
-    "captured_at": "2026-09-29T22:25:32.928981+09:00",
+    "actual_end": "2026-09-27",
+    "captured_at": "2026-09-30T10:20:51.044387+09:00",
     "discovered_count": 0,
-    "sha256": "3203ba286175dd0223daba36e0f67f11e2a8995c2fe239f7ef2b9cb8e6246c6b"
+    "sha256": "4e2d5d6f20845f507f1300cbd319133ea006a9c6d9cdc6fe8993d3c1834e9b19"
   },
   "schedule_coverage": {
     "source_count": 57,
@@ -111,8 +111,8 @@
     "published_count": 43,
     "empty_slot_count": 1,
     "rendered_count": 57,
-    "captured_at": "2026-09-29T22:25:30+09:00",
-    "source_sha256": "3f0c7acb10957fc0513bfc2195e2a36bae0b3109a62b92879c14a64a5a0e0970",
+    "captured_at": "2026-09-30T10:20:45+09:00",
+    "source_sha256": "437e84b9337aac4f3b36aaec0f8ac05711d4c199d371ce28634897c6e253ba6f",
     "source_keys": [
       "041df4186e57435d16a213e4",
       "046e9ae86978ec443a14a477",
@@ -172,9 +172,9 @@
       "fb8b94f9a4bc50f751a7dbde",
       "fd8e3865806f5fe77415a0d7"
     ],
-    "planned": 1,
+    "planned": 0,
     "unmatched": 0,
-    "community": 13,
+    "community": 14,
     "slot": 0,
     "other_period": 0
   },
@@ -188,9 +188,9 @@
     "snapshot_date": "2026-09-29",
     "elapsed_weeks": 5,
     "quality_basis": "analytics-d7",
-    "d7_completed": 36,
-    "average_views": 20287,
-    "lf_average_views": 72396,
+    "d7_completed": 37,
+    "average_views": 20768,
+    "lf_average_views": 65529,
     "sf_average_views": 13344,
     "subscriber_count": 804000,
     "previous_average_views": 54901
@@ -205,9 +205,9 @@
     },
     "9": {
       "publish_count": 43,
-      "d7_completed": 36,
-      "average_views": 20287,
-      "lf_average_views": 72396,
+      "d7_completed": 37,
+      "average_views": 20768,
+      "lf_average_views": 65529,
       "sf_average_views": 13344
     }
   }
