@@ -8,13 +8,18 @@ import json
 import os
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+
+import duckdb
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_dashboard as vd  # noqa: E402
 import smoke_dashboard as sd  # noqa: E402
 import refresh_live_window_from_duckdb as live_window_refresh  # noqa: E402
+import refresh_live_daily_from_duckdb as daily_refresh  # noqa: E402
+import dashboard_forecast_state as forecast_state  # noqa: E402
 
 
 def _load_dashboard_html():
@@ -131,8 +136,11 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('data-live-quality-mom="8-smart"', self.html)
         self.assertIn('data-live-quality-mom="8-essential"', self.html)
         self.assertIn('8월 목표 1.00억 대비', self.html)
-        self.assertNotIn('6,246만', self.html)
-        self.assertNotIn('8월 목표 1.00억 대비 62.5%', self.html)
+        # [2026-09-30] 8월 1D 평균거래액은 지연 품질 갱신으로 계속 재계산되는 값이다(마감된 매출과
+        #   무관). 특정 금액/퍼센트를 박아두면 정상 재계산이 우연히 옛 "방송 평균 거래액" 공식의
+        #   결과값(6,246만 · 62.5%)과 일치할 때 오탐한다. 옛 공식의 라벨 자체로 차단한다
+        #   (line 617 test_live_average_uses_1d_brand_daily_gmv 와 동일 가드).
+        self.assertNotIn('방송 평균 거래액', self.html)
         self.assertIn(f'data-yt-quality-mom-main="{month}"', self.html)
         self.assertRegex(self.html, rf'data-yt-quality-mom-main="{month}">MoM (?:▲|▼|—|0\.0%)')
         self.assertIn('data-quality-trend="live-8"', self.html)
@@ -390,7 +398,93 @@ class DashboardGuardTest(unittest.TestCase):
         for amount in amounts:
             self.assertIn(amount, september)
         self.assertNotIn('MoM', september)
-        self.assertNotIn('8.03억', september)
+        # [2026-09-30] 값이 아니라 렌더러 식별 표식으로 차단 — 9월 일반광고 예측치가 우연히
+        #   정확히 8.03억이 되면 assertNotIn("8.03억") 이 정상 canonical 출력에 오탐한다
+        #   (9/18, 9/29 와 같은 유형). 실제 사고(e30a526^)의 옛 게이지 툴팁은
+        #   `<div class="th">9월 · 부킹 진행</div>...<span>부킹 합계</span><b>8.03억</b>...
+        #   <span>목표 채움</span>` 형태였다 — "패키지별 부킹"은 이 게이지 툴팁이 아니라
+        #   mvr 라이브 팀카드 툴팁(line 192 에서 별도 검증)에서만 쓰이는 라벨이라 여기서는
+        #   무의미했다. 게이지 툴팁 자체의 옛 pre-canonical 렌더링(부킹 진행/부킹 합계/목표
+        #   채움)이 당월(9월)에 재등장하지 않는지로 검사한다 — 10~12월은 아직 이 라벨을 정상
+        #   적으로 쓰므로 september 변수로만 범위를 한정한다.
+        self.assertIn('<div class="th">9월 마감예상</div>', september)
+        self.assertNotIn('부킹 합계', september)
+        self.assertNotIn('목표 채움', september)
+
+    # [2026-09-30] Prevention regression for the recurring bug class fixed in
+    #   8574d51 (2026-09-18), 017fa36 (2026-09-29) and the two guards above: a test
+    #   pins an exact live/current-month amount, and the daily refresh eventually
+    #   produces real data that coincidentally matches it, breaking CI and stalling
+    #   bot metric publication. Exercise the real production update functions with
+    #   inputs engineered to reproduce those exact coincidences and prove the
+    #   label-based guards that replaced the literal checks stay green regardless.
+    def test_label_based_guards_survive_coincidental_current_month_amounts(self):
+        # [2026-09-30] Do not pin the active forecast month to September: derive it
+        #   from the loaded artifact's own manifest so this test stays correct
+        #   whether the checked-in index.html's default_month is 9, 10, or later.
+        _, manifest = vd.extract_manifest(self.html)
+        month = int(manifest["default_month"])
+        year = dt.datetime.fromisoformat(manifest["built_at_kst"]).year
+        as_of = dt.date(year, month, 9)
+        ym = f"{year}-{month:02d}"
+        prev_ym = (as_of.replace(day=1) - dt.timedelta(days=1)).strftime("%Y-%m")
+        raw = dict(as_of=as_of.isoformat(), range_label=f"{month}/1~{month}/9", ad_gen_won=1, ad_int_won=1,
+                   live_won=0, total_won=2, target_won=1_277_682_548,
+                   team_targets_won=dict(ad_gen=865_682_548, ad_int=200_000_000, live=212_000_000),
+                   progress_pct=0.1)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "coincidence.duckdb"
+            con = duckdb.connect(str(path))
+            con.execute("create schema revenue")
+            con.execute(
+                "create table revenue.v_revenue_forecast_monthly("
+                "ym varchar, team_code varchar, forecast_revenue double,"
+                "source_table varchar, source_column varchar, rule_id varchar)"
+            )
+            # 일반광고 단독 803,000,000원 -> the exact "8.03억" amount that would
+            # trip a literal assertNotIn('8.03억', ...) on fully correct output.
+            con.executemany(
+                "insert into revenue.v_revenue_forecast_monthly values (?, ?, ?, ?, ?, ?)",
+                [
+                    (ym, "ad_gen", 803_000_000, "ad_gen.booking_pred", "revenue", "forecast_ad_gen_booking_v1"),
+                    (ym, "ad_int", 10_000_000, "ad_int.contract", "계약 금액", "forecast_ad_int_contract_v1"),
+                    (ym, "live", 5_000_000, "live.booking_confirmed", "패키지 비용", "forecast_live_booking_confirmed_v1"),
+                    (ym, "MBD_TOTAL", 818_000_000, "team_forecast_sources", "forecast_revenue", "forecast_mbd_total_v1"),
+                ],
+            )
+            con.execute(
+                "create table revenue.integrated_ssot(revenue_month varchar, revenue_team varchar,"
+                "team_attributed_revenue double, include_in_mbd_revenue boolean)"
+            )
+            con.executemany(
+                "insert into revenue.integrated_ssot values (?, ?, ?, true)",
+                [(prev_ym, "일반광고", 868200000), (prev_ym, "통합광고", 29090909), (prev_ym, "라이브커머스", 215000000)],
+            )
+            con.close()
+            pred = forecast_state.fetch_forecast(path, as_of)
+        self.assertEqual(pred["ad_gen"], 803_000_000)
+        updated = forecast_state.update_forecast_surfaces(self.html, raw, pred)
+        gauge_tips = {
+            int(m): html_mod.unescape(tip)
+            for m, tip in re.findall(r'<div class="g [^"]*" data-m="(\d+)"[^>]*? data-tip="([^"]+)"', updated)
+        }
+        active = gauge_tips[month]
+        self.assertIn("8.03억", active)  # sanity: the coincidence really landed
+        self.assertIn(f'<div class="th">{month}월 마감예상</div>', active)
+        self.assertNotIn('부킹 합계', active)
+        self.assertNotIn('목표 채움', active)
+        current = html_mod.unescape(vd._month_surface(updated, "mvr", month))
+        self.assertIn("8.03억", current)
+        self.assertNotIn("패키지별 부킹", current)
+
+        # 8월 1D 평균거래액 재계산이 우연히 옛 "방송 평균 거래액" 공식의 결과(6,246만 · 62.5%)와
+        # 같아져도, 라벨 기반 가드는 옛 공식이 실제로 재도입된 게 아니므로 계속 통과해야 한다.
+        stats = {"avg": 62_460_000, "sum": 62_460_000, "n": 1, "mom": 0.05}
+        summary = {key: dict(stats) for key in daily_refresh.TEAM_ORDER}
+        quality_updated = daily_refresh.update_live_quality(self.html, summary, month=8)
+        self.assertIn("6,246만", quality_updated)  # sanity: the coincidence really landed
+        self.assertIn("8월 목표 1.00억 대비 62.5%", quality_updated)
+        self.assertNotIn("방송 평균 거래액", quality_updated)
 
     def test_public_guard_rejects_non_allowlisted_content_link(self):
         bad = self.html.replace("https://www.youtube.com/watch?v=", "https://evil.example/watch?v=", 1)

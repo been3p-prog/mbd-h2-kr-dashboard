@@ -13,11 +13,36 @@ import refresh_owned_youtube_window_from_duckdb as youtube
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _force_month_state(html: str, month: int, phase_label: str, phase: str) -> str:
+    """Force one month's selector option + mvk/mvs/mvr phase to an explicit,
+    self-contained state, independent of whatever that month's phase happens
+    to be in the checked-in artifact at the moment this runs."""
+    html, option_count = re.subn(
+        rf'<option value="{month}"(?: selected)?>([^<]+) · [^<]+</option>',
+        lambda m: f'<option value="{month}">{m.group(1)} · {phase_label}</option>',
+        html, count=1,
+    )
+    if option_count != 1:
+        raise RuntimeError(f'month {month} option not found to force')
+    html, phase_count = re.subn(
+        rf'(class="(?:mvk|mvs|mvr) mv" data-m="{month}" data-phase=")[^"]+(")',
+        rf'\g<1>{phase}\g<2>', html,
+    )
+    if phase_count != 3:
+        raise RuntimeError(f'month {month} phase surfaces mismatch: {phase_count}')
+    return html
+
+
 class PeriodStateTest(unittest.TestCase):
     def test_rollover_does_not_finalize_unclosed_month(self):
         source = (ROOT / 'index.html').read_text()
         for renderer in (live, youtube):
-            updated = renderer.update_default_month_state(source, 10)
+            # [2026-09-30] Force September to an explicit unclosed ('current')
+            #   baseline before rolling to October — independent of whatever
+            #   September's momentary phase is in the checked-in artifact
+            #   (current, pending_close, or already sealed) at test-run time.
+            unclosed = _force_month_state(source, 9, '진행 중', 'current')
+            updated = renderer.update_default_month_state(unclosed, 10)
             self.assertIn('2026년 9월 · 마감 확인 필요', updated)
             self.assertIn('data-m="9" data-phase="pending_close"', updated)
             self.assertIn('data-m="8" data-phase="closed"', updated)

@@ -21,9 +21,14 @@ from finalize_month_review_from_duckdb import finalize_month_review
 
 class TwoCardContractTest(unittest.TestCase):
     def setUp(self):
-        self.html = (Path(__file__).resolve().parents[1] / 'index.html').read_text()
+        # [2026-09-30] Reuse ForecastStateTest's September-forced html (see
+        #   dashboard_calendar_fixture.synthetic_month_state) instead of
+        #   re-reading the checked-in index.html directly, so this class's
+        #   September-dated arithmetic stays valid once the real artifact
+        #   rolls past September.
         fixture = forecast_fixture.ForecastStateTest()
         fixture.setUp()
+        self.html = fixture.html
         self.raw = dict(fixture.raw, previous_same_period={'as_of': '2026-08-09', 'total_won': 200000000})
 
     def test_cutoffs_handle_short_months_leap_year_and_year_boundary(self):

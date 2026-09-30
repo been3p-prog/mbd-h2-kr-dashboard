@@ -10,6 +10,7 @@ from unittest import mock
 import duckdb
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import dashboard_calendar_fixture as calendar_fixture
 import dashboard_forecast_state as forecast
 import refresh_live_daily_from_duckdb as daily
 import verify_dashboard as guard
@@ -17,7 +18,14 @@ import verify_dashboard as guard
 
 class ForecastStateTest(unittest.TestCase):
     def setUp(self):
-        self.html = (Path(__file__).resolve().parents[1] / "index.html").read_text()
+        # [2026-09-30] Force September to current/진행 중 (independent of the
+        #   checked-in artifact's real momentary month) so this fixture's
+        #   September-dated `raw`/`pred` arithmetic stays valid once the real
+        #   index.html rolls past September.
+        self.html = calendar_fixture.synthetic_month_state(
+            (Path(__file__).resolve().parents[1] / "index.html").read_text(), 9,
+            set_default_month=True,
+        )
         self.raw = dict(as_of="2026-09-09", range_label="9/1~9/9", ad_gen_won=222800000,
                         ad_int_won=20000000, live_won=0, total_won=242800000,
                         target_won=1277682548, team_targets_won=dict(ad_gen=865682548, ad_int=200000000, live=212000000),
@@ -36,7 +44,17 @@ class ForecastStateTest(unittest.TestCase):
         self.assertEqual(teams.count("RAW 누적 · 9/1~9/9"), 3)
         self.assertIn("7.27억", teams)
         self.assertIn("7,333만", teams)
-        self.assertNotIn("1.74억", teams)
+        # [2026-09-30] Not a pinned amount (that pattern broke CI when live RAW
+        #   coincidentally landed on the literal 1.74억, see 017fa36) — assert the
+        #   actual contract: an unapproved/pending Live forecast (self.pred["live"]
+        #   is None) must render as the "확인 필요" placeholder, never any numeric
+        #   amount, regardless of what number that would coincidentally be.
+        live_amount = re.search(
+            r'data-current-forecast-team="live"[^>]*>.*?<div class="bigv num">([^<]+)</div>',
+            teams, re.S,
+        )
+        self.assertIsNotNone(live_amount)
+        self.assertEqual(live_amount.group(1), "확인 필요")
         self.assertNotIn('class="seg"', guard._gauge_surface(updated, 9))
         self.assertEqual(before, guard._month_surface(updated, "mvk", 8))
         self.assertEqual(updated, forecast.update_forecast_surfaces(updated, self.raw, self.pred))
@@ -164,9 +182,31 @@ class ForecastStateTest(unittest.TestCase):
         self.assertIn("10월 마감예측치", top)
         self.assertNotIn("목표 채움 · 부킹 진행", top)
         self.assertIn('data-phase="pending_close"', guard._month_surface(text, "mvk", 9))
+        # [2026-09-30] Production always bumps the manifest's default_month in
+        #   the same refresh() call that rolls the selector/phase (see
+        #   refresh_live_daily_from_duckdb.refresh calling
+        #   update_default_month_state then update_manifest(default_month=
+        #   month)). Mirror that here so guard.verify actually evaluates
+        #   October's "current month" contract instead of silently
+        #   re-checking September's already-valid state via a stale manifest.
+        text = daily.update_manifest(text, "2026-10-01T09:00:00+09:00", {"month": "2026-10"}, default_month=10)
         _, manifest = guard.extract_manifest(text)
         now = dt.datetime.fromisoformat(manifest["built_at_kst"])
-        self.assertEqual(guard.verify(text, now, allow_stale_sources=guard.OPTIONAL_STALE_SOURCES), [])
+        # [2026-09-30] This fixture only rolls the calendar and hydrates
+        #   October's current RAW + forecast surfaces; it deliberately never
+        #   hydrates October's owned YouTube ledger (that partial-artifact
+        #   scenario is exercised end-to-end by
+        #   test_dashboard_month_rollover_acceptance.py). Requiring the whole
+        #   guard to be green here would fail on the un-hydrated "youtube
+        #   main" surfaces regardless of whether the rollover/forecast
+        #   invariants under test actually hold. Scope the assertion to what
+        #   this test builds: no violation outside the youtube-main category.
+        #   If the real index later carries a validly hydrated October
+        #   YouTube section, guard.verify can legitimately return [] here —
+        #   only non-youtube-main errors are a real regression.
+        errors = guard.verify(text, now, allow_stale_sources=guard.OPTIONAL_STALE_SOURCES)
+        non_forecast_errors = [e for e in errors if not e.startswith('youtube main')]
+        self.assertEqual(non_forecast_errors, [])
         for marker in ('data-live-progress-count=', 'data-live-package-count=', '시그니처 하위'):
             with self.subTest(missing=marker):
                 bad = text.replace(marker, 'removed-marker=', 1)

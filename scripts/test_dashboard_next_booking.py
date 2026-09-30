@@ -15,7 +15,15 @@ import test_dashboard_forecast_state as fixture
 
 class NextBookingTest(unittest.TestCase):
     def setUp(self):
-        self.html = (Path(__file__).resolve().parents[1] / 'index.html').read_text()
+        # [2026-09-30] Reuse ForecastStateTest's September-forced html (see
+        #   dashboard_calendar_fixture.synthetic_month_state) instead of
+        #   re-reading the checked-in index.html directly: October must stay
+        #   data-phase="future" for update_next_booking to accept it as the
+        #   next-booking target, independent of the real artifact's momentary
+        #   current month.
+        forecast_fixture = fixture.ForecastStateTest()
+        forecast_fixture.setUp()
+        self.html = forecast_fixture.html
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.path = Path(self.tmp.name) / 'test.duckdb'
