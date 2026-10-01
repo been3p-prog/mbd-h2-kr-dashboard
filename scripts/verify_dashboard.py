@@ -1085,6 +1085,8 @@ def verify(
                 if 'data-forecast-detail-team=' in rest:
                     team = re.search(rf'<div class="team"[^>]*data-forecast-detail-team="{key.replace("-", "_")}"[^>]*>', rest)
                     if not team:
+                        if values[key] == 0:
+                            continue  # [2026-10-01] 예약 0건 팀은 상세 원천 행이 없다(검증된 0) — 상세 블록 생략 허용
                         raise ValueError('next booking detail team missing')
                     team_attrs = dict(re.findall(r'(data-[\w-]+)="([^"]*)"', team[0]))
                     detail_total = int(team_attrs['data-forecast-detail-source-total'])

@@ -62,6 +62,17 @@ class NextBookingTest(unittest.TestCase):
             self.assertNotEqual(bad,text)
             self.assertIn('next booking surfaces invalid: month 9',guard.verify(bad,dt.datetime.now().astimezone()))
 
+    # [2026-10-01] 차월 라이브 예약 0건: 행은 없지만 canonical TOTAL이 나머지 합과 같으면 검증된 0으로 렌더
+    def test_next_live_absent_with_confirming_total_renders_zero(self):
+        con = duckdb.connect(str(self.path))
+        con.execute("delete from revenue.v_revenue_forecast_monthly where ym='2026-10' and team_code='live'")
+        con.execute("update revenue.v_revenue_forecast_monthly set forecast_revenue=566500000 where ym='2026-10' and team_code='MBD_TOTAL'")
+        con.close()
+        booked = forecast.fetch_forecast(self.path, dt.date(2026,9,10), include_next=True)['next_booking']
+        self.assertEqual((booked['live'], booked['total_won']), (0, 566500000))
+        text = booking.update_next_booking(self.html, dt.date(2026,9,10), booked)
+        self.assertEqual(guard.verify(text,dt.datetime.now().astimezone(), allow_stale_sources=guard.OPTIONAL_STALE_SOURCES),[])
+
     def test_missing_next_live_is_not_zero_and_missing_target_fails(self):
         con = duckdb.connect(str(self.path))
         con.execute("delete from revenue.v_revenue_forecast_monthly where ym='2026-10' and team_code='live'")
