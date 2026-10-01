@@ -179,7 +179,8 @@ def forecast_team_tip(label: str, key: str, month: int, value: int | None, *, ca
     return "".join(rows)
 
 
-def fetch_forecast(db_path, as_of: dt.date, *, include_next: bool = False) -> dict:
+def fetch_forecast(db_path, as_of: dt.date, *, include_next: bool = False,
+                   absent_team_is_zero: bool = False) -> dict:
     """Consume the existing canonical forecast; never substitute RAW or costs."""
     import duckdb
     expected = {
@@ -208,6 +209,12 @@ def fetch_forecast(db_path, as_of: dt.date, *, include_next: bool = False) -> di
         if value is None or not math.isfinite(value) or value < 0 or value != int(value):
             raise ValueError('canonical forecast amount invalid')
         values[team] = int(value)
+    # [2026-10-01] 다음달 예약 미리보기 전용: 11월 라이브 예약이 아직 0건이면 뷰에 행이 없다 — canonical
+    # MBD_TOTAL이 나머지 팀 합과 정확히 같을 때만 '검증된 0'으로 채운다. 당월은 기존처럼 실패.
+    if (absent_team_is_zero and 'MBD_TOTAL' in values
+            and sum(values.get(k, 0) for _, k in TEAMS) == values['MBD_TOTAL']):
+        for _, k in TEAMS:
+            values.setdefault(k, 0)
     if set(values) != set(expected) or sum(values.get(k, 0) for _, k in TEAMS) != values.get('MBD_TOTAL'):
         raise ValueError('canonical forecast missing teams or total mismatch')
     mapping = {'일반광고': 'ad_gen', '통합광고': 'ad_int', '라이브커머스': 'live'}

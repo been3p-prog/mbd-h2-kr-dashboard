@@ -83,6 +83,25 @@ class ForecastStateTest(unittest.TestCase):
                         [('일반광고',868200000),('통합광고',29090909),('라이브커머스',215000000)])
         con.close()
 
+    # [2026-10-01] 다음달 미리보기: 행 없는 팀은 TOTAL이 합과 맞을 때만 0, 당월은 계속 실패
+    def test_next_month_absent_team_is_zero_only_when_total_confirms(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'canonical.duckdb'
+            self._canonical_fixture(path)
+            con = duckdb.connect(str(path))
+            con.execute("delete from revenue.v_revenue_forecast_monthly where team_code = 'live'")
+            con.execute("update revenue.v_revenue_forecast_monthly set forecast_revenue = 1021233333 where team_code = 'MBD_TOTAL'")
+            con.close()
+            booked = forecast.fetch_forecast(path, dt.date(2026, 9, 9), absent_team_is_zero=True)
+            self.assertEqual(booked['live'], 0)
+            with self.assertRaisesRegex(ValueError, 'missing teams'):
+                forecast.fetch_forecast(path, dt.date(2026, 9, 9))
+            con = duckdb.connect(str(path))
+            con.execute("update revenue.v_revenue_forecast_monthly set forecast_revenue = 1 where team_code = 'MBD_TOTAL'")
+            con.close()
+            with self.assertRaisesRegex(ValueError, 'missing teams'):
+                forecast.fetch_forecast(path, dt.date(2026, 9, 9), absent_team_is_zero=True)
+
     def test_canonical_forecast_connects_total_mom_achievement_and_chart(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / 'canonical.duckdb'

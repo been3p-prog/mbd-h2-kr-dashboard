@@ -15,7 +15,7 @@ def attach_next_booking(db_path, as_of, forecast):
     import duckdb
     from dashboard_forecast_state import fetch_forecast
     next_date = (as_of.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
-    booked = fetch_forecast(db_path, next_date)
+    booked = fetch_forecast(db_path, next_date, absent_team_is_zero=True)  # [2026-10-01] 예약 0건 팀 = 검증된 0
     con = duckdb.connect(str(db_path), read_only=True)
     try:
         rows = con.execute("select team, value_num from meta.targets where ym=? and metric='매출' "
