@@ -1373,7 +1373,14 @@ class TargetMbdSnapshotTest(unittest.TestCase):
                     shutil.copy2(stale, args[-1])
                 return SimpleNamespace(returncode=0)
 
-            with mock.patch.object(target_mbd.subprocess, "run", side_effect=fake_run):
+            pinned_validate = target_mbd.validate_snapshot
+
+            def validate_as_of_fixture_month(path):
+                return pinned_validate(path, as_of=dt.date(2026, 9, 1))
+
+            with mock.patch.object(target_mbd.subprocess, "run", side_effect=fake_run), mock.patch.object(
+                target_mbd, "validate_snapshot", side_effect=validate_as_of_fixture_month
+            ):
                 with self.assertRaisesRegex(RuntimeError, "stale target MBD source"):
                     target_mbd.sync_snapshot(output, key=key)
             self.assertEqual(output.read_bytes(), b"last-good")
