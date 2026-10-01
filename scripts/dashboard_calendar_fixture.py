@@ -61,6 +61,74 @@ def _force_manifest_default_month(html: str, month: int) -> str:
     return manifest_re.sub(lambda m: m.group(1) + new_raw + m.group(3), html, count=1)
 
 
+def _month_surface(html: str, group: str, month: int) -> str | None:
+    marker = re.compile(rf'class="{re.escape(group)} mv" data-m="(\d+)"')
+    matches = list(marker.finditer(html))
+    for index, match in enumerate(matches):
+        if int(match.group(1)) == month:
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(html)
+            return html[match.start():end]
+    return None
+
+
+def _gauge_surface(html: str, month: int) -> str | None:
+    marker = re.compile(r'class="g [^"]*" data-m="(\d+)"')
+    matches = list(marker.finditer(html))
+    for index, match in enumerate(matches):
+        if int(match.group(1)) == month:
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(html)
+            return html[match.start():end]
+    return None
+
+
+def _has_future_layout(html: str, month: int) -> bool:
+    top = _month_surface(html, "mvk", month) or ""
+    gauge = _gauge_surface(html, month) or ""
+    return (
+        'data-kpi-role="booking"' in top
+        and 'data-kpi-role="target"' in top
+        and 'data-booking-scale=' in gauge
+    )
+
+
+def _copy_future_layout(html: str, target: int, template: int) -> str:
+    # [2026-10-01] Copy a valid later future layout when the live artifact's next month is current.
+    for group in ("mvk", "mvr"):
+        current_surface = _month_surface(html, group, target)
+        future_template = _month_surface(html, group, template)
+        if current_surface is None or future_template is None:
+            raise RuntimeError(f"month {target} future {group} layout missing")
+        replacement = future_template.replace(f'data-m="{template}"', f'data-m="{target}"').replace(
+            f"{template}월", f"{target}월"
+        )
+        html = html.replace(current_surface, replacement, 1)
+    current_gauge = _gauge_surface(html, target)
+    future_gauge = _gauge_surface(html, template)
+    if current_gauge is None or future_gauge is None:
+        raise RuntimeError(f"month {target} future gauge layout missing")
+    replacement = future_gauge.replace(f'data-m="{template}"', f'data-m="{target}"').replace(
+        f"{template}월", f"{target}월"
+    )
+    html = html.replace(current_gauge, replacement, 1)
+    current_preview = _month_surface(html, "mvs", target - 1)
+    template_preview = _month_surface(html, "mvs", template - 1)
+    current_start = (current_preview or "").find('<div class="feature"')
+    current_end = (current_preview or "").find('<div class="mini"', current_start)
+    template_start = (template_preview or "").find('<div class="feature"')
+    template_end = (template_preview or "").find('<div class="mini"', template_start)
+    if min(current_start, current_end, template_start, template_end) < 0:
+        raise RuntimeError(f"month {target - 1} next-booking feature missing")
+    feature = template_preview[template_start:template_end].replace(
+        f'data-next-booking-month="{template}"', f'data-next-booking-month="{target}"'
+    ).replace(f"{template}월", f"{target}월")
+    updated_preview = (
+        current_preview[:current_start]
+        + feature
+        + current_preview[current_end:]
+    )
+    return html.replace(current_preview, updated_preview, 1)
+
+
 def synthetic_month_state(html: str, month: int, *, set_default_month: bool = False) -> str:
     """Force the selector, `var CUR`, every mvk/mvs/mvr phase, and every
     annual-gauge bar class into a deterministic calendar centered on `month`:
@@ -85,6 +153,14 @@ def synthetic_month_state(html: str, month: int, *, set_default_month: bool = Fa
     html, cursor_count = re.subn(r"\bvar CUR = \d+;", f"var CUR = {month};", html)
     if cursor_count != 1:
         raise RuntimeError(f"month JS cursor count mismatch: {cursor_count}")
+    next_month = month + 1
+    if next_month <= 12 and not _has_future_layout(html, next_month):
+        template = next(
+            (value for value in options if value > next_month and _has_future_layout(html, value)),
+            None,
+        )
+        if template is not None:
+            html = _copy_future_layout(html, next_month, template)
     if set_default_month:
         html = _force_manifest_default_month(html, month)
     return html

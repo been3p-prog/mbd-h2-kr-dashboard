@@ -17,6 +17,9 @@ from unittest import mock
 import duckdb
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+# [2026-10-01] Normalize copied dashboard HTML to the fixture's September calendar.
+import dashboard_calendar_fixture as calendar_fixture  # noqa: E402
+import dashboard_next_booking as next_booking  # noqa: E402
 import refresh_live_daily_from_duckdb as refresh  # noqa: E402
 import refresh_live_window_from_duckdb as live_window_refresh  # noqa: E402
 import refresh_owned_youtube_window_from_duckdb as owned_refresh  # noqa: E402
@@ -1012,7 +1015,11 @@ class CurrentRawRefreshTest(unittest.TestCase):
 
         html_path = Path(self.tmp.name) / "index.html"
         html_path.write_text(
-            (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8"),
+            calendar_fixture.synthetic_month_state(
+                (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8"),
+                9,
+                set_default_month=True,
+            ),
             encoding="utf-8",
         )
         revenue = {
@@ -1051,7 +1058,11 @@ class CurrentRawRefreshTest(unittest.TestCase):
         self.assertIn('data-live-quality-mom-main="9"', rendered)
         self.assertIn("0방송 · 총 0", rendered)
         self.assertIn('data-current-raw-empty="true"', rendered)
-        self.assertEqual(rendered.count('data-current-raw-team-empty='), 3)
+        # [2026-10-01] Count only the selected September surface, not retained future-month markup.
+        month9_detail = rendered.split('class="mvr mv" data-m="9"', 1)[1].split(
+            'class="mvr mv" data-m="10"', 1
+        )[0]
+        self.assertEqual(month9_detail.count('data-current-raw-team-empty='), 3)
         self.assertIn("현재 RAW 누적 · 9/1~9/1", rendered)
         self.assertIn("RAW 누적 · 9/1~9/1</span><b>0 ", rendered)
 
@@ -1064,7 +1075,11 @@ class CurrentRawRefreshTest(unittest.TestCase):
         now = FixedDateTime.now(refresh.KST)
         html_path = Path(self.tmp.name) / "index.html"
         html_path.write_text(
-            (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8"),
+            calendar_fixture.synthetic_month_state(
+                (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8"),
+                9,
+                set_default_month=True,
+            ),
             encoding="utf-8",
         )
         revenue = {
@@ -1157,6 +1172,27 @@ class CurrentRawRefreshTest(unittest.TestCase):
             default_month=9,
         )
         candidate = owned_refresh.update_default_month_state(candidate, 9)
+        # [2026-10-01] Re-normalize the refreshed candidate's future layout before guard verification.
+        candidate = calendar_fixture.synthetic_month_state(candidate, 9)
+        # [2026-10-01] Rebuild the linked October preview so the verifier sees one fixed fixture state.
+        candidate = next_booking.update_next_booking(
+            candidate,
+            now.date(),
+            {
+                "month": 10,
+                "total_won": 1_052_100_000,
+                "target_won": 1_377_682_548,
+                "ad_gen": 785_100_000,
+                "ad_int": 30_000_000,
+                "live": 237_000_000,
+                "team_targets_won": {
+                    "ad_gen": 865_682_548,
+                    "ad_int": 200_000_000,
+                    "live": 212_000_000,
+                },
+                "snapshot_as_of": now.date().isoformat(),
+            },
+        )
 
         self.assertIn('<option value="9" selected>2026년 9월 · 진행 중</option>', candidate)
         self.assertIn("FORECAST 2026-09", candidate)
@@ -1373,6 +1409,7 @@ class TargetMbdSnapshotTest(unittest.TestCase):
                     shutil.copy2(stale, args[-1])
                 return SimpleNamespace(returncode=0)
 
+            # [2026-10-01] Pin validation to the fixture's September targets instead of wall-clock October.
             pinned_validate = target_mbd.validate_snapshot
 
             def validate_as_of_fixture_month(path):

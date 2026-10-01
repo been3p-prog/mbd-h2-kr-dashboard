@@ -169,7 +169,12 @@ class DashboardGuardTest(unittest.TestCase):
         self.assertIn('MoM ▲ 40.3%', self.html)
         self.assertIn('패키지 총액 = AF 패키지비', self.html)
         self.assertIn('진행건수 = 확정 편성건', self.html)
-        retained = 9 - self.html.count('data-current-forecast-team="live"')
+        # [2026-10-01] Derive retained live rows from closed calendar months, not a September constant.
+        closed_months = [
+            value for value in range(1, month)
+            if 'data-phase="closed"' in (vd._month_surface(self.html, "mvr", value) or "")
+        ]
+        retained = len(closed_months)
         self.assertEqual(self.html.count('data-live-progress-count='), retained)
         self.assertEqual(self.html.count('data-live-package-count='), retained * 3)
         self.assertIn('진행 36건', self.html)

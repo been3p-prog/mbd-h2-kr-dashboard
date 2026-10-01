@@ -208,7 +208,16 @@ class ForecastStateTest(unittest.TestCase):
         #   month)). Mirror that here so guard.verify actually evaluates
         #   October's "current month" contract instead of silently
         #   re-checking September's already-valid state via a stale manifest.
-        text = daily.update_manifest(text, "2026-10-01T09:00:00+09:00", {"month": "2026-10"}, default_month=10)
+        # [2026-10-01] Pin rollover source clocks before verifying the fixed October fixture.
+        text = daily.update_manifest(
+            text,
+            "2026-10-01T09:00:00+09:00",
+            {"month": "2026-10"},
+            touched_sources={"revenue_mirror", "live_quality", "yt_quality", "okr_targets", "owned_media"},
+            default_month=10,
+            source_as_of="2026-10-01T08:00:00+09:00",
+            captured_at="2026-10-01T08:30:00+09:00",
+        )
         _, manifest = guard.extract_manifest(text)
         now = dt.datetime.fromisoformat(manifest["built_at_kst"])
         # [2026-09-30] This fixture only rolls the calendar and hydrates
@@ -271,8 +280,10 @@ class ForecastStateTest(unittest.TestCase):
         import refresh_live_window_from_duckdb as window
         root = Path(__file__).resolve().parents[1]
         contract = json.loads((root / "data/live_window_contract.json").read_text())
-        self.assertEqual(contract_guard.check(self.html, contract), [])
-        bad = re.sub(r'data-live-quality-source-count="[^"]+"', 'data-live-quality-source-count="99999"', self.html)
+        # [2026-10-01] Check the live-window contract against the artifact it describes, not the September fixture.
+        contract_html = (root / "index.html").read_text()
+        self.assertEqual(contract_guard.check(contract_html, contract), [])
+        bad = re.sub(r'data-live-quality-source-count="[^"]+"', 'data-live-quality-source-count="99999"', contract_html)
         self.assertTrue(any("MAIN_DETAIL_QUALITY_MISMATCH" in e for e in contract_guard.check(bad, contract)))
         row = dict(date=dt.date(2026,9,1), brand="Public fixture", pd="PRIVATE_PD_CANARY",
                    package_key="스마트", pgm="일반", viewers=100, clicks=10, buyers=5,
