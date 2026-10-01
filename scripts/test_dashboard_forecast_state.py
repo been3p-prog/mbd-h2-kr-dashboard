@@ -192,6 +192,74 @@ class ForecastStateTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'canonical forecast'):
                     forecast.fetch_forecast(path, dt.date(2026,9,9))
 
+    def _packet_fixture(self, path):
+        # Current month (10월): all four teams present → strict.
+        # Next month (11월): no live row; MBD_TOTAL == ad_gen + ad_int → verified zero.
+        con = duckdb.connect(str(path))
+        con.execute('create schema revenue')
+        con.execute('create table revenue.v_revenue_forecast_monthly(ym varchar, team_code varchar, forecast_revenue double, source_table varchar, source_column varchar, rule_id varchar)')
+        con.executemany('insert into revenue.v_revenue_forecast_monthly values (?, ?, ?, ?, ?, ?)', [
+            ('2026-10','ad_gen',900000000,'ad_gen.booking_pred','revenue','forecast_ad_gen_booking_v1'),
+            ('2026-10','ad_int',80000000,'ad_int.contract','계약 금액','forecast_ad_int_contract_v1'),
+            ('2026-10','live',170000000,'live.booking_confirmed','패키지 비용','forecast_live_booking_confirmed_v1'),
+            ('2026-10','MBD_TOTAL',1150000000,'team_forecast_sources','forecast_revenue','forecast_mbd_total_v1'),
+            ('2026-11','ad_gen',500000000,'ad_gen.booking_pred','revenue','forecast_ad_gen_booking_v1'),
+            ('2026-11','ad_int',40000000,'ad_int.contract','계약 금액','forecast_ad_int_contract_v1'),
+            ('2026-11','MBD_TOTAL',540000000,'team_forecast_sources','forecast_revenue','forecast_mbd_total_v1')])
+        con.execute('create table revenue.integrated_ssot(revenue_month varchar, revenue_team varchar, team_attributed_revenue double, include_in_mbd_revenue boolean)')
+        con.close()
+
+    # [2026-10-01] 봇 패킷: 현월 엄격(absent_team_is_zero=False), 차월만 검증된 0 허용
+    def test_packet_current_strict_next_absent_team_is_verified_zero(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'packet.duckdb'
+            self._packet_fixture(path)
+            packet = forecast.fetch_packet_forecasts(path, dt.date(2026, 10, 1))
+        self.assertEqual(set(packet), {'2026-10', '2026-11'})
+        # Current month keeps the real live forecast and full canonical total.
+        self.assertEqual(packet['2026-10']['live'], 170000000)
+        self.assertEqual(packet['2026-10']['total_won'], 1150000000)
+        # Next month: the absent live row is a verified zero and the total still reconciles.
+        self.assertEqual(packet['2026-11']['live'], 0)
+        self.assertEqual(packet['2026-11']['total_won'], 540000000)
+        self.assertEqual(
+            packet['2026-11']['ad_gen'] + packet['2026-11']['ad_int'] + packet['2026-11']['live'],
+            packet['2026-11']['total_won'])
+
+    def test_packet_current_month_fails_closed_on_absent_team(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'packet.duckdb'
+            self._packet_fixture(path)
+            # Remove the current-month live row AND reconcile its total, so a relaxed
+            # path would have accepted zero. The strict current month must still fail.
+            con = duckdb.connect(str(path))
+            con.execute("delete from revenue.v_revenue_forecast_monthly where ym='2026-10' and team_code='live'")
+            con.execute("update revenue.v_revenue_forecast_monthly set forecast_revenue=980000000 where ym='2026-10' and team_code='MBD_TOTAL'")
+            con.close()
+            with self.assertRaisesRegex(ValueError, 'missing teams'):
+                forecast.fetch_packet_forecasts(path, dt.date(2026, 10, 1))
+
+    def test_packet_next_month_fails_closed_on_corrupt_canonical(self):
+        mutations = [
+            # Total mismatch: zero-fill only applies when MBD_TOTAL == present sum.
+            "update revenue.v_revenue_forecast_monthly set forecast_revenue=1 where ym='2026-11' and team_code='MBD_TOTAL'",
+            # Duplicate team row.
+            "insert into revenue.v_revenue_forecast_monthly select * from revenue.v_revenue_forecast_monthly where ym='2026-11' and team_code='ad_gen'",
+            # Wrong provenance.
+            "update revenue.v_revenue_forecast_monthly set source_table='live.cost_raw' where ym='2026-11' and team_code='ad_gen'",
+            # Invalid values.
+            "update revenue.v_revenue_forecast_monthly set forecast_revenue='NaN' where ym='2026-11' and team_code='ad_gen'",
+            "update revenue.v_revenue_forecast_monthly set forecast_revenue=-1 where ym='2026-11' and team_code='ad_gen'",
+            "update revenue.v_revenue_forecast_monthly set forecast_revenue=NULL where ym='2026-11' and team_code='ad_gen'",
+        ]
+        for sql in mutations:
+            with self.subTest(sql=sql), tempfile.TemporaryDirectory() as temp:
+                path = Path(temp) / 'packet.duckdb'
+                self._packet_fixture(path)
+                con = duckdb.connect(str(path)); con.execute(sql); con.close()
+                with self.assertRaisesRegex(ValueError, 'canonical forecast'):
+                    forecast.fetch_packet_forecasts(path, dt.date(2026, 10, 1))
+
     def test_october_rollover_does_not_reuse_september_forecast(self):
         raw = dict(self.raw, as_of="2026-10-01", range_label="10/1~10/1")
         text = daily.update_default_month_state(self.html, 10, year=2026)

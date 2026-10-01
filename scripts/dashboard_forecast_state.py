@@ -237,6 +237,31 @@ def fetch_forecast(db_path, as_of: dt.date, *, include_next: bool = False,
     return result
 
 
+# [2026-10-01] 봇 패킷의 현월·차월 예측을 분리 추출 — export_bot_metrics가 두 달 모두를
+# 엄격(absent_team_is_zero=False)으로 조회해 11월 라이브 예약 0건(뷰에 live 행 없음)에서
+# `canonical forecast missing teams`로 실패하던 것을 고친다. 현월은 그대로 엄격, 차월만
+# dashboard_next_booking과 동일한 불변식(canonical MBD_TOTAL이 present 팀 합과 정확히 같을
+# 때만 0 허용)으로 완화한다. 중복/provenance/finite/nonnegative/total 검증은 그대로 유지.
+def fetch_packet_forecasts(db_path, as_of: dt.date) -> dict:
+    """Bot-packet forecasts: current month stays strict, only the next-month
+    preview admits a verified zero for an absent team.
+
+    Returns {ym: forecast} for the current month and, unless December, the next
+    month. The current month keeps the strict behavior and fails closed when a
+    team row is missing; the next month relies on the same
+    dashboard_forecast_state invariant as the next-booking preview — a missing
+    team is zero only when canonical MBD_TOTAL exactly equals the present sum.
+    """
+    forecasts = {}
+    for month in (as_of.month, as_of.month + 1):
+        if month > 12:
+            continue
+        cutoff = dt.date(as_of.year, month, 1)
+        forecasts[cutoff.strftime('%Y-%m')] = fetch_forecast(
+            db_path, cutoff, absent_team_is_zero=(month != as_of.month))
+    return forecasts
+
+
 def update_forecast_surfaces(text: str, raw: dict, forecast: dict) -> str:
     month = int(raw["as_of"][5:7])
     start, end = _month_bounds(text, "mvk", month)

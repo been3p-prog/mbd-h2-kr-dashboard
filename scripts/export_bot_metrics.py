@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 
 import duckdb
-from dashboard_forecast_state import fetch_forecast
+from dashboard_forecast_state import fetch_packet_forecasts
 from refresh_live_daily_from_duckdb import fetch_current_revenue_snapshot
 from refresh_owned_youtube_window_from_duckdb import fetch_main_content
 
@@ -70,12 +70,9 @@ def export(mbd_path, yt_path, html_path, as_of):
             closed = bool(re.search(fr'class="mvk mv" data-m="{month}"[^>]*data-phase="closed"'.encode(), html))
             months[ym] = {'raw': raw, 'actual': actual_values if closed and len(actual_values) == 3 else None,
                           'closed': closed, 'forecast': None}
-        for month in (as_of.month, as_of.month + 1):
-            if month > 12:
-                continue
-            cutoff = dt.date(as_of.year, month, 1)
-            f = fetch_forecast(mbd_path, cutoff)
-            months.setdefault(cutoff.strftime('%Y-%m'), {})['forecast'] = f
+        # [2026-10-01] 현월은 엄격, 차월(예약 0건 팀=검증된 0)만 완화 — fetch_packet_forecasts로 분리.
+        for ym, f in fetch_packet_forecasts(mbd_path, as_of).items():
+            months.setdefault(ym, {})['forecast'] = f
         # Difference of the existing same-month MTD function, not a new revenue rule.
         daily = []
         previous = {k: 0 for k in ('ad_gen_won', 'ad_int_won', 'live_won')}
