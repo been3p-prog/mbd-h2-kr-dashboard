@@ -10,6 +10,7 @@ import json
 import re
 import subprocess
 import urllib.request
+from html.parser import HTMLParser
 from pathlib import Path
 from export_bot_metrics import export
 
@@ -33,6 +34,89 @@ print(json.dumps({'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'dashboard
 '''
 
 
+class _CutoffParser(HTMLParser):
+    """Collect clocks only inside their owning mvk surface, not adjacent months."""
+
+    def __init__(self):
+        super().__init__()
+        self.manifests = []
+        self.manifest = None
+        self.surfaces = []
+        self.surface = None
+        self.depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        values = dict(attrs)
+        is_manifest = any(k == 'id' and v == 'mbd-public-guard' for k, v in attrs)
+        is_surface = any(k == 'class' and 'mvk' in (v or '').split() for k, v in attrs)
+        if is_manifest or is_surface or (self.surface is not None and 'data-current-as-of' in values):
+            if len(values) != len(attrs):
+                raise ValueError('ambiguous cutoff attributes')
+        if is_manifest:
+            if tag != 'script' or values.get('type') != 'application/json':
+                raise ValueError('malformed dashboard manifest')
+            self.manifest = []
+        if tag == 'div':
+            self.depth += 1
+        if is_surface:
+            month = values.get('data-m') or ''
+            if tag != 'div' or self.surface is not None or not re.fullmatch(r'[1-9]|1[0-2]', month):
+                raise ValueError('malformed month surface')
+            self.surface = {'month': int(month), 'depth': self.depth, 'cutoffs': []}
+        if self.surface is not None and 'data-current-as-of' in values:
+            self.surface['cutoffs'].append(values['data-current-as-of'])
+
+    def handle_endtag(self, tag):
+        if tag == 'script' and self.manifest is not None:
+            self.manifests.append(''.join(self.manifest))
+            self.manifest = None
+        if tag == 'div':
+            if self.surface is not None and self.depth == self.surface['depth']:
+                self.surfaces.append(self.surface)
+                self.surface = None
+            self.depth -= 1
+
+    def handle_data(self, data):
+        if self.manifest is not None:
+            self.manifest.append(data)
+
+
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('ambiguous dashboard manifest key')
+        result[key] = value
+    return result
+
+
+def _invalid_constant(value):
+    raise ValueError('malformed dashboard manifest constant')
+
+
+def dashboard_cutoff(html):
+    parser = _CutoffParser()
+    parser.feed(html.decode('utf-8'))
+    parser.close()
+    if parser.manifest is not None or len(parser.manifests) != 1:
+        raise ValueError('missing or ambiguous dashboard manifest')
+    manifest = json.loads(parser.manifests[0], object_pairs_hook=_unique_object,
+                          parse_constant=_invalid_constant)
+    month = manifest.get('default_month') if isinstance(manifest, dict) else None
+    if type(month) is not int or not 1 <= month <= 12:
+        raise ValueError('malformed default month')
+    surfaces = [s for s in parser.surfaces if s['month'] == month]
+    if parser.surface is not None or len(surfaces) != 1:
+        raise ValueError('missing or ambiguous default month surface')
+    cutoffs = surfaces[0]['cutoffs']
+    if len(cutoffs) != 1 or not isinstance(cutoffs[0], str) or not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', cutoffs[0]):
+        raise ValueError('missing, ambiguous or malformed default month cutoff')
+    cutoff = dt.date.fromisoformat(cutoffs[0])
+    if cutoff.month != month:
+        raise ValueError('default month differs from cutoff')
+    return cutoff
+
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument('--mbd',required=True);p.add_argument('--youtube',required=True)
@@ -43,7 +127,7 @@ def main():
     req=urllib.request.Request(URL+'?bot-metrics='+sha[:12],headers={'Cache-Control':'no-cache'})
     with urllib.request.urlopen(req,timeout=25) as r:public=r.read(8_000_001)
     if public!=html:raise RuntimeError('public HTML not the local candidate; no cache write')
-    cutoff=dt.date.fromisoformat(re.search(rb'data-current-as-of="([0-9-]+)"',html)[1].decode())
+    cutoff=dashboard_cutoff(html)
     payload=export(a.mbd,a.youtube,a.html,cutoff)
     data=json.dumps(payload,ensure_ascii=False,allow_nan=False,separators=(',',':')).encode()
     if a.check_only:
