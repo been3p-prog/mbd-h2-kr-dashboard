@@ -17,6 +17,7 @@ from snapshot_transport import describe_transport_exception, describe_transport_
 
 KST = dt.timezone(dt.timedelta(hours=9))
 DEFAULT_OUTPUT = Path("/tmp/mbd_h2_target_snapshot.duckdb")
+COMPLETED_ACTUAL_GRACE_DAY = 15  # [2026-10-01] 전월 확정 SSOT 미적재 허용 마지막 날(월초 마감 대기)
 DEFAULT_HOST = "cnc-media@192.168.7.238"
 DEFAULT_KEY = Path("/Users/sb.lee/.ssh/id_ed25519_mbd_server")
 DEFAULT_REMOTE_PYTHON = "/Users/cnc-media/automations/.venvs/mbd/bin/python"
@@ -159,7 +160,15 @@ def validate_snapshot(path: Path, *, as_of: dt.date | None = None) -> dict:
         }
         expected_actual_teams = {"일반광고", "통합광고", "라이브커머스"}
         missing_actuals = sorted(expected_actual_teams - completed_actual_teams)
-        if missing_actuals:
+        # [2026-10-01] 빈 승인 "ㄱㄱ" — 전월 확정 SSOT는 수동 적재라 월초엔 아직 없다. 매월 15일까지는
+        # 경고만 하고 갱신을 진행(전월 비교는 하류에서 '비교값 없음'), 16일부터는 다시 실패시켜 적재 누락을 드러낸다.
+        if missing_actuals and as_of.day <= COMPLETED_ACTUAL_GRACE_DAY:
+            print(
+                "WARNING: completed-month actuals pending close "
+                f"month={completed_month} teams={','.join(missing_actuals)}",
+                file=sys.stderr,
+            )
+        elif missing_actuals:
             raise RuntimeError(
                 "target MBD snapshot missing completed-month actual teams: "
                 + ",".join(missing_actuals)
@@ -191,6 +200,7 @@ def validate_snapshot(path: Path, *, as_of: dt.date | None = None) -> dict:
         "captured_date": str(captured_date),
         "source_mtime_date": str(source_mtime_date),
         "completed_actual_month": completed_month,
+        "completed_actual_missing_teams": missing_actuals,
         "ingest_dates": ingest_dates,
         "bytes": path.stat().st_size,
     }

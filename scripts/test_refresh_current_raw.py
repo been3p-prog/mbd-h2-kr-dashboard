@@ -1320,8 +1320,12 @@ class TargetMbdSnapshotTest(unittest.TestCase):
             con = duckdb.connect(str(path))
             con.execute("delete from revenue.integrated_ssot where revenue_team = '라이브커머스'")
             con.close()
+            # [2026-10-01] 15일까지는 마감 대기로 경고만, 16일부터 실패
+            with contextlib.redirect_stderr(io.StringIO()):
+                result = self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+            self.assertEqual(result["completed_actual_missing_teams"], ["라이브커머스"])
             with self.assertRaisesRegex(RuntimeError, "missing completed-month actual teams"):
-                self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 1))
+                self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 16))
 
     def test_live_renderers_default_never_points_to_retired_local_db(self):
         expected = Path("/tmp/mbd_h2_target_snapshot.duckdb")
