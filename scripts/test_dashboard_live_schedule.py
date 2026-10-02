@@ -6,7 +6,13 @@ import unittest
 from unittest import mock
 
 import duckdb
-from dashboard_live_schedule import RETRO_STYLE, fetch_schedule, update_schedule
+from dashboard_live_schedule import (
+    RETRO_BODY_END_MARKER,
+    RETRO_STYLE,
+    WEEK_BOUNDARY_CLOSE,
+    fetch_schedule,
+    update_schedule,
+)
 
 
 class FullLiveScheduleTest(unittest.TestCase):
@@ -50,7 +56,22 @@ class FullLiveScheduleTest(unittest.TestCase):
         rows = fetch_schedule(self.db, 2026, 9)
         self.assertEqual(len(rows), 6)
         ledger = self.ledger(self.render())
-        self.assertEqual(ledger.count('class="activity-row wk-row"'), 6)
+        # [2026-10-02] 여는 태그를 정확 리터럴로 검증 — 다른 렌더러/가드가
+        # `<div class="activity-row">`를 정확 일치로 스캔하므로 data-* 속성이 붙으면
+        # 매칭 행이 0건이 된다. 느슨한 부분문자열 카운트는 이 회귀를 잡지 못했다.
+        self.assertEqual(ledger.count('<div class="activity-row">'), 6)
+        self.assertNotIn('data-live-schedule-row', ledger)
+        # 행 식별은 커스텀 ID 대신 (일자, 타이틀) 쌍으로 한다
+        self.assertEqual(sorted(re.findall(
+            r'<div class="activity-row"><time class="activity-date" datetime="([^"]+)"[^>]*>'
+            r'.*?<b class="content-title">([^<]+)</b>', ledger, flags=re.DOTALL)), [
+                ('2026-09-02', '완료'),
+                ('2026-09-03', '회고 대기'),
+                ('2026-09-09', '대기'),
+                ('2026-09-29', '예정&lt;x&gt;'),
+                ('2026-09-29', '예정&lt;x&gt;'),
+                ('2026-09-30', '무료'),
+            ])
         self.assertEqual(len(re.findall(r'data-week-group="9-\d" open', ledger)), 5)
         self.assertIn('data-live-main-source-measured="2"', ledger)
         self.assertIn('data-live-main-source-pending="1"', ledger)
@@ -67,6 +88,7 @@ class FullLiveScheduleTest(unittest.TestCase):
         ledger = self.ledger(self.render())
         self.assertEqual(ledger.count('<details class="wk-retro"><summary>'), 2)
         self.assertEqual(ledger.count('<div class="wk-retro-body">'), 2)
+        self.assertEqual(ledger.count(f'</div>{RETRO_BODY_END_MARKER}</details>'), 2)
         self.assertIn('<summary>회고 · 발송 완료</summary>', ledger)
         self.assertIn('<summary>회고 · 입력 대기</summary>', ledger)
         self.assertIn('<b>공식 회고</b>\n회고 입력 대기', ledger)
@@ -77,6 +99,36 @@ class FullLiveScheduleTest(unittest.TestCase):
         self.assertNotIn('미래 타사', ledger)
         self.assertNotIn('PRIVATE_SENTINEL_7b2f', ledger)
         self.assertNotIn('내부회고', ledger)
+
+    def test_nested_retro_never_emits_the_week_boundary_close_sequence(self):
+        # [2026-10-02] refresh_live_daily_from_duckdb.update_live_activity_rows의 주차 삽입
+        # 정규식은 `<div class="week-items">` 이후 첫 `</div></details>`를 주차 종료로 본다.
+        # 중첩 wk-retro가 그 리터럴을 내보내면 주차 경계가 회고 닫기에 걸려 삽입 위치가 깨진다.
+        ledger = self.ledger(self.render())
+        retros = re.findall(r'<details class="wk-retro">.*?</details>', ledger, flags=re.DOTALL)
+        self.assertEqual(len(retros), 2)
+        for retro in retros:
+            # 필수 마크업은 유지되어야 한다
+            self.assertTrue(retro.startswith('<details class="wk-retro"><summary>'), retro)
+            self.assertIn('<div class="wk-retro-body">', retro)
+            self.assertTrue(retro.endswith(f'</div>{RETRO_BODY_END_MARKER}</details>'), retro)
+            # 어떤 wk-retro도 주차 경계와 충돌하는 리터럴 종료 시퀀스를 내보내지 않는다
+            self.assertNotIn(WEEK_BOUNDARY_CLOSE, retro)
+
+        # 소비자와 동일한 정규식으로, 회고가 중첩된 주차에서도 경계가 주차 자신의 닫기에 걸리는지 검증.
+        # 9월 1주차(9/1–9/7)에는 실적 반영 2건이 있어 회고 2개가 모두 이 주차에 중첩된다.
+        match = re.compile(
+            r'(<details class="week-group" data-week-group="9-1"[^>]*>.*?<div class="week-items">)'
+            r'(?P<body>.*?)(' + re.escape(WEEK_BOUNDARY_CLOSE) + r')',
+            re.DOTALL,
+        ).search(ledger)
+        self.assertIsNotNone(match, 'week 9-1 boundary not found')
+        body = match.group('body')
+        self.assertEqual(body.count('<div class="activity-row">'), 2)
+        self.assertEqual(body.count('<details class="wk-retro">'), 2)
+        # 주차 body 안에서 열린 details는 모두 같은 body 안에서 닫힌다 (경계 조기 종료 아님)
+        self.assertEqual(body.count('</details>'), 2)
+        self.assertEqual(body.count(RETRO_BODY_END_MARKER), 2)
 
     def test_native_details_css_is_idempotent_and_has_no_state_handlers(self):
         stale_style = '''<style data-wk-retro-style="native-v1">
@@ -94,7 +146,12 @@ class FullLiveScheduleTest(unittest.TestCase):
         self.assertEqual(rerendered.count(RETRO_STYLE), 1)
         self.assertNotIn(stale_style, rerendered)
         self.assertIn('.wk-retro[open]>.wk-retro-body{display:block}', rerendered)
-        self.assertIn('@media (hover:hover){.wk-row:hover .wk-retro-body{display:block}}', rerendered)
+        # [2026-10-02] 행 class는 정확히 "activity-row" — hover는 해당 셀렉터로 스코프된다
+        self.assertIn('@media (hover:hover){.activity-row:hover .wk-retro-body{display:block}}', rerendered)
+        # 스타일과 재생성된 원장 어디에도 wk-row 토큰이 남지 않아야 한다 (다른 렌더러가
+        # class="activity-row" 정확 일치로 스캔하므로). 원장 밖 과거월 잔존은 다음 refresh가 정리.
+        self.assertNotIn('wk-row', RETRO_STYLE)
+        self.assertNotIn('wk-row', self.ledger(rerendered))
         self.assertRegex(rerendered, r'\.wk-retro-body\{[^}]*position:fixed')
         self.assertRegex(rerendered, r'\.wk-retro-body\{[^}]*left:50%;top:50%;transform:translate\(-50%,-50%\)')
         self.assertRegex(rerendered, r'\.wk-retro-body\{[^}]*max-height:min\(60vh,calc\(100vh - 2rem\)\)')
@@ -105,8 +162,7 @@ class FullLiveScheduleTest(unittest.TestCase):
             re.findall(r'<script\b[^>]*>(.*?)</script>', rerendered, flags=re.DOTALL | re.I))
         self.assertTrue(scripts.strip(), 'rerendered document exposes no scripts to audit')
         # 주간 회고는 순수 CSS + native <details> — 어떤 스크립트도 주간 셀렉터를 참조하면 안 됨
-        for token in ('wk-retro', 'wk-row'):
-            self.assertNotIn(token, scripts)
+        self.assertNotIn('wk-retro', scripts)
         # 열림 상태를 JS로 제어하는 토큰은 문서 전체에서 금지
         for token in ("classList.contains('is-open')", "querySelector('.wk-retro')",
                       "closest('.wk-retro')", 'data-wk-retro-open', 'is-open'):

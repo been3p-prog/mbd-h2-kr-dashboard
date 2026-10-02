@@ -73,16 +73,22 @@ def fetch_schedule(db_path, year, month):
 
 RETRO_STYLE_MARKER = 'data-wk-retro-style="native-v1"'
 RETRO_STYLE = '''<style data-wk-retro-style="native-v1">
-.wk-row .activity-main{position:relative}
 .wk-retro{display:inline-block;margin-left:.45rem}
 .wk-retro>summary{cursor:pointer;color:var(--sub);font-size:.75rem;list-style-position:inside}
 .wk-retro-body{display:none;position:fixed;z-index:20;left:50%;top:50%;transform:translate(-50%,-50%);width:min(32rem,calc(100vw - 2rem));max-height:min(60vh,calc(100vh - 2rem));overflow:auto;box-sizing:border-box;padding:.75rem;margin:0;border:1px solid var(--line);border-radius:.65rem;background:var(--card);box-shadow:0 12px 30px rgba(15,23,42,.18);white-space:pre-wrap;text-align:left}
 .wk-retro[open]>.wk-retro-body{display:block}
-@media (hover:hover){.wk-row:hover .wk-retro-body{display:block}}
+@media (hover:hover){.activity-row:hover .wk-retro-body{display:block}}
 </style>'''
 RETRO_STYLE_PATTERN = re.compile(
     r'<style data-wk-retro-style="native-v1">.*?</style>', re.DOTALL
 )
+# [2026-10-02] 주차 경계 리터럴 충돌 방지용 구분자 — refresh_live_daily_from_duckdb의
+# update_live_activity_rows 주차 삽입 정규식이 `<div class="week-items">` 이후 첫
+# `</div></details>`를 주차 종료로 보기 때문에, 중첩된 wk-retro가 같은 시퀀스를
+# 내보내면 주차 경계가 모호해진다. 무해한 HTML 주석을 body 닫기와 details 닫기
+# 사이에 끼워 넣어 주차 경계가 계속 유일하게 식별되도록 한다.
+RETRO_BODY_END_MARKER = '<!--wk-retro-body-->'
+WEEK_BOUNDARY_CLOSE = '</div></details>'
 
 
 def _retro_html(row):
@@ -96,9 +102,12 @@ def _retro_html(row):
         f'\n\n<b>타사 라이브 이력</b>\n{html.escape(competitor, quote=True)}'
         if competitor else ''
     )
+    # 필수 마크업(<details><summary><div class="wk-retro-body">)은 그대로 유지하고,
+    # body 닫기와 details 닫기 사이에만 RETRO_BODY_END_MARKER를 삽입한다.
     return (
         f'<details class="wk-retro"><summary>회고 · {"입력 대기" if not review else sent_label}</summary>'
-        f'<div class="wk-retro-body">{review_html}{sent_html}{competitor_html}</div></details>'
+        f'<div class="wk-retro-body">{review_html}{sent_html}{competitor_html}</div>'
+        f'{RETRO_BODY_END_MARKER}</details>'
     )
 
 
@@ -138,7 +147,7 @@ def update_schedule(document, rows, *, as_of, source_as_of=None):
     for week in range(1, math.ceil(month_end / 7) + 1):
         first, last = (week - 1) * 7 + 1, min(week * 7, month_end)
         items = []
-        for row_index, row in enumerate(rows, start=1):
+        for row in rows:
             if not first <= row['date'].day <= last:
                 continue
             is_future = row['date'] > as_of
@@ -154,9 +163,13 @@ def update_schedule(document, rows, *, as_of, source_as_of=None):
                 missing = is_future or value is None or (not has_result and value == 0)
                 label = '—' if missing else (f'{value:,}' if key == 'viewers' else fmt_won(value))
                 metrics.append(f'<span class="metric-cell"><b>{label}</b></span>')
-            row_id = f'live-schedule-{row["date"].strftime("%Y%m%d")}-{row_index:02d}'
             retro = _retro_html(row) if has_result else ''
-            items.append(f'<div class="activity-row wk-row" data-live-schedule-row="{row_id}">'
+            # [2026-10-02] 행 여는 태그를 정확히 `<div class="activity-row">`로 유지 — 다른
+            # 렌더러/가드(refresh_live_daily_from_duckdb의 주차 삽입 등)가 이 리터럴을 정확
+            # 일치로 스캔하므로 class 변경이나 data-* 속성 추가는 매칭 행을 0건으로 만든다.
+            # 행 식별은 내부 ID 대신 <time datetime>과 content-title로 한다.
+            # 주간 회고 hover는 .activity-row:hover .wk-retro-body로 스코프한다.
+            items.append('<div class="activity-row">'
                          f'<time class="activity-date" datetime="{row["date"].isoformat()}">{fmt_m_d(row["date"])}</time>'
                          '<div class="activity-main activity-main-inline"><span class="activity-title-line">'
                          f'<b class="content-title">{html.escape(row["brand"])}</b>'
