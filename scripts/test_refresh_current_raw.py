@@ -1,3 +1,4 @@
+import calendar
 import contextlib
 import datetime as dt
 import hashlib
@@ -605,6 +606,263 @@ class CurrentRawRefreshTest(unittest.TestCase):
         self.assertEqual(month["engagement"], 0)
         self.assertEqual(month["raw_status"], "awaiting_current_month_analytics")
         self.assertEqual(month["fetched_at"], dt.datetime(2026, 9, 1, 0, 45))
+
+    def test_fetch_month_accepts_explicit_current_month_not_due_row_and_renders_placeholder(self):
+        path = Path(self.tmp.name) / "youtube_explicit_not_due.duckdb"
+        con = duckdb.connect(str(path))
+        con.execute('''
+            create table v_youtube_monthly_analytics(
+                period_start date, period_end date,
+                metric_start_date date, metric_end_date date,
+                period_complete boolean,
+                channel_view_count bigint, channel_like_count bigint,
+                channel_comment_count bigint, channel_share_count bigint,
+                channel_engagement_count bigint,
+                new_published_view_count bigint, prior_published_view_count bigint,
+                unknown_publish_view_count bigint,
+                fetched_at timestamp, raw_status varchar
+            )
+        ''')
+        con.execute('''
+            insert into v_youtube_monthly_analytics values (
+                '2026-09-01', '2026-09-30', '2026-09-01', '2026-09-30', true,
+                900, 90, 9, 3, 102, 600, 300, 0,
+                '2026-10-01 00:45:00', 'ok'
+            )
+        ''')
+        con.execute('''
+            insert into v_youtube_monthly_analytics values (
+                '2026-10-01', '2026-10-31', '2026-10-01', null, false,
+                null, null, null, null, null, null, null, null,
+                '2026-10-02 10:15:00', 'not_due'
+            )
+        ''')
+
+        month = owned_refresh.fetch_month(
+            con,
+            2026,
+            10,
+            now_kst=dt.datetime(2026, 10, 2, 10, 20, tzinfo=owned_refresh.KST),
+        )
+        con.close()
+        section, contract = owned_refresh.render_section(
+            month,
+            [],
+            {"total": 0},
+            [],
+            dt.datetime(2026, 10, 2, 10, 20, tzinfo=owned_refresh.KST),
+        )
+
+        self.assertEqual(month["period_start"], dt.date(2026, 10, 1))
+        self.assertEqual(month["period_end"], dt.date(2026, 10, 31))
+        self.assertEqual(month["metric_start_date"], dt.date(2026, 10, 1))
+        self.assertEqual(month["metric_end_date"], dt.date(2026, 10, 1))
+        self.assertFalse(month["period_complete"])
+        for key in ("views", "likes", "comments", "shares", "engagement", "new_views", "prior_views", "unknown_views"):
+            self.assertEqual(month[key], 0)
+        self.assertEqual(month["fetched_at"], dt.datetime(2026, 10, 2, 10, 15))
+        self.assertEqual(month["raw_status"], "awaiting_current_month_analytics")
+        self.assertIn('data-yt-window-latest-date="2026-10-01"', section)
+        self.assertIn("raw_status awaiting_current_month_analytics", section)
+        self.assertEqual(contract["source"]["monthly_period"], "2026-10-01~2026-10-01")
+        self.assertEqual(contract["source"]["raw_status"], "awaiting_current_month_analytics")
+
+    def test_fetch_month_rejects_malformed_explicit_not_due_rows(self):
+        base_row = [
+            dt.date(2026, 10, 1), dt.date(2026, 10, 31),
+            dt.date(2026, 10, 1), None, False,
+            None, None, None, None, None, None, None, None,
+            dt.datetime(2026, 10, 2, 10, 15), "not_due",
+        ]
+        malformed = {
+            "wrong_period_end": {1: dt.date(2026, 10, 30)},
+            "null_metric_start": {2: None},
+            "non_null_metric_end": {3: dt.date(2026, 10, 1)},
+            "complete_period": {4: True},
+            "partially_populated_aggregate": {5: 1},
+            "zero_aggregate_is_still_populated": {9: 0},
+            "missing_fetched_at": {13: None},
+        }
+        for case, replacements in malformed.items():
+            with self.subTest(case=case):
+                con = duckdb.connect()
+                con.execute('''
+                    create table v_youtube_monthly_analytics(
+                        period_start date, period_end date,
+                        metric_start_date date, metric_end_date date,
+                        period_complete boolean,
+                        channel_view_count bigint, channel_like_count bigint,
+                        channel_comment_count bigint, channel_share_count bigint,
+                        channel_engagement_count bigint,
+                        new_published_view_count bigint, prior_published_view_count bigint,
+                        unknown_publish_view_count bigint,
+                        fetched_at timestamp, raw_status varchar
+                    )
+                ''')
+                row = list(base_row)
+                con.execute('''
+                    insert into v_youtube_monthly_analytics values (
+                        '2026-09-01', '2026-09-30', '2026-09-01', '2026-09-30', true,
+                        900, 90, 9, 3, 102, 600, 300, 0,
+                        '2026-10-01 00:45:00', 'ok'
+                    )
+                ''')
+                for index, value in replacements.items():
+                    row[index] = value
+                con.execute(
+                    "insert into v_youtube_monthly_analytics values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    row,
+                )
+                with self.assertRaisesRegex(RuntimeError, "invalid not_due monthly YouTube analytics row"):
+                    owned_refresh.fetch_month(
+                        con,
+                        2026,
+                        10,
+                        now_kst=dt.datetime(2026, 10, 2, 10, 20, tzinfo=owned_refresh.KST),
+                    )
+                con.close()
+
+    def test_fetch_month_rejects_historical_and_future_not_due_rows(self):
+        for year, month, previous_start, previous_end in (
+            (2026, 9, "2026-08-01", "2026-08-31"),
+            (2026, 11, "2026-10-01", "2026-10-31"),
+        ):
+            with self.subTest(year=year, month=month):
+                con = duckdb.connect()
+                con.execute('''
+                    create table v_youtube_monthly_analytics(
+                        period_start date, period_end date,
+                        metric_start_date date, metric_end_date date,
+                        period_complete boolean,
+                        channel_view_count bigint, channel_like_count bigint,
+                        channel_comment_count bigint, channel_share_count bigint,
+                        channel_engagement_count bigint,
+                        new_published_view_count bigint, prior_published_view_count bigint,
+                        unknown_publish_view_count bigint,
+                        fetched_at timestamp, raw_status varchar
+                    )
+                ''')
+                con.execute(
+                    "insert into v_youtube_monthly_analytics values (?, ?, ?, ?, true, 100, 10, 2, 1, 13, 60, 40, 0, ?, 'ok')",
+                    [previous_start, previous_end, previous_start, previous_end, previous_end + " 23:55:00"],
+                )
+                requested_start = dt.date(year, month, 1)
+                requested_end = dt.date(year, month, 1).replace(
+                    day=calendar.monthrange(year, month)[1]
+                )
+                con.execute(
+                    "insert into v_youtube_monthly_analytics values (?, ?, ?, null, false, null, null, null, null, null, null, null, null, ?, 'not_due')",
+                    [requested_start, requested_end, requested_start, dt.datetime(2026, 10, 2, 10, 15)],
+                )
+
+                with self.assertRaisesRegex(RuntimeError, "invalid not_due monthly YouTube analytics row"):
+                    owned_refresh.fetch_month(
+                        con,
+                        year,
+                        month,
+                        now_kst=dt.datetime(2026, 10, 2, 10, 20, tzinfo=owned_refresh.KST),
+                    )
+                con.close()
+
+    def test_fetch_month_rejects_not_due_with_multi_month_gap(self):
+        con = duckdb.connect()
+        con.execute('''
+            create table v_youtube_monthly_analytics(
+                period_start date, period_end date,
+                metric_start_date date, metric_end_date date,
+                period_complete boolean,
+                channel_view_count bigint, channel_like_count bigint,
+                channel_comment_count bigint, channel_share_count bigint,
+                channel_engagement_count bigint,
+                new_published_view_count bigint, prior_published_view_count bigint,
+                unknown_publish_view_count bigint,
+                fetched_at timestamp, raw_status varchar
+            )
+        ''')
+        con.execute('''
+            insert into v_youtube_monthly_analytics values
+                ('2026-08-01', '2026-08-31', '2026-08-01', '2026-08-31', true,
+                 100, 10, 2, 1, 13, 60, 40, 0, '2026-09-01 00:45:00', 'ok'),
+                ('2026-10-01', '2026-10-31', '2026-10-01', null, false,
+                 null, null, null, null, null, null, null, null, '2026-10-02 10:15:00', 'not_due')
+        ''')
+
+        with self.assertRaisesRegex(RuntimeError, "invalid not_due monthly YouTube analytics row"):
+            owned_refresh.fetch_month(
+                con,
+                2026,
+                10,
+                now_kst=dt.datetime(2026, 10, 2, 10, 20, tzinfo=owned_refresh.KST),
+            )
+        con.close()
+
+    def test_fetch_month_rejects_not_due_without_preceding_source_history(self):
+        con = duckdb.connect()
+        con.execute('''
+            create table v_youtube_monthly_analytics(
+                period_start date, period_end date,
+                metric_start_date date, metric_end_date date,
+                period_complete boolean,
+                channel_view_count bigint, channel_like_count bigint,
+                channel_comment_count bigint, channel_share_count bigint,
+                channel_engagement_count bigint,
+                new_published_view_count bigint, prior_published_view_count bigint,
+                unknown_publish_view_count bigint,
+                fetched_at timestamp, raw_status varchar
+            )
+        ''')
+        con.execute('''
+            insert into v_youtube_monthly_analytics values (
+                '2026-10-01', '2026-10-31', '2026-10-01', null, false,
+                null, null, null, null, null, null, null, null,
+                '2026-10-02 10:15:00', 'not_due'
+            )
+        ''')
+
+        with self.assertRaisesRegex(RuntimeError, "invalid not_due monthly YouTube analytics row"):
+            owned_refresh.fetch_month(
+                con,
+                2026,
+                10,
+                now_kst=dt.datetime(2026, 10, 2, 10, 20, tzinfo=owned_refresh.KST),
+            )
+        con.close()
+
+    def test_fetch_month_prefers_older_usable_row_over_later_not_due_row(self):
+        con = duckdb.connect()
+        con.execute('''
+            create table v_youtube_monthly_analytics(
+                period_start date, period_end date,
+                metric_start_date date, metric_end_date date,
+                period_complete boolean,
+                channel_view_count bigint, channel_like_count bigint,
+                channel_comment_count bigint, channel_share_count bigint,
+                channel_engagement_count bigint,
+                new_published_view_count bigint, prior_published_view_count bigint,
+                unknown_publish_view_count bigint,
+                fetched_at timestamp, raw_status varchar
+            )
+        ''')
+        con.execute('''
+            insert into v_youtube_monthly_analytics values
+                ('2026-10-01', '2026-10-31', '2026-10-01', '2026-10-01', false,
+                 321, 21, 4, 2, 27, 200, 121, 0, '2026-10-02 09:00:00', 'ok'),
+                ('2026-10-01', '2026-10-31', '2026-10-01', null, false,
+                 null, null, null, null, null, null, null, null, '2026-10-02 10:15:00', 'not_due')
+        ''')
+
+        month = owned_refresh.fetch_month(
+            con,
+            2026,
+            10,
+            now_kst=dt.datetime(2026, 10, 2, 10, 20, tzinfo=owned_refresh.KST),
+        )
+        con.close()
+
+        self.assertEqual(month["views"], 321)
+        self.assertEqual(month["engagement"], 27)
+        self.assertEqual(month["fetched_at"], dt.datetime(2026, 10, 2, 9, 0))
+        self.assertEqual(month["raw_status"], "ok")
 
     def test_fetch_month_does_not_hide_a_multi_month_gap(self):
         path = Path(self.tmp.name) / "youtube_month_gap.duckdb"

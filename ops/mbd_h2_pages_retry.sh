@@ -6,6 +6,20 @@
 MBD_H2_TRANSIENT_FAILURE_PATTERN='Could not set lock on file|Conflicting lock is held|_duckdb\.IOException.*lock|Could not resolve host|Name or service not known|NameResolutionError|Temporary failure in name resolution|network is unreachable|Failed to connect|Connection refused|Connection reset|connection was reset|RemoteDisconnected|ConnectTimeout|ReadTimeout|TimeoutError|timed out|Operation timed out|temporarily unavailable|Temporary failure|TLS.*(error|failed)|SSL.*(error|failed)|RPC failed|remote end hung up unexpectedly|HTTP(Error)?[^0-9]*(429|500|502|503|504)|status.?code.?[:= ]*(429|500|502|503|504)|Service Unavailable|Bad Gateway|Gateway Timeout|MBD_H2_PAGES_STALE_PUBLIC_READBACK'
 MBD_H2_AUTH_FAILURE_PATTERN='Permission denied|Authentication failed|Host key verification failed|Could not read from remote repository|Repository not found|could not read Username|fatal: Authentication'
 
+# The production wrapper already redirects stdout/stderr to its job log and sets
+# MBD_H2_RETRY_LOG_INHERITED=1. Reopening that same path would create an
+# independent file offset, so use the inherited stream in that mode. Standalone
+# callers still append to the explicit path.
+mbd_h2_retry_log() {
+  local log_file="$1"
+  shift
+  if [[ "${MBD_H2_RETRY_LOG_INHERITED:-0}" == 1 ]]; then
+    printf "$@"
+  else
+    printf "$@" >>"$log_file"
+  fi
+}
+
 mbd_h2_is_transient_failure_text() {
   printf '%s\n' "$1" | /usr/bin/grep -Eiq "$MBD_H2_TRANSIENT_FAILURE_PATTERN"
 }
@@ -23,8 +37,9 @@ mbd_h2_runtime_budget_allows_retry() {
   now="$(/bin/date +%s)"
   elapsed=$((now - started))
   if (( elapsed + sleep_seconds >= max_runtime )); then
-    printf '[%s] runtime budget exhausted elapsed=%ss sleep=%ss max=%ss; no retry\n' \
-      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$elapsed" "$sleep_seconds" "$max_runtime" >>"$log_file"
+    mbd_h2_retry_log "$log_file" \
+      '[%s] runtime budget exhausted elapsed=%ss sleep=%ss max=%ss; no retry\n' \
+      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$elapsed" "$sleep_seconds" "$max_runtime"
     return 1
   fi
   return 0
@@ -42,8 +57,8 @@ mbd_h2_run_with_retry() {
   local attempt_output
 
   while (( attempt <= max_attempts )); do
-    printf '[%s] [%s] attempt %s/%s\n' \
-      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" >>"$log_file"
+    mbd_h2_retry_log "$log_file" '[%s] [%s] attempt %s/%s\n' \
+      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts"
 
     attempt_output=""
     if attempt_output="$("$@" 2>&1)"; then
@@ -54,21 +69,32 @@ mbd_h2_run_with_retry() {
 
     if [[ "$rc" -eq 0 ]]; then
       if (( attempt > 1 )); then
-        printf '[%s] [%s] recovered on attempt %s/%s\n' \
-          "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" >>"$log_file"
+        mbd_h2_retry_log "$log_file" '[%s] [%s] recovered on attempt %s/%s\n' \
+          "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts"
       fi
       return 0
     fi
 
+    mbd_h2_retry_log "$log_file" '[%s] [%s] failed attempt output begin attempt=%s/%s rc=%s\n' \
+      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" "$rc"
+    if [[ -n "$attempt_output" ]]; then
+      mbd_h2_retry_log "$log_file" '%s\n' "$attempt_output"
+    else
+      mbd_h2_retry_log "$log_file" '[%s] [%s] failed attempt output empty attempt=%s/%s rc=%s\n' \
+        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" "$rc"
+    fi
+    mbd_h2_retry_log "$log_file" '[%s] [%s] failed attempt output end attempt=%s/%s rc=%s\n' \
+      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" "$rc"
+
     if mbd_h2_is_auth_failure_text "$attempt_output" || ! mbd_h2_is_transient_failure_text "$attempt_output"; then
-      printf '[%s] [%s] non-transient failure; no retry rc=%s attempt=%s/%s\n' \
-        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$rc" "$attempt" "$max_attempts" >>"$log_file"
+      mbd_h2_retry_log "$log_file" '[%s] [%s] non-transient failure; no retry rc=%s attempt=%s/%s\n' \
+        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$rc" "$attempt" "$max_attempts"
       return "$rc"
     fi
 
     if (( attempt >= max_attempts )); then
-      printf '[%s] [%s] transient retry exhausted after %s/%s attempts rc=%s\n' \
-        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" "$rc" >>"$log_file"
+      mbd_h2_retry_log "$log_file" '[%s] [%s] transient retry exhausted after %s/%s attempts rc=%s\n' \
+        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" "$rc"
       return "$rc"
     fi
 
@@ -76,8 +102,8 @@ mbd_h2_run_with_retry() {
       return "$rc"
     fi
 
-    printf '[%s] [%s] transient failure; retrying same idempotent stage after %ss\n' \
-      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$sleep_seconds" >>"$log_file"
+    mbd_h2_retry_log "$log_file" '[%s] [%s] transient failure; retrying same idempotent stage after %ss\n' \
+      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$sleep_seconds"
     /bin/sleep "$sleep_seconds"
     attempt=$((attempt + 1))
   done
@@ -99,8 +125,8 @@ mbd_h2_push_expected_commit() {
   local push_output remote_output remote_sha remote_rc candidate ref extra
 
   while (( attempt <= max_attempts )); do
-    printf '[%s] [%s] attempt %s/%s expected_sha=%s\n' \
-      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" "$expected_sha" >>"$log_file"
+    mbd_h2_retry_log "$log_file" '[%s] [%s] attempt %s/%s expected_sha=%s\n' \
+      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" "$expected_sha"
 
     push_output=""
     if push_output="$("$git_bin" push origin main 2>&1)"; then
@@ -125,38 +151,38 @@ mbd_h2_push_expected_commit() {
     fi
 
     if [[ "$remote_sha" == "$expected_sha" ]]; then
-      printf '[%s] [%s] push response failed but remote already matches expected commit; recovered\n' \
-        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" >>"$log_file"
+      mbd_h2_retry_log "$log_file" '[%s] [%s] push response failed but remote already matches expected commit; recovered\n' \
+        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label"
       return 0
     fi
 
     if [[ -n "$remote_sha" && "$remote_sha" != "$base_sha" ]]; then
-      printf '[%s] [%s] remote moved to unexpected commit remote=%s expected=%s base=%s; no retry\n' \
-        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$remote_sha" "$expected_sha" "$base_sha" >>"$log_file"
+      mbd_h2_retry_log "$log_file" '[%s] [%s] remote moved to unexpected commit remote=%s expected=%s base=%s; no retry\n' \
+        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$remote_sha" "$expected_sha" "$base_sha"
       return 65
     fi
 
     if [[ "$remote_rc" -ne 0 ]] && mbd_h2_is_auth_failure_text "$remote_output"; then
-      printf '[%s] [%s] non-transient remote readback auth failure; no retry rc=%s\n' \
-        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$remote_rc" >>"$log_file"
+      mbd_h2_retry_log "$log_file" '[%s] [%s] non-transient remote readback auth failure; no retry rc=%s\n' \
+        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$remote_rc"
       return "$remote_rc"
     fi
 
     if mbd_h2_is_auth_failure_text "$push_output"; then
-      printf '[%s] [%s] non-transient push auth failure; no retry rc=%s\n' \
-        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$rc" >>"$log_file"
+      mbd_h2_retry_log "$log_file" '[%s] [%s] non-transient push auth failure; no retry rc=%s\n' \
+        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$rc"
       return "$rc"
     fi
 
     if ! mbd_h2_is_transient_failure_text "$push_output"; then
-      printf '[%s] [%s] non-transient push failure; no retry rc=%s\n' \
-        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$rc" >>"$log_file"
+      mbd_h2_retry_log "$log_file" '[%s] [%s] non-transient push failure; no retry rc=%s\n' \
+        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$rc"
       return "$rc"
     fi
 
     if (( attempt >= max_attempts )); then
-      printf '[%s] [%s] transient push retry exhausted after %s/%s attempts rc=%s\n' \
-        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" "$rc" >>"$log_file"
+      mbd_h2_retry_log "$log_file" '[%s] [%s] transient push retry exhausted after %s/%s attempts rc=%s\n' \
+        "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$attempt" "$max_attempts" "$rc"
       return "$rc"
     fi
 
@@ -164,8 +190,9 @@ mbd_h2_push_expected_commit() {
       return "$rc"
     fi
 
-    printf '[%s] [%s] transient push failure with remote still at base/unknown; retrying same commit after %ss\n' \
-      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$sleep_seconds" >>"$log_file"
+    mbd_h2_retry_log "$log_file" \
+      '[%s] [%s] transient push failure with remote still at base/unknown; retrying same commit after %ss\n' \
+      "$(/bin/date '+%Y-%m-%d %H:%M:%S %Z')" "$label" "$sleep_seconds"
     /bin/sleep "$sleep_seconds"
     attempt=$((attempt + 1))
   done

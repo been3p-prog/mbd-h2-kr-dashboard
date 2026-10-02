@@ -87,7 +87,13 @@ def metric(label: str, value: str, em: str) -> str:
     return f'<div class="yt-kpi"><small>{esc(label)}</small><b>{esc(value)}</b><em>{esc(em)}</em></div>'
 
 
-def fetch_month(con: duckdb.DuckDBPyConnection, year: int, month: int) -> dict:
+def fetch_month(
+    con: duckdb.DuckDBPyConnection,
+    year: int,
+    month: int,
+    *,
+    now_kst: dt.datetime | None = None,
+) -> dict:
     requested_start = dt.date(year, month, 1)
     row = con.execute(
         """
@@ -98,7 +104,8 @@ def fetch_month(con: duckdb.DuckDBPyConnection, year: int, month: int) -> dict:
                unknown_publish_view_count, fetched_at, raw_status
         from v_youtube_monthly_analytics
         where period_start = ?
-        order by fetched_at desc
+        order by case when raw_status = 'not_due' then 1 else 0 end,
+                 fetched_at desc
         limit 1
         """,
         [requested_start],
@@ -142,6 +149,62 @@ def fetch_month(con: duckdb.DuckDBPyConnection, year: int, month: int) -> dict:
         "new_views", "prior_views", "unknown_views", "fetched_at", "raw_status",
     ]
     out = dict(zip(keys, row))
+    if out["raw_status"] == "not_due":
+        try:
+            period_start = ensure_date(out["period_start"])
+            period_end = ensure_date(out["period_end"])
+            metric_start = ensure_date(out["metric_start_date"])
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError("invalid not_due monthly YouTube analytics row") from exc
+        aggregate_keys = (
+            "views", "likes", "comments", "shares", "engagement",
+            "new_views", "prior_views", "unknown_views",
+        )
+        effective_now = now_kst or dt.datetime.now(KST)
+        if effective_now.tzinfo is None:
+            effective_now = effective_now.replace(tzinfo=KST)
+        else:
+            effective_now = effective_now.astimezone(KST)
+        current_kst_start = dt.date(effective_now.year, effective_now.month, 1)
+        previous = con.execute(
+            """
+            select period_start
+            from v_youtube_monthly_analytics
+            where period_start < ?
+            order by period_start desc, fetched_at desc
+            limit 1
+            """,
+            [requested_start],
+        ).fetchone()
+        previous_is_adjacent = False
+        if previous:
+            previous_start = ensure_date(previous[0])
+            previous_is_adjacent = (
+                (previous_start.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
+                == requested_start
+            )
+        if not (
+            period_start == requested_start
+            and period_start == current_kst_start
+            and period_end == _month_end(year, month)
+            and metric_start == requested_start
+            and out["metric_end_date"] is None
+            and out["period_complete"] is False
+            and all(out[key] is None for key in aggregate_keys)
+            and out["fetched_at"] is not None
+            and previous_is_adjacent
+        ):
+            raise RuntimeError("invalid not_due monthly YouTube analytics row")
+        return {
+            "period_start": requested_start,
+            "period_end": _month_end(year, month),
+            "metric_start_date": requested_start,
+            "metric_end_date": requested_start,
+            "period_complete": False,
+            **{key: 0 for key in aggregate_keys},
+            "fetched_at": out["fetched_at"],
+            "raw_status": "awaiting_current_month_analytics",
+        }
     for key in ("period_start", "period_end", "metric_start_date", "metric_end_date"):
         out[key] = ensure_date(out[key])
     return out
@@ -950,7 +1013,7 @@ def refresh(html_path: Path, contract_path: Path, db_path: Path, quiet: bool = F
     current_end = min(now.date(), _month_end(now.year, now.month))
     con = duckdb.connect(str(db_path), read_only=True)
     try:
-        month = fetch_month(con, now.year, now.month)
+        month = fetch_month(con, now.year, now.month, now_kst=now)
         from youtube_verified_analytics import load_overlay
         verified = load_overlay(con, required=require_verified)
         weeks = fetch_weeks(con, month["period_start"], month["period_end"])

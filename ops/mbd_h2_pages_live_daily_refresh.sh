@@ -32,6 +32,7 @@ STAMP="$(date '+%Y%m%d_%H%M%S')"
 LOG="$LOG_DIR/daily_live_refresh_${STAMP}.log"
 exec 3>&1 4>&2
 exec >"$LOG" 2>&1
+export MBD_H2_RETRY_LOG_INHERITED=1
 
 cleanup() {
   local rc=$?

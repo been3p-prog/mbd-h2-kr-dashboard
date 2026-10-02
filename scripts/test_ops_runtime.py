@@ -672,6 +672,226 @@ class MbdH2CronRuntimeTest(unittest.TestCase):
             self.assertEqual(counter.read_text(), "2")
             self.assertIn("transient failure; retrying", log.read_text())
 
+    def test_retry_library_logs_nontransient_failure_output_before_classification(self):
+        self.assertTrue(RETRY_LIB.is_file(), f"missing retry library: {RETRY_LIB}")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            log = root / "retry.log"
+            command = root / "fail.sh"
+            command.write_text(
+                "#!/bin/bash\n"
+                "printf 'Traceback (most recent call last):\\n  File \"refresh.py\", line 7\\nValueError: Invalid isoformat string: '\"'\"'None'\"'\"'\\n' >&2\n"
+                "exit 23\n",
+                encoding="utf-8",
+            )
+            command.chmod(0o755)
+            script = (
+                f"source {RETRY_LIB!s}; "
+                "export MBD_H2_MAX_ATTEMPTS=3 MBD_H2_RETRY_SLEEP_SECONDS=0; "
+                f"mbd_h2_run_with_retry youtube_refresh {log!s} {command!s}"
+            )
+            result = self._run(["/bin/bash", "-c", script], check=False)
+            log_text = log.read_text()
+
+            self.assertEqual(result.returncode, 23)
+            self.assertIn("Traceback (most recent call last):", log_text)
+            self.assertLess(log_text.index("failed attempt output begin"), log_text.index("Traceback"))
+            self.assertLess(log_text.index("ValueError: Invalid isoformat string"), log_text.index("failed attempt output end"))
+            self.assertLess(log_text.index("failed attempt output end"), log_text.index("non-transient failure; no retry"))
+            self.assertIn("[youtube_refresh] failed attempt output begin attempt=1/3 rc=23", log_text)
+            self.assertIn("[youtube_refresh] failed attempt output end attempt=1/3 rc=23", log_text)
+
+    def test_retry_library_logs_exact_multiline_output_in_order(self):
+        self.assertTrue(RETRY_LIB.is_file(), f"missing retry library: {RETRY_LIB}")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            log = root / "retry.log"
+            command = root / "multiline.sh"
+            command.write_text(
+                "#!/bin/bash\n"
+                "printf 'first line\\n  indented second line\\nthird line'\n"
+                "exit 17\n",
+                encoding="utf-8",
+            )
+            command.chmod(0o755)
+            script = (
+                f"source {RETRY_LIB!s}; "
+                "export MBD_H2_MAX_ATTEMPTS=2 MBD_H2_RETRY_SLEEP_SECONDS=0; "
+                f"mbd_h2_run_with_retry exact_output {log!s} {command!s}"
+            )
+            result = self._run(["/bin/bash", "-c", script], check=False)
+            log_text = log.read_text()
+
+            self.assertEqual(result.returncode, 17)
+            begin = log_text.index("failed attempt output begin attempt=1/2 rc=17")
+            output = log_text.index("first line\n  indented second line\nthird line", begin)
+            end = log_text.index("failed attempt output end attempt=1/2 rc=17", output)
+            classification = log_text.index("non-transient failure; no retry", end)
+            self.assertLess(begin, output)
+            self.assertLess(output, end)
+            self.assertLess(end, classification)
+
+    def test_retry_library_preserves_failure_block_with_production_redirect_and_later_output(self):
+        self.assertTrue(RETRY_LIB.is_file(), f"missing retry library: {RETRY_LIB}")
+        production_wrapper = (REPO / "ops" / "mbd_h2_pages_live_daily_refresh.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            'exec >"$LOG" 2>&1\nexport MBD_H2_RETRY_LOG_INHERITED=1',
+            production_wrapper,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            log = root / "daily.log"
+            command = root / "long_traceback.sh"
+            command.write_text(
+                "#!/bin/bash\n"
+                "printf 'Traceback (most recent call last):\\n'\n"
+                "i=1\n"
+                "while [[ \"$i\" -le 30 ]]; do\n"
+                "  if (( i % 2 )); then\n"
+                "    printf '  File \"refresh.py\", line %02d, in stage_%02d\\n' \"$i\" \"$i\"\n"
+                "  else\n"
+                "    printf '    payload_%02d = preserve_combined_stream_order\\n' \"$i\" >&2\n"
+                "  fi\n"
+                "  i=$((i+1))\n"
+                "done\n"
+                "printf 'RuntimeError: terminal diagnostic payload\\n' >&2\n"
+                "exit 47\n",
+                encoding="utf-8",
+            )
+            command.chmod(0o755)
+            script = (
+                "exec >\"$1\" 2>&1; "
+                "export MBD_H2_RETRY_LOG_INHERITED=1; "
+                "source \"$3\"; "
+                "export MBD_H2_MAX_ATTEMPTS=1 MBD_H2_RETRY_SLEEP_SECONDS=0; "
+                "mbd_h2_run_with_retry production_redirect \"$1\" \"$2\"; rc=$?; "
+                "printf 'wrapper observed rc=%s\\n' \"$rc\"; "
+                "i=1; while [[ \"$i\" -le 12 ]]; do "
+                "printf 'later stage line %02d\\n' \"$i\"; i=$((i+1)); done; "
+                "exit \"$rc\""
+            )
+
+            result = self._run(
+                ["/bin/bash", "-c", script, "retry-integration", str(log), str(command), str(RETRY_LIB)],
+                check=False,
+            )
+            log_text = log.read_text(encoding="utf-8")
+
+            self.assertEqual(result.returncode, 47)
+            ordered = ["failed attempt output begin attempt=1/1 rc=47", "Traceback (most recent call last):"]
+            for i in range(1, 31):
+                if i % 2:
+                    ordered.append(f'  File "refresh.py", line {i:02d}, in stage_{i:02d}')
+                else:
+                    ordered.append(f"    payload_{i:02d} = preserve_combined_stream_order")
+            ordered.extend([
+                "RuntimeError: terminal diagnostic payload",
+                "failed attempt output end attempt=1/1 rc=47",
+                "non-transient failure; no retry rc=47 attempt=1/1",
+                "wrapper observed rc=47",
+                *(f"later stage line {i:02d}" for i in range(1, 13)),
+            ])
+            cursor = -1
+            for expected in ordered:
+                with self.subTest(expected=expected):
+                    self.assertEqual(log_text.count(expected), 1)
+                    cursor = log_text.index(expected, cursor + 1)
+
+    def test_retry_library_logs_each_transient_failure_before_retry_and_silences_success(self):
+        self.assertTrue(RETRY_LIB.is_file(), f"missing retry library: {RETRY_LIB}")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            counter = root / "counter"
+            log = root / "retry.log"
+            command = root / "flaky_output.sh"
+            command.write_text(
+                "#!/bin/bash\n"
+                "n=0; [[ -f \"$1\" ]] && n=$(cat \"$1\")\n"
+                "n=$((n+1)); printf '%s' \"$n\" > \"$1\"\n"
+                "if [[ \"$n\" -eq 1 ]]; then\n"
+                "  printf 'transient detail line 1\\nOperation timed out on line 2\\n' >&2\n"
+                "  exit 9\n"
+                "fi\n"
+                "printf 'SUCCESS_OUTPUT_MUST_STAY_SILENT\\n'\n",
+                encoding="utf-8",
+            )
+            command.chmod(0o755)
+            script = (
+                f"source {RETRY_LIB!s}; "
+                "export MBD_H2_MAX_ATTEMPTS=2 MBD_H2_RETRY_SLEEP_SECONDS=0 "
+                "MBD_H2_MAX_RUNTIME_SECONDS=60 MBD_H2_RUN_STARTED_EPOCH=$(/bin/date +%s); "
+                f"mbd_h2_run_with_retry transient_probe {log!s} {command!s} {counter!s}"
+            )
+            result = self._run(["/bin/bash", "-c", script], check=False)
+            log_text = log.read_text()
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(counter.read_text(), "2")
+            self.assertEqual(log_text.count("failed attempt output begin"), 1)
+            self.assertEqual(log_text.count("failed attempt output end"), 1)
+            self.assertNotIn("SUCCESS_OUTPUT_MUST_STAY_SILENT", log_text)
+            self.assertLess(log_text.index("Operation timed out on line 2"), log_text.index("transient failure; retrying"))
+            self.assertLess(log_text.index("transient failure; retrying"), log_text.index("attempt 2/2"))
+            self.assertLess(log_text.index("attempt 2/2"), log_text.index("recovered on attempt 2/2"))
+
+    def test_retry_library_marks_empty_failed_output_without_inventing_an_error(self):
+        self.assertTrue(RETRY_LIB.is_file(), f"missing retry library: {RETRY_LIB}")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            log = root / "retry.log"
+            command = root / "empty_fail.sh"
+            command.write_text("#!/bin/bash\nexit 19\n", encoding="utf-8")
+            command.chmod(0o755)
+            script = (
+                f"source {RETRY_LIB!s}; "
+                "export MBD_H2_MAX_ATTEMPTS=1 MBD_H2_RETRY_SLEEP_SECONDS=0; "
+                f"mbd_h2_run_with_retry empty_probe {log!s} {command!s}"
+            )
+            result = self._run(["/bin/bash", "-c", script], check=False)
+            log_text = log.read_text()
+
+            self.assertEqual(result.returncode, 19)
+            marker_lines = [
+                line.split("] [empty_probe] ", 1)[1]
+                for line in log_text.splitlines()
+                if "] [empty_probe] failed attempt output" in line
+            ]
+            self.assertEqual(
+                marker_lines,
+                [
+                    "failed attempt output begin attempt=1/1 rc=19",
+                    "failed attempt output empty attempt=1/1 rc=19",
+                    "failed attempt output end attempt=1/1 rc=19",
+                ],
+            )
+
+    def test_retry_library_success_keeps_stage_output_silent(self):
+        self.assertTrue(RETRY_LIB.is_file(), f"missing retry library: {RETRY_LIB}")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            log = root / "retry.log"
+            command = root / "success.sh"
+            command.write_text(
+                "#!/bin/bash\nprintf 'SUCCESS_STDOUT\\n'\nprintf 'SUCCESS_STDERR\\n' >&2\n",
+                encoding="utf-8",
+            )
+            command.chmod(0o755)
+            script = (
+                f"source {RETRY_LIB!s}; "
+                "export MBD_H2_MAX_ATTEMPTS=2 MBD_H2_RETRY_SLEEP_SECONDS=0; "
+                f"mbd_h2_run_with_retry success_probe {log!s} {command!s}"
+            )
+            result = self._run(["/bin/bash", "-c", script], check=False)
+            log_text = log.read_text()
+
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("[success_probe] attempt 1/2", log_text)
+            self.assertNotIn("SUCCESS_STDOUT", log_text)
+            self.assertNotIn("SUCCESS_STDERR", log_text)
+            self.assertNotIn("failed attempt output", log_text)
+
     def test_retry_library_fails_fast_on_auth_failure(self):
         self.assertTrue(RETRY_LIB.is_file(), f"missing retry library: {RETRY_LIB}")
         with tempfile.TemporaryDirectory() as tmp:
