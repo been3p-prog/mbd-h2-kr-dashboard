@@ -22,16 +22,37 @@ def _metric(value):
         return None
 
 
+def _review_text(value):
+    lines = [line.rstrip() for line in str(value or '').replace('\r\n', '\n').replace('\r', '\n').split('\n')]
+    while lines and not lines[-1]:
+        lines.pop()
+    return '\n'.join(lines).strip()
+
+
+def _review_sent(value):
+    return str(value or '').strip().upper() == 'TRUE'
+
+
 def fetch_schedule(db_path, year, month):
     start = dt.date(year, month, 1)
     end = dt.date(year, month, calendar.monthrange(year, month)[1])
     con = duckdb.connect(str(db_path), read_only=True)
     try:
-        rows = con.execute(r'''
+        source_columns = {
+            row[0] for row in con.execute(
+                "select column_name from information_schema.columns "
+                "where table_schema='live' and table_name='raw_slots'"
+            ).fetchall()
+        }
+        review_expr = '"공식 회고"' if '공식 회고' in source_columns else 'NULL'
+        sent_expr = '"회고 발송"' if '회고 발송' in source_columns else 'NULL'
+        competitor_expr = '"타사 라이브 이력"' if '타사 라이브 이력' in source_columns else 'NULL'
+        rows = con.execute(f'''
             select try_cast("온에어 일자" as date), "브랜드명", "패키지", "PGM",
                    "라이브 시청자 (비로그인 포함)",
                    "일 전체 GMV (라이브 브랜드 전체)", "라이브 1H GMV",
-                   regexp_matches(lower(concat_ws(' ', "패키지", "PGM", "비고 (프로모션)")), '무상|무료|free')
+                   regexp_matches(lower(concat_ws(' ', "패키지", "PGM", "비고 (프로모션)")), '무상|무료|free'),
+                   {review_expr}, {sent_expr}, {competitor_expr}
             from live.raw_slots
             where try_cast("온에어 일자" as date) between ? and ?
               and not regexp_matches(lower(concat_ws(' ', "패키지", "PGM", "비고 (프로모션)")), '취소|cancel')
@@ -42,8 +63,43 @@ def fetch_schedule(db_path, year, month):
     # Do not deduplicate by date/brand: separate broadcasts can share both.
     return [dict(date=d, brand=brand or '브랜드 확인중', package=package or '',
                  pgm=pgm or '', viewers=_metric(viewers), gmv_1d=_metric(day_gmv),
-                 gmv_1h=_metric(hour_gmv), free=bool(free))
-            for d, brand, package, pgm, viewers, day_gmv, hour_gmv, free in rows]
+                 gmv_1h=_metric(hour_gmv), free=bool(free),
+                 official_review=_review_text(official_review),
+                 review_sent=_review_sent(review_sent),
+                 competitor_live_history=_review_text(competitor_live_history))
+            for (d, brand, package, pgm, viewers, day_gmv, hour_gmv, free,
+                 official_review, review_sent, competitor_live_history) in rows]
+
+
+RETRO_STYLE_MARKER = 'data-wk-retro-style="native-v1"'
+RETRO_STYLE = '''<style data-wk-retro-style="native-v1">
+.wk-row .activity-main{position:relative}
+.wk-retro{display:inline-block;margin-left:.45rem}
+.wk-retro>summary{cursor:pointer;color:var(--sub);font-size:.75rem;list-style-position:inside}
+.wk-retro-body{display:none;position:fixed;z-index:20;left:50%;top:50%;transform:translate(-50%,-50%);width:min(32rem,calc(100vw - 2rem));max-height:min(60vh,calc(100vh - 2rem));overflow:auto;box-sizing:border-box;padding:.75rem;margin:0;border:1px solid var(--line);border-radius:.65rem;background:var(--card);box-shadow:0 12px 30px rgba(15,23,42,.18);white-space:pre-wrap;text-align:left}
+.wk-retro[open]>.wk-retro-body{display:block}
+@media (hover:hover){.wk-row:hover .wk-retro-body{display:block}}
+</style>'''
+RETRO_STYLE_PATTERN = re.compile(
+    r'<style data-wk-retro-style="native-v1">.*?</style>', re.DOTALL
+)
+
+
+def _retro_html(row):
+    review = row.get('official_review', '').strip()
+    competitor = row.get('competitor_live_history', '').strip()
+    sent_label = '발송 완료' if row.get('review_sent') else '발송 대기'
+    review_html = (f'<b>공식 회고</b>\n{html.escape(review, quote=True)}'
+                   if review else '<b>공식 회고</b>\n회고 입력 대기')
+    sent_html = f'\n\n<b>회고 발송</b>\n{sent_label}'
+    competitor_html = (
+        f'\n\n<b>타사 라이브 이력</b>\n{html.escape(competitor, quote=True)}'
+        if competitor else ''
+    )
+    return (
+        f'<details class="wk-retro"><summary>회고 · {"입력 대기" if not review else sent_label}</summary>'
+        f'<div class="wk-retro-body">{review_html}{sent_html}{competitor_html}</div></details>'
+    )
 
 
 def update_schedule(document, rows, *, as_of, source_as_of=None):
@@ -51,6 +107,14 @@ def update_schedule(document, rows, *, as_of, source_as_of=None):
 
     year, month = as_of.year, as_of.month
     source_as_of = source_as_of or as_of
+    if RETRO_STYLE_MARKER in document:
+        match = RETRO_STYLE_PATTERN.search(document)
+        if not match:
+            raise RuntimeError('Live retrospective style boundary changed; retain last-good dashboard')
+        document = (document[:match.start()] + RETRO_STYLE
+                    + RETRO_STYLE_PATTERN.sub('', document[match.end():]))
+    else:
+        document = document.replace('</head>', RETRO_STYLE + '</head>', 1)
     month_end = calendar.monthrange(year, month)[1]
     for row in rows:
         if (row['date'].year, row['date'].month) != (year, month):
@@ -74,7 +138,7 @@ def update_schedule(document, rows, *, as_of, source_as_of=None):
     for week in range(1, math.ceil(month_end / 7) + 1):
         first, last = (week - 1) * 7 + 1, min(week * 7, month_end)
         items = []
-        for row in rows:
+        for row_index, row in enumerate(rows, start=1):
             if not first <= row['date'].day <= last:
                 continue
             is_future = row['date'] > as_of
@@ -90,11 +154,13 @@ def update_schedule(document, rows, *, as_of, source_as_of=None):
                 missing = is_future or value is None or (not has_result and value == 0)
                 label = '—' if missing else (f'{value:,}' if key == 'viewers' else fmt_won(value))
                 metrics.append(f'<span class="metric-cell"><b>{label}</b></span>')
-            items.append('<div class="activity-row">'
+            row_id = f'live-schedule-{row["date"].strftime("%Y%m%d")}-{row_index:02d}'
+            retro = _retro_html(row) if has_result else ''
+            items.append(f'<div class="activity-row wk-row" data-live-schedule-row="{row_id}">'
                          f'<time class="activity-date" datetime="{row["date"].isoformat()}">{fmt_m_d(row["date"])}</time>'
                          '<div class="activity-main activity-main-inline"><span class="activity-title-line">'
                          f'<b class="content-title">{html.escape(row["brand"])}</b>'
-                         f'<small class="activity-inline-meta">{html.escape(meta)}</small></span></div>'
+                         f'<small class="activity-inline-meta">{html.escape(meta)}</small></span>{retro}</div>'
                          '<div class="activity-metric metric-trio num">' + ''.join(metrics) + '</div></div>')
         body = ''.join(items) or '<div class="activity-empty">원천에 등록된 편성 없음</div>'
         groups.append(f'<details class="week-group" data-week-group="{month}-{week}" open>'
