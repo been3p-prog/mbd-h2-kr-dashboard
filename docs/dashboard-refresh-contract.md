@@ -47,10 +47,14 @@ Public Live rows do not publish PD names, cost or margin. The already-visible ho
 measurement is 1H, not 3H; untouched historical 3H columns retain their prior basis.
 Main/detail Live performance count, 1D total and average are cross-checked before deployment.
 The full schedule count is separate from the positive-GMV performance population.
-Completed Live cards may publish the escaped `공식 회고`, `회고 발송`, and
-`타사 라이브 이력` fields in a hover/tap overlay. `내부회고` stays outside the
-public query, rendered HTML, manifest allowlist, and release artifact. Missing
-official reviews show `회고 입력 대기`; they are never filled from another field.
+Completed Live rows may publish the escaped `공식 회고`, `회고 발송`, and
+`타사 라이브 이력` fields, gated solely on a nonblank `공식 회고`: the row then
+carries one inline native `<details>` icon whose tap opens the escaped body, plus
+a CSS-only sibling hover pop for pointer devices. A blank `공식 회고` renders no
+icon, no details and no hover overlay even when `회고 발송` is TRUE or
+`타사 라이브 이력` has text, and no pending placeholder is shown in its place.
+`내부회고` stays outside the public query, rendered HTML, manifest allowlist, and
+release artifact. No retrospective field is ever filled from another field.
 
 ## Full weekly content visibility (2026-09-10)
 

@@ -20,6 +20,16 @@ from pathlib import Path
 from typing import cast
 
 VIEWPORTS = ((1440, 900, "desktop"), (390, 844, "mobile"))
+# [2026-10-02] 주간 회고 hover pop 전용 스모크 — generic VIEWPORTS 루프와 완전히 분리한다.
+#   기존 제네릭 픽스처/계약이 이 증거를 요구하지 않게 두어야(그래야 _check_viewport 회귀가
+#   안 생긴다) 하므로, 전용 뷰포트·전용 수집기·전용 검증기로 따로 돈다.
+WEEKLY_RETRO_VIEWPORT = (1280, 900)
+WEEKLY_RETRO_MONTH = 9
+WEEKLY_RETRO_ROW_DATE = "2026-09-07"
+WEEKLY_RETRO_ROW_TITLE = "베베숲"
+# 유튜브 원장에도 .activity-row 가 있으므로 라이브 원장으로 한정한다. 인덱스 정렬을 보장하려고
+# 행 탐색 JS 와 Playwright locator 가 반드시 같은 셀렉터를 쓴다.
+WEEKLY_RETRO_ROW_SELECTOR = '[data-content-ledger="live"] .activity-row'
 SELECTED_OPTION_RE = re.compile(r'<option value="(\d+)" selected>')
 MANIFEST_RE = re.compile(
     r'<script type="application/json" id="mbd-public-guard">(.*?)</script>', re.S)
@@ -481,6 +491,143 @@ def _check_viewport(result, width, height, tag, *, switch_expected):
     return errors
 
 
+# 행 탐색: 날짜(datetime)와 공백 정규화한 .content-title 완전일치로 후보 인덱스를 모은다.
+_WEEKLY_RETRO_ROW_JS = (
+    "a=>{var rows=document.querySelectorAll(a.selector);var indexes=[];"
+    "for(var i=0;i<rows.length;i++){"
+    "var time=rows[i].querySelector('time.activity-date');"
+    "var title=rows[i].querySelector('.content-title');"
+    "if(!time||!title)continue;"
+    "if(time.getAttribute('datetime')!==a.date)continue;"
+    "if((title.textContent||'').replace(/\\s+/g,' ').trim()!==a.title)continue;"
+    "indexes.push(i);}"
+    "return {indexes:indexes,rowTotal:rows.length};}"
+)
+# hit-test: 직계 자식 .wk-retro-pop 의 중심에서 elementFromPoint 를 찍어 그 지점의 타깃이
+# pop 자신이거나 pop의 자손인지를 돌려준다. display 는 참고 증거로만 싣는다.
+_WEEKLY_RETRO_POP_JS = (
+    "row=>{var pops=Array.prototype.filter.call(row.children,function(node){"
+    "return node.classList&&node.classList.contains('wk-retro-pop');});"
+    "var time=row.querySelector('time.activity-date');"
+    "var title=row.querySelector('.content-title');"
+    "var out={popCount:pops.length,"
+    "date:time?time.getAttribute('datetime'):null,"
+    "title:((title&&title.textContent)||'').replace(/\\s+/g,' ').trim()};"
+    "if(pops.length!==1)return out;"
+    "var pop=pops[0];var rect=pop.getBoundingClientRect();"
+    "var cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;"
+    "var target=document.elementFromPoint(cx,cy);"
+    "out.display=getComputedStyle(pop).display;"
+    "out.pointerEvents=getComputedStyle(pop).pointerEvents;"
+    "out.box={left:rect.left,top:rect.top,width:rect.width,height:rect.height};"
+    "out.viewport={width:window.innerWidth,height:window.innerHeight};"
+    "out.point={x:cx,y:cy};"
+    "out.hitTarget=target?(target.tagName+((typeof target.className==='string'&&target.className)"
+    "?'.'+target.className.trim().split(/\\s+/).join('.'):'')):null;"
+    "out.hitIsPop=target===pop;"
+    "out.hitIsDescendant=!!target&&target!==pop&&pop.contains(target);"
+    "out.topmost=out.hitIsPop||out.hitIsDescendant;"
+    "return out;}"
+)
+
+
+def collect_weekly_retro_evidence(source: str, width=None, height=None) -> dict:
+    """최종 HTML을 실제 시스템 Chrome(1280x900)에 띄워 주간 회고 pop의 hit-test 증거를 모은다.
+
+    #msel 을 9월로 바꾸고, (2026-09-07, 베베숲) 행을 정확히 하나 고른 뒤 그 행을 hover 하고,
+    직계 자식 .wk-retro-pop 의 중심 좌표에서 document.elementFromPoint 를 호출한다.
+    계산된 display 는 증거로만 남기고 통과 조건에는 절대 쓰지 않는다 — 실제로 포인터에
+    잡히는지(topmost)가 유일한 합격 조건이다. 실패/부재는 모두 error 로 fail-closed.
+    """
+    width = WEEKLY_RETRO_VIEWPORT[0] if width is None else width
+    height = WEEKLY_RETRO_VIEWPORT[1] if height is None else height
+    try:
+        sync_playwright = importlib.import_module("playwright.sync_api").sync_playwright
+    except (ImportError, ModuleNotFoundError):
+        return {"error": "playwright package missing; weekly retrospective hit-test cannot run"}
+    with tempfile.NamedTemporaryFile("w", suffix=".html", encoding="utf-8", delete=False) as handle:
+        handle.write(source)
+        render_path = Path(handle.name)
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(
+                executable_path=find_chrome(), headless=True,
+                args=["--no-sandbox", "--disable-gpu", "--hide-scrollbars"])
+            try:
+                page = browser.new_page(viewport={"width": width, "height": height})
+                page.set_default_timeout(5_000)
+                page.goto(render_path.as_uri(), wait_until="load", timeout=30_000)
+                page.wait_for_timeout(150)
+                month = page.evaluate(
+                    "m=>{var sel=document.getElementById('msel');if(!sel)return null;"
+                    "sel.value=m;sel.dispatchEvent(new Event('change'));return sel.value;}",
+                    str(WEEKLY_RETRO_MONTH))
+                page.wait_for_timeout(150)
+                found = page.evaluate(_WEEKLY_RETRO_ROW_JS, {
+                    "selector": WEEKLY_RETRO_ROW_SELECTOR,
+                    "date": WEEKLY_RETRO_ROW_DATE,
+                    "title": WEEKLY_RETRO_ROW_TITLE})
+                evidence = {
+                    "viewportRequested": {"width": width, "height": height},
+                    "month": month,
+                    "rowMatches": len(found["indexes"]),
+                    "rowTotal": found["rowTotal"],
+                }
+                if len(found["indexes"]) != 1:
+                    return evidence
+                row = page.locator(WEEKLY_RETRO_ROW_SELECTOR).nth(found["indexes"][0])
+                row.scroll_into_view_if_needed()
+                row.hover()
+                page.wait_for_timeout(180)
+                evidence.update(row.evaluate(_WEEKLY_RETRO_POP_JS))
+                return evidence
+            finally:
+                browser.close()
+    except Exception as exc:
+        return {"error": f"{type(exc).__name__}: {exc}"}
+    finally:
+        render_path.unlink(missing_ok=True)
+
+
+def _check_weekly_retro(evidence) -> list:
+    """주간 회고 hover pop 증거 검증 — topmost 가 True 가 아니면 무조건 RED."""
+    tag = "weekly-retro"
+    if not isinstance(evidence, dict):
+        return [f"{tag}: hover hit-test evidence missing"]
+    if evidence.get("error"):
+        return [f"{tag}: {evidence['error']}"]
+    errors = []
+    if str(evidence.get("month")) != str(WEEKLY_RETRO_MONTH):
+        errors.append(f"{tag}: month selector={evidence.get('month')!r} != {WEEKLY_RETRO_MONTH}")
+    if evidence.get("rowMatches") != 1:
+        errors.append(
+            f"{tag}: rows matching ({WEEKLY_RETRO_ROW_DATE}, {WEEKLY_RETRO_ROW_TITLE})"
+            f"={evidence.get('rowMatches')} != 1 (scanned {evidence.get('rowTotal')})")
+    if evidence.get("date") != WEEKLY_RETRO_ROW_DATE:
+        errors.append(f"{tag}: hovered row datetime={evidence.get('date')!r} != {WEEKLY_RETRO_ROW_DATE}")
+    if evidence.get("title") != WEEKLY_RETRO_ROW_TITLE:
+        errors.append(f"{tag}: hovered row title={evidence.get('title')!r} != {WEEKLY_RETRO_ROW_TITLE}")
+    if evidence.get("popCount") != 1:
+        errors.append(f"{tag}: direct-child .wk-retro-pop count={evidence.get('popCount')} != 1")
+    box, viewport = evidence.get("box"), evidence.get("viewport")
+    numbers = (isinstance(box, dict) and isinstance(viewport, dict)
+               and all(isinstance(box.get(key), (int, float)) for key in ("left", "top", "width", "height"))
+               and all(isinstance(viewport.get(key), (int, float)) for key in ("width", "height")))
+    if not numbers:
+        errors.append(f"{tag}: pop box/viewport metrics missing: box={box}, viewport={viewport}")
+    elif (box["width"] <= 0 or box["height"] <= 0 or box["left"] < -1 or box["top"] < -1
+            or box["left"] + box["width"] > viewport["width"] + 1
+            or box["top"] + box["height"] > viewport["height"] + 1):
+        errors.append(f"{tag}: pop box is empty or outside the viewport: box={box}, viewport={viewport}")
+    # display 는 증거로만 싣는다 — 계산된 display 가 block 이어도 포인터에 잡히지 않으면 실패.
+    if evidence.get("topmost") is not True:
+        errors.append(
+            f"{tag}: elementFromPoint{evidence.get('point')} target={evidence.get('hitTarget')!r} "
+            f"is neither the pop nor its descendant (topmost={evidence.get('topmost')!r}, "
+            f"display={evidence.get('display')!r}, pointerEvents={evidence.get('pointerEvents')!r})")
+    return errors
+
+
 def main() -> int:
     source_path = Path(sys.argv[1] if len(sys.argv) > 1 else "index.html").resolve()
     source = source_path.read_text(encoding="utf-8")
@@ -501,6 +648,11 @@ def main() -> int:
         switch = {"current": current, "target": target}
         errors.extend(_check_viewport(result, width, height, tag, switch_expected=switch))
 
+    # [2026-10-02] 전용 주간 회고 hover 스모크 — generic 루프와 독립적으로 최종 HTML을
+    #   1280x900 에 띄워 elementFromPoint 로 pop 적중을 요구한다(증거 없으면 RED).
+    weekly_retro = collect_weekly_retro_evidence(source)
+    errors.extend(_check_weekly_retro(weekly_retro))
+
     if errors:
         print("DASHBOARD_SMOKE=RED")
         for error in errors:
@@ -513,6 +665,10 @@ def main() -> int:
         f"mobile:{observed_widths.get('mobile')}; "
         "source_links=present; lower_cards=green; live_window=green; "
         "live_retrospective_hover_tap=green; "
+        f"weekly_retro_hover_topmost=green"
+        f"(viewport={WEEKLY_RETRO_VIEWPORT[0]}x{WEEKLY_RETRO_VIEWPORT[1]},"
+        f"row={WEEKLY_RETRO_ROW_DATE}/{WEEKLY_RETRO_ROW_TITLE},"
+        f"hit={weekly_retro.get('hitTarget')}); "
         "live_window_full_width=green; youtube_window=green; "
         "youtube_window_full_width=green; future_negative_control=green; "
         "layout_ownership=green"

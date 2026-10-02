@@ -1108,6 +1108,103 @@ class SmokeViewportPolicyTest(unittest.TestCase):
             self._result(1200), 1440, 900, "desktop", switch_expected=None)
         self.assertTrue(any("requested width" in e for e in errors))
 
+    # [2026-10-02] 주간 회고 hover 증거는 전용 스모크에서만 요구한다 — 제네릭 뷰포트 픽스처는
+    #   이 키를 갖지 않아도 계속 통과해야 한다(독립). 검증은 _check_weekly_retro 가 따로 한다.
+    def test_generic_viewport_contract_does_not_require_weekly_retro_evidence(self):
+        for width, height, tag in sd.VIEWPORTS:
+            with self.subTest(viewport=tag):
+                result = self._result(width)
+                self.assertNotIn("weeklyRetro", result)
+                self.assertNotIn("retro", result["liveWindow"])
+                self.assertEqual(
+                    sd._check_viewport(result, width, height, tag, switch_expected=None), [])
+
+
+# [2026-10-02] 주간 회고 hover pop 전용 증거 검증기. hover 노출을 계산된 display 로만 증명하던
+#   구멍을 막는다 — 합격 조건은 pop 중심에서 document.elementFromPoint 가 pop 자신이나 그
+#   자손을 돌려주는 것(topmost)이고, display:block 이어도 포인터에 잡히지 않으면 RED 다.
+class WeeklyRetroEvidencePolicyTest(unittest.TestCase):
+    def _evidence(self, **overrides):
+        evidence = {
+            "viewportRequested": {"width": 1280, "height": 900},
+            "month": "9",
+            "rowMatches": 1,
+            "rowTotal": 42,
+            "popCount": 1,
+            "date": sd.WEEKLY_RETRO_ROW_DATE,
+            "title": sd.WEEKLY_RETRO_ROW_TITLE,
+            "display": "block",
+            "pointerEvents": "auto",
+            "box": {"left": 384.0, "top": 180.0, "width": 512.0, "height": 540.0},
+            "viewport": {"width": 1280, "height": 900},
+            "point": {"x": 640.0, "y": 450.0},
+            "hitTarget": "DIV.wk-retro-pop",
+            "hitIsPop": True,
+            "hitIsDescendant": False,
+            "topmost": True,
+        }
+        evidence.update(overrides)
+        return evidence
+
+    def test_dedicated_smoke_pins_viewport_and_exact_row_independently(self):
+        self.assertEqual(sd.WEEKLY_RETRO_VIEWPORT, (1280, 900))
+        self.assertEqual(sd.WEEKLY_RETRO_MONTH, 9)
+        self.assertEqual(sd.WEEKLY_RETRO_ROW_DATE, "2026-09-07")
+        self.assertEqual(sd.WEEKLY_RETRO_ROW_TITLE, "베베숲")
+        # 전용 뷰포트는 제네릭 VIEWPORTS 에 섞이지 않는다
+        self.assertNotIn(1280, [width for width, _, _ in sd.VIEWPORTS])
+
+    def test_topmost_pop_passes(self):
+        self.assertEqual(sd._check_weekly_retro(self._evidence()), [])
+
+    def test_topmost_descendant_of_pop_passes(self):
+        self.assertEqual(sd._check_weekly_retro(self._evidence(
+            hitTarget="B", hitIsPop=False, hitIsDescendant=True)), [])
+
+    def test_computed_display_alone_never_passes(self):
+        # display:block + pointer-events:none → elementFromPoint 는 pop 아래 요소를 돌려준다.
+        errors = sd._check_weekly_retro(self._evidence(
+            display="block", pointerEvents="none", hitTarget="DIV.activity-row",
+            hitIsPop=False, hitIsDescendant=False, topmost=False))
+        self.assertTrue(any("neither the pop nor its descendant" in e for e in errors), errors)
+
+    def test_missing_topmost_fails(self):
+        evidence = self._evidence()
+        del evidence["topmost"]
+        self.assertTrue(any("topmost" in e for e in sd._check_weekly_retro(evidence)))
+
+    def test_missing_or_errored_evidence_fails(self):
+        self.assertTrue(sd._check_weekly_retro(None))
+        self.assertTrue(sd._check_weekly_retro({}))
+        self.assertTrue(any("playwright" in e for e in sd._check_weekly_retro(
+            {"error": "playwright package missing; weekly retrospective hit-test cannot run"})))
+
+    def test_ambiguous_or_wrong_row_fails(self):
+        for overrides, needle in (
+            ({"rowMatches": 0}, "rows matching"),
+            ({"rowMatches": 2}, "rows matching"),
+            ({"month": "3"}, "month selector"),
+            ({"date": "2026-09-08"}, "datetime"),
+            ({"title": "베베숲 "}, "title"),
+            ({"title": "베베숲키즈"}, "title"),
+            ({"popCount": 0}, "wk-retro-pop count"),
+            ({"popCount": 2}, "wk-retro-pop count"),
+        ):
+            with self.subTest(**overrides):
+                errors = sd._check_weekly_retro(self._evidence(**overrides))
+                self.assertTrue(any(needle in e for e in errors), errors)
+
+    def test_empty_or_offscreen_pop_box_fails(self):
+        for box in ({"left": 384.0, "top": 180.0, "width": 0.0, "height": 540.0},
+                    {"left": 384.0, "top": 180.0, "width": 512.0, "height": 0.0},
+                    {"left": 900.0, "top": 180.0, "width": 512.0, "height": 540.0},
+                    {"left": 384.0, "top": -40.0, "width": 512.0, "height": 540.0}):
+            with self.subTest(box=box):
+                errors = sd._check_weekly_retro(self._evidence(box=box))
+                self.assertTrue(any("outside the viewport" in e for e in errors), errors)
+        errors = sd._check_weekly_retro(self._evidence(box=None, viewport=None))
+        self.assertTrue(any("metrics missing" in e for e in errors), errors)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
