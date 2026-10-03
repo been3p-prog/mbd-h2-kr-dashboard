@@ -6,8 +6,8 @@
     "period_complete": false,
     "raw_status": "awaiting_current_month_analytics",
     "source_as_of": {
-      "yt_quality": "2026-10-02T10:09:18+09:00",
-      "owned_media": "2026-10-02T10:09:17+09:00"
+      "yt_quality": "2026-10-03T00:07:09+09:00",
+      "owned_media": "2026-10-03T00:07:08+09:00"
     }
   },
   "required_copy": [
@@ -69,16 +69,16 @@
   "weekly_rows": [
     {
       "period": "9/28–10/4",
-      "views": 934264,
+      "views": 1313685,
       "complete": false
     }
   ],
   "content_cards": [],
   "verified_api": {
-    "actual_end": "2026-09-29",
-    "captured_at": "2026-10-02T18:25:15.617226+09:00",
-    "discovered_count": 0,
-    "sha256": "107c02fdccff490b90a2e75ce42cd8b1d794bf350f60e260b3d37386a7b727a6"
+    "actual_end": "2026-09-30",
+    "captured_at": "2026-10-03T10:20:29.190557+09:00",
+    "discovered_count": 1,
+    "sha256": "a6efe20442102d38479108a4fbbbcb6705c44c7cd4b65ec875d3f3f265229cee"
   },
   "schedule_coverage": {
     "source_count": 16,
@@ -89,8 +89,8 @@
     "published_count": 2,
     "empty_slot_count": 43,
     "rendered_count": 16,
-    "captured_at": "2026-10-02T18:25:12+09:00",
-    "source_sha256": "1ae2d682400dd2117269b088acd07682e6c6728a28652d86dd1665afecca076b",
+    "captured_at": "2026-10-03T10:20:25+09:00",
+    "source_sha256": "07f37203dec37d6fd4f2a513e058198b46823917f790f7acae85d28a54baeaa2",
     "source_keys": [
       "0ab7dd244dd2d76fe117e4d2",
       "1196b82ad2cad5866d20b660",
@@ -109,9 +109,9 @@
       "d8fbc4ad76edb889d47aef41",
       "de9667892d6d4bd38f65f807"
     ],
-    "planned": 6,
-    "unmatched": 0,
-    "community": 0,
+    "planned": 4,
+    "unmatched": 1,
+    "community": 1,
     "slot": 8,
     "other_period": 0
   },
@@ -130,15 +130,15 @@
     "lf_average_views": 0,
     "sf_average_views": 0,
     "subscriber_count": 805000,
-    "previous_average_views": 20610
+    "previous_average_views": 25542
   },
   "quality_history": {
     "9": {
       "publish_count": 43,
-      "d7_completed": 38,
-      "average_views": 20610,
-      "lf_average_views": 65529,
-      "sf_average_views": 13389
+      "d7_completed": 40,
+      "average_views": 25542,
+      "lf_average_views": 89196,
+      "sf_average_views": 13921
     },
     "10": {
       "publish_count": 2,
