@@ -4,10 +4,10 @@
     "duckdb": "read-only YouTube snapshot",
     "monthly_period": "2026-10-01~2026-10-01",
     "period_complete": false,
-    "raw_status": "awaiting_current_month_analytics",
+    "raw_status": "ok",
     "source_as_of": {
-      "yt_quality": "2026-10-03T00:07:09+09:00",
-      "owned_media": "2026-10-03T00:07:08+09:00"
+      "yt_quality": "2026-10-04T00:14:09+09:00",
+      "owned_media": "2026-10-04T00:14:08+09:00"
     }
   },
   "required_copy": [
@@ -32,65 +32,65 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "0",
+      "value": "34만",
       "em": "10/1–10/1"
     },
     {
       "label": "발행",
-      "value": "2건",
-      "em": "LF 1 · SF 1"
+      "value": "3건",
+      "em": "LF 1 · SF 2"
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "0",
+      "value": "2.3만",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "0",
+      "value": "31만",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "0",
+      "value": "3,227",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "0",
-      "em": "댓글 0"
+      "value": "2,822",
+      "em": "댓글 36"
     },
     {
       "label": "공유",
-      "value": "0",
-      "em": "미매칭 0"
+      "value": "369",
+      "em": "미매칭 7,662"
     }
   ],
   "weekly_rows": [
     {
       "period": "9/28–10/4",
-      "views": 1313685,
+      "views": 1657198,
       "complete": false
     }
   ],
   "content_cards": [],
   "verified_api": {
-    "actual_end": "2026-09-30",
-    "captured_at": "2026-10-03T10:20:29.190557+09:00",
+    "actual_end": "2026-10-01",
+    "captured_at": "2026-10-04T10:20:59.280700+09:00",
     "discovered_count": 1,
-    "sha256": "a6efe20442102d38479108a4fbbbcb6705c44c7cd4b65ec875d3f3f265229cee"
+    "sha256": "5576ffb7a4b915a785a83f993d2be89ddfaa20fbba8fda1bad427d6eddd3f230"
   },
   "schedule_coverage": {
     "source_count": 16,
-    "matched_count": 2,
-    "extra_count": 14,
+    "matched_count": 3,
+    "extra_count": 13,
     "issue_count": 0,
     "published_unmatched_count": 0,
-    "published_count": 2,
+    "published_count": 3,
     "empty_slot_count": 43,
     "rendered_count": 16,
-    "captured_at": "2026-10-03T10:20:25+09:00",
-    "source_sha256": "07f37203dec37d6fd4f2a513e058198b46823917f790f7acae85d28a54baeaa2",
+    "captured_at": "2026-10-04T10:20:56+09:00",
+    "source_sha256": "59e6429039896cc048ba52994af802bb5d78a8e4d374298d72478c335c0f2575",
     "source_keys": [
       "0ab7dd244dd2d76fe117e4d2",
       "1196b82ad2cad5866d20b660",
@@ -109,7 +109,7 @@
       "d8fbc4ad76edb889d47aef41",
       "de9667892d6d4bd38f65f807"
     ],
-    "planned": 4,
+    "planned": 3,
     "unmatched": 1,
     "community": 1,
     "slot": 8,
@@ -118,11 +118,11 @@
   "main_surface": {
     "year": 2026,
     "month": 10,
-    "publish_count": 2,
+    "publish_count": 3,
     "lf_publish_count": 1,
-    "sf_publish_count": 1,
-    "latest_publish_date": "2026-10-02",
-    "snapshot_date": "2026-10-02",
+    "sf_publish_count": 2,
+    "latest_publish_date": "2026-10-03",
+    "snapshot_date": "2026-10-03",
     "elapsed_weeks": 1,
     "quality_basis": "analytics-d7",
     "d7_completed": 0,
@@ -130,18 +130,18 @@
     "lf_average_views": 0,
     "sf_average_views": 0,
     "subscriber_count": 805000,
-    "previous_average_views": 25542
+    "previous_average_views": 26488
   },
   "quality_history": {
     "9": {
       "publish_count": 43,
-      "d7_completed": 40,
-      "average_views": 25542,
+      "d7_completed": 41,
+      "average_views": 26488,
       "lf_average_views": 89196,
-      "sf_average_views": 13921
+      "sf_average_views": 15403
     },
     "10": {
-      "publish_count": 2,
+      "publish_count": 3,
       "d7_completed": 0,
       "average_views": 0,
       "lf_average_views": 0,
