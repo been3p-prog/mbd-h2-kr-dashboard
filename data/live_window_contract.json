@@ -3,16 +3,16 @@
   "source": {
     "duckdb": "read-only MBD snapshot",
     "schema_table": "live.raw_slots",
-    "period": "2026-10-01~2026-10-01",
-    "latest_completed_date": "2026-10-01",
-    "completed_row_count": 1,
+    "period": "2026-10-01~2026-10-05",
+    "latest_completed_date": "2026-10-05",
+    "completed_row_count": 2,
     "sheet_rows": []
   },
   "quality_summary": {
     "month": 10,
-    "count": 1,
-    "gmv_1d": 83355890,
-    "average": 83355890.0
+    "count": 2,
+    "gmv_1d": 132645090,
+    "average": 66322545.0
   },
   "rules": {
     "broadcast_card_amount": {
@@ -40,13 +40,14 @@
     "data-live-period=\"mtd\"",
     "data-live-window-latest-date=",
     "10월 금월 누적",
-    "완료 1건",
+    "완료 2건",
     "미집계/0원 편성은 누적 성과에서 제외",
     "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
     "월/주간 효율=`방송별 데이터 GMV`",
     "generic GMV 표기 금지",
-    "data-live-retro=\"available\""
+    "data-live-retro=\"available\"",
+    "data-live-retro=\"pending\""
   ],
   "forbidden_in_live_window": [
     "aria-label=\"8월 1주차 라이브 성과 요약\"",
@@ -61,56 +62,60 @@
   "hero_kpis": [
     {
       "label": "진행",
-      "value": "1건",
-      "em": "10/1–10/1 완료"
+      "value": "2건",
+      "em": "10/1–10/5 완료"
     },
     {
       "label": "1D 거래액",
-      "value": "8,336만",
+      "value": "1.33억",
       "em": "브랜드 일거래액 누적"
     },
     {
       "label": "방송별 GMV",
-      "value": "3,045만",
+      "value": "5,181만",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "3,045만",
+      "value": "2,591만",
       "em": "방송별 GMV 평균"
     },
     {
       "label": "시청",
-      "value": "16만",
-      "em": "평균 16만"
+      "value": "17만",
+      "em": "평균 8.4만"
     },
     {
       "label": "클릭률",
-      "value": "4.8%",
-      "em": "클릭 7,760"
+      "value": "6.9%",
+      "em": "클릭 11,503"
     },
     {
       "label": "구매",
-      "value": "728",
-      "em": "구매율 0.45%"
+      "value": "1,045",
+      "em": "구매율 0.62%"
     },
     {
       "label": "1H 거래액",
-      "value": "3,805만",
+      "value": "6,071만",
       "em": "방송 중 거래액 누적"
     }
   ],
   "required_narrative": [
     "월 누적과 주간을 분리",
     "상단은 금월 누적, 아래는 주차별 완료 방송",
-    "최신 완료일 10/1까지 갱신",
+    "최신 완료일 10/5까지 갱신",
     "카드 거래액은 1D 브랜드 일거래액",
     "월/주간 효율은 방송별 데이터 GMV"
   ],
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 100.0% / 방송별 GMV 100.0% · 1건"
+      "value": "시청 96.0% / 방송별 GMV 58.8% · 1건"
+    },
+    {
+      "label": "에센셜",
+      "value": "시청 4.0% / 방송별 GMV 41.2% · 1건"
     }
   ],
   "broadcast_cards": {
@@ -133,6 +138,29 @@
         "official_sha256": "0836ef9adb07ed536673b3272c634c550e410a416cd84a317372904cc310f70f",
         "official_chars": 671,
         "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261005-02": {
+      "brand": "아이리스코리아",
+      "meta": "10/5 · 에센셜 · 오세일",
+      "metrics": {
+        "시청": "6,727",
+        "클릭률": "55.6%",
+        "구매": "317",
+        "거래액": "1D 4,929만"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 49289200,
+        "방송별 데이터 GMV": 21358300,
+        "라이브 1H GMV": 22659500
+      },
+      "retrospective": {
+        "available": false,
+        "official_sha256": "",
+        "official_chars": 0,
+        "sent": false,
         "competitor_sha256": "",
         "competitor_chars": 0
       }
