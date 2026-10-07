@@ -3,16 +3,16 @@
   "source": {
     "duckdb": "read-only MBD snapshot",
     "schema_table": "live.raw_slots",
-    "period": "2026-10-01~2026-10-05",
-    "latest_completed_date": "2026-10-05",
-    "completed_row_count": 2,
+    "period": "2026-10-01~2026-10-06",
+    "latest_completed_date": "2026-10-06",
+    "completed_row_count": 4,
     "sheet_rows": []
   },
   "quality_summary": {
     "month": 10,
-    "count": 2,
-    "gmv_1d": 132645090,
-    "average": 66322545.0
+    "count": 4,
+    "gmv_1d": 614908060,
+    "average": 153727015.0
   },
   "rules": {
     "broadcast_card_amount": {
@@ -40,14 +40,13 @@
     "data-live-period=\"mtd\"",
     "data-live-window-latest-date=",
     "10월 금월 누적",
-    "완료 2건",
+    "완료 4건",
     "미집계/0원 편성은 누적 성과에서 제외",
     "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
     "월/주간 효율=`방송별 데이터 GMV`",
     "generic GMV 표기 금지",
-    "data-live-retro=\"available\"",
-    "data-live-retro=\"pending\""
+    "data-live-retro=\"available\""
   ],
   "forbidden_in_live_window": [
     "aria-label=\"8월 1주차 라이브 성과 요약\"",
@@ -62,60 +61,64 @@
   "hero_kpis": [
     {
       "label": "진행",
-      "value": "2건",
-      "em": "10/1–10/5 완료"
+      "value": "4건",
+      "em": "10/1–10/6 완료"
     },
     {
       "label": "1D 거래액",
-      "value": "1.33억",
+      "value": "6.15억",
       "em": "브랜드 일거래액 누적"
     },
     {
       "label": "방송별 GMV",
-      "value": "5,181만",
+      "value": "3.35억",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "2,591만",
+      "value": "8,381만",
       "em": "방송별 GMV 평균"
     },
     {
       "label": "시청",
-      "value": "17만",
-      "em": "평균 8.4만"
+      "value": "35만",
+      "em": "평균 8.8만"
     },
     {
       "label": "클릭률",
-      "value": "6.9%",
-      "em": "클릭 11,503"
+      "value": "7.3%",
+      "em": "클릭 25,607"
     },
     {
       "label": "구매",
-      "value": "1,045",
-      "em": "구매율 0.62%"
+      "value": "2,423",
+      "em": "구매율 0.69%"
     },
     {
       "label": "1H 거래액",
-      "value": "6,071만",
+      "value": "2.36억",
       "em": "방송 중 거래액 누적"
     }
   ],
   "required_narrative": [
     "월 누적과 주간을 분리",
     "상단은 금월 누적, 아래는 주차별 완료 방송",
-    "최신 완료일 10/5까지 갱신",
+    "최신 완료일 10/6까지 갱신",
     "카드 거래액은 1D 브랜드 일거래액",
     "월/주간 효율은 방송별 데이터 GMV"
   ],
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 96.0% / 방송별 GMV 58.8% · 1건"
+      "value": "시청 96.3% / 방송별 GMV 23.7% · 2건"
+    },
+    {
+      "label": "스마트",
+      "value": "시청 1.8% / 방송별 GMV 69.9% · 1건"
     },
     {
       "label": "에센셜",
-      "value": "시청 4.0% / 방송별 GMV 41.2% · 1건"
+      "value": "시청 1.9% / 방송별 GMV 6.4% · 1건"
     }
   ],
   "broadcast_cards": {
@@ -157,10 +160,56 @@
         "라이브 1H GMV": 22659500
       },
       "retrospective": {
-        "available": false,
-        "official_sha256": "",
-        "official_chars": 0,
-        "sent": false,
+        "available": true,
+        "official_sha256": "5d30dd2ad0216d7306c3ac8618ff24787b6a120716406eb8a02fe021e52168e8",
+        "official_chars": 249,
+        "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261006-03": {
+      "brand": "베베숲",
+      "meta": "10/6 · 시그니처 · 오세일",
+      "metrics": {
+        "시청": "18만",
+        "클릭률": "4.9%",
+        "구매": "1,173",
+        "거래액": "1D 2.48억"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 247827970,
+        "방송별 데이터 GMV": 49006740,
+        "라이브 1H GMV": 62566490
+      },
+      "retrospective": {
+        "available": true,
+        "official_sha256": "15e58784a437a3668bacbf5190a286f23f76e0bad5948a55814d3d007a80674d",
+        "official_chars": 625,
+        "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261006-04": {
+      "brand": "삼익가구X스칸디아",
+      "meta": "10/6 · 스마트 · 일반",
+      "metrics": {
+        "시청": "6,321",
+        "클릭률": "85.9%",
+        "구매": "205",
+        "거래액": "1D 2.34억"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 234435000,
+        "방송별 데이터 GMV": 234435000,
+        "라이브 1H GMV": 112931400
+      },
+      "retrospective": {
+        "available": true,
+        "official_sha256": "9c8503239c514108137d5f7d6319eb5a3e3a5f1a4c4be32fd70910f903cb3bac",
+        "official_chars": 392,
+        "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
       }
