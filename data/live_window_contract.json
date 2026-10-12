@@ -230,9 +230,9 @@
         "라이브 1H GMV": 97672900
       },
       "retrospective": {
-        "available": false,
-        "official_sha256": "",
-        "official_chars": 0,
+        "available": true,
+        "official_sha256": "dc10154cebec41d1252c22d1edb6406a6aacfb86ca8310858c353d51bc87ba2f",
+        "official_chars": 832,
         "sent": false,
         "competitor_sha256": "",
         "competitor_chars": 0
