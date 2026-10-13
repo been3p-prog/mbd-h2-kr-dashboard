@@ -46,8 +46,7 @@
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
     "월/주간 효율=`방송별 데이터 GMV`",
     "generic GMV 표기 금지",
-    "data-live-retro=\"available\"",
-    "data-live-retro=\"pending\""
+    "data-live-retro=\"available\""
   ],
   "forbidden_in_live_window": [
     "aria-label=\"8월 1주차 라이브 성과 요약\"",
@@ -72,12 +71,12 @@
     },
     {
       "label": "방송별 GMV",
-      "value": "5.81억",
+      "value": "4.59억",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "7,259만",
+      "value": "5,740만",
       "em": "방송별 GMV 평균"
     },
     {
@@ -111,15 +110,15 @@
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 94.8% / 방송별 GMV 19.8% · 3건"
+      "value": "시청 94.8% / 방송별 GMV 25.1% · 3건"
     },
     {
       "label": "스마트",
-      "value": "시청 3.9% / 방송별 GMV 76.5% · 4건"
+      "value": "시청 3.9% / 방송별 GMV 70.3% · 4건"
     },
     {
       "label": "에센셜",
-      "value": "시청 1.3% / 방송별 GMV 3.7% · 1건"
+      "value": "시청 1.3% / 방송별 GMV 4.7% · 1건"
     }
   ],
   "broadcast_cards": {
@@ -203,7 +202,7 @@
       },
       "source_won": {
         "일 전체 GMV (라이브 브랜드 전체)": 234435000,
-        "방송별 데이터 GMV": 234435000,
+        "방송별 데이터 GMV": 112931400,
         "라이브 1H GMV": 112931400
       },
       "retrospective": {
@@ -233,7 +232,7 @@
         "available": true,
         "official_sha256": "dc10154cebec41d1252c22d1edb6406a6aacfb86ca8310858c353d51bc87ba2f",
         "official_chars": 832,
-        "sent": false,
+        "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
       }
@@ -276,10 +275,10 @@
         "라이브 1H GMV": 39582000
       },
       "retrospective": {
-        "available": false,
-        "official_sha256": "",
-        "official_chars": 0,
-        "sent": false,
+        "available": true,
+        "official_sha256": "7dd5125fef7f0d9760c0642c24a47175128837d6ddf277c899bdae3ea4829120",
+        "official_chars": 822,
+        "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
       }
@@ -299,10 +298,10 @@
         "라이브 1H GMV": 21232100
       },
       "retrospective": {
-        "available": false,
-        "official_sha256": "",
-        "official_chars": 0,
-        "sent": false,
+        "available": true,
+        "official_sha256": "eab192985876f4def214a97452849c62741175c7e86fe13c202cc723f5f44ccc",
+        "official_chars": 1021,
+        "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
       }
