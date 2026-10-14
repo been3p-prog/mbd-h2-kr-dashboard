@@ -3,16 +3,16 @@
   "source": {
     "duckdb": "read-only MBD snapshot",
     "schema_table": "live.raw_slots",
-    "period": "2026-10-01~2026-10-12",
-    "latest_completed_date": "2026-10-12",
-    "completed_row_count": 10,
+    "period": "2026-10-01~2026-10-13",
+    "latest_completed_date": "2026-10-13",
+    "completed_row_count": 13,
     "sheet_rows": []
   },
   "quality_summary": {
     "month": 10,
-    "count": 10,
-    "gmv_1d": 1542030600,
-    "average": 154203060.0
+    "count": 13,
+    "gmv_1d": 2192536010,
+    "average": 168656616.15384614
   },
   "rules": {
     "broadcast_card_amount": {
@@ -40,13 +40,14 @@
     "data-live-period=\"mtd\"",
     "data-live-window-latest-date=",
     "10월 금월 누적",
-    "완료 10건",
+    "완료 13건",
     "미집계/0원 편성은 누적 성과에서 제외",
     "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
     "월/주간 효율=`방송별 데이터 GMV`",
     "generic GMV 표기 금지",
-    "data-live-retro=\"available\""
+    "data-live-retro=\"available\"",
+    "data-live-retro=\"pending\""
   ],
   "forbidden_in_live_window": [
     "aria-label=\"8월 1주차 라이브 성과 요약\"",
@@ -61,64 +62,64 @@
   "hero_kpis": [
     {
       "label": "진행",
-      "value": "10건",
-      "em": "10/1–10/12 완료"
+      "value": "13건",
+      "em": "10/1–10/13 완료"
     },
     {
       "label": "1D 거래액",
-      "value": "15.42억",
+      "value": "21.93억",
       "em": "브랜드 일거래액 누적"
     },
     {
       "label": "방송별 GMV",
-      "value": "8.23억",
+      "value": "11.12억",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "8,227만",
+      "value": "8,557만",
       "em": "방송별 GMV 평균"
     },
     {
       "label": "시청",
-      "value": "72만",
-      "em": "평균 7.2만"
+      "value": "97만",
+      "em": "평균 7.4만"
     },
     {
       "label": "클릭률",
-      "value": "6.8%",
-      "em": "클릭 48,939"
+      "value": "5.7%",
+      "em": "클릭 55,066"
     },
     {
       "label": "구매",
-      "value": "3,758",
-      "em": "구매율 0.52%"
+      "value": "3,980",
+      "em": "구매율 0.41%"
     },
     {
       "label": "1H 거래액",
-      "value": "7.72억",
+      "value": "11.36억",
       "em": "방송 중 거래액 누적"
     }
   ],
   "required_narrative": [
     "월 누적과 주간을 분리",
     "상단은 금월 누적, 아래는 주차별 완료 방송",
-    "최신 완료일 10/12까지 갱신",
+    "최신 완료일 10/13까지 갱신",
     "카드 거래액은 1D 브랜드 일거래액",
     "월/주간 효율은 방송별 데이터 GMV"
   ],
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 95.2% / 방송별 GMV 17.6% · 4건"
+      "value": "시청 90.4% / 방송별 GMV 18.4% · 5건"
     },
     {
       "label": "스마트",
-      "value": "시청 3.9% / 방송별 GMV 79.8% · 5건"
+      "value": "시청 8.9% / 방송별 GMV 79.7% · 7건"
     },
     {
       "label": "에센셜",
-      "value": "시청 0.9% / 방송별 GMV 2.6% · 1건"
+      "value": "시청 0.7% / 방송별 GMV 1.9% · 1건"
     }
   ],
   "broadcast_cards": {
@@ -347,6 +348,75 @@
         "available": true,
         "official_sha256": "4e515ba08dcc3518afac40c20b65ba8313b87d8444d172a8dad0ef8c78abc2d4",
         "official_chars": 967,
+        "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261013-11": {
+      "brand": "LG전자",
+      "meta": "10/13 · 시그니처 · 일반",
+      "metrics": {
+        "시청": "19만",
+        "클릭률": "1.1%",
+        "구매": "38",
+        "거래액": "1D 2.79억"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 279261470,
+        "방송별 데이터 GMV": 59926000,
+        "라이브 1H GMV": 91849000
+      },
+      "retrospective": {
+        "available": false,
+        "official_sha256": "",
+        "official_chars": 0,
+        "sent": false,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261013-12": {
+      "brand": "시몬스",
+      "meta": "10/13 · 스마트 · 일반",
+      "metrics": {
+        "시청": "5.3만",
+        "클릭률": "2.6%",
+        "구매": "61",
+        "거래액": "1D 3.55억"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 355370000,
+        "방송별 데이터 GMV": 222410000,
+        "라이브 1H GMV": 264590000
+      },
+      "retrospective": {
+        "available": true,
+        "official_sha256": "fecdd5d6cf85719e51a9c82654d52cdda1c46e4bf90e0a2f74cd3d6d361900ec",
+        "official_chars": 772,
+        "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261013-13": {
+      "brand": "실리만",
+      "meta": "10/13 · 스마트 · 주방캠페인",
+      "metrics": {
+        "시청": "4,588",
+        "클릭률": "58.5%",
+        "구매": "123",
+        "거래액": "1D 1,587만"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 15873940,
+        "방송별 데이터 GMV": 7382890,
+        "라이브 1H GMV": 7537850
+      },
+      "retrospective": {
+        "available": true,
+        "official_sha256": "178086242e0ec5f9a3e477804e418e37f3bed220d58914fb1bd135dc645b42e1",
+        "official_chars": 458,
         "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
