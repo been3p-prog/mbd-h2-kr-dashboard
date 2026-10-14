@@ -370,7 +370,7 @@
         "available": true,
         "official_sha256": "d1673885a0a194cb1c803160cca7747927784517d97366d3b7c1e39a2f575a70",
         "official_chars": 381,
-        "sent": false,
+        "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
       }
@@ -391,8 +391,8 @@
       },
       "retrospective": {
         "available": true,
-        "official_sha256": "fecdd5d6cf85719e51a9c82654d52cdda1c46e4bf90e0a2f74cd3d6d361900ec",
-        "official_chars": 772,
+        "official_sha256": "fd460e18e597d5cf46b3a4a66c5f8a643c10806520a12c393de9194537ed9398",
+        "official_chars": 749,
         "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
