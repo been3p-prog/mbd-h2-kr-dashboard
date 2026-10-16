@@ -32,7 +32,7 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "292만",
+      "value": "291만",
       "em": "10/1–10/13"
     },
     {
@@ -52,18 +52,18 @@
     },
     {
       "label": "인게이지먼트",
-      "value": "17,605",
+      "value": "17,609",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "14,472",
+      "value": "14,477",
       "em": "댓글 300"
     },
     {
       "label": "공유",
-      "value": "2,833",
-      "em": "미매칭 4.3만"
+      "value": "2,832",
+      "em": "미매칭 3.9만"
     }
   ],
   "weekly_rows": [
@@ -74,7 +74,7 @@
     },
     {
       "period": "10/5–10/11",
-      "views": 1240126,
+      "views": 1236731,
       "complete": true
     },
     {
@@ -93,9 +93,9 @@
   ],
   "verified_api": {
     "actual_end": "2026-10-13",
-    "captured_at": "2026-10-16T10:36:26.469656+09:00",
+    "captured_at": "2026-10-16T16:25:12.663069+09:00",
     "discovered_count": 0,
-    "sha256": "4c5442bd986939ead621da11db1ec321420677e14cb5111ed22adb9fcdc17b1e"
+    "sha256": "bcbded23ae3c4880e6d1c6dcda203d7a25991af6c69a95ce0ba640002549abd0"
   },
   "schedule_coverage": {
     "source_count": 20,
@@ -106,8 +106,8 @@
     "published_count": 16,
     "empty_slot_count": 34,
     "rendered_count": 25,
-    "captured_at": "2026-10-16T10:36:23+09:00",
-    "source_sha256": "a39caebf111649b54994aff167d9f0f785674f2bc7a060bb5c48fce318471643",
+    "captured_at": "2026-10-16T16:25:09+09:00",
+    "source_sha256": "bbdc77952f42231c16939c12fb8bf0501726cd0e379938c278e66a0ef9bef474",
     "source_keys": [
       "1196b82ad2cad5866d20b660",
       "2159dc9957c9e6b6edea8d11",
