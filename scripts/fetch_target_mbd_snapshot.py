@@ -18,6 +18,9 @@ from snapshot_transport import describe_transport_exception, describe_transport_
 KST = dt.timezone(dt.timedelta(hours=9))
 DEFAULT_OUTPUT = Path("/tmp/mbd_h2_target_snapshot.duckdb")
 COMPLETED_ACTUAL_GRACE_DAY = 15  # [2026-10-01] 전월 확정 SSOT 미적재 허용 마지막 날(월초 마감 대기)
+# [2026-10-16] 9월 확정 SSOT 미적재로 10/16 갱신이 멈춤 — 빈 "ㄱㄱ"(TG 381): 9월분만 유예를 월말까지 연장,
+# 그동안 매일 갱신은 계속하고 전월 비교는 하류에서 '비교값 없음'. 다른 달은 15일 규칙 그대로.
+COMPLETED_ACTUAL_GRACE_UNTIL = {"2026-09": dt.date(2026, 10, 31)}
 DEFAULT_HOST = "cnc-media@192.168.7.238"
 DEFAULT_KEY = Path("/Users/sb.lee/.ssh/id_ed25519_mbd_server")
 DEFAULT_REMOTE_PYTHON = "/Users/cnc-media/automations/.venvs/mbd/bin/python"
@@ -162,7 +165,10 @@ def validate_snapshot(path: Path, *, as_of: dt.date | None = None) -> dict:
         missing_actuals = sorted(expected_actual_teams - completed_actual_teams)
         # [2026-10-01] 빈 승인 "ㄱㄱ" — 전월 확정 SSOT는 수동 적재라 월초엔 아직 없다. 매월 15일까지는
         # 경고만 하고 갱신을 진행(전월 비교는 하류에서 '비교값 없음'), 16일부터는 다시 실패시켜 적재 누락을 드러낸다.
-        if missing_actuals and as_of.day <= COMPLETED_ACTUAL_GRACE_DAY:
+        in_grace = as_of.day <= COMPLETED_ACTUAL_GRACE_DAY or as_of <= COMPLETED_ACTUAL_GRACE_UNTIL.get(
+            completed_month, dt.date.min
+        )
+        if missing_actuals and in_grace:
             print(
                 "WARNING: completed-month actuals pending close "
                 f"month={completed_month} teams={','.join(missing_actuals)}",

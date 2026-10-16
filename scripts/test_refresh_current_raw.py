@@ -1621,6 +1621,22 @@ class TargetMbdSnapshotTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "missing completed-month actual teams"):
                 self._module().validate_snapshot(path, as_of=dt.date(2026, 9, 16))
 
+    def test_target_mbd_snapshot_validator_extends_september_actual_grace_only(self):
+        # [2026-10-16] 9월분만 10/31까지 경고, 다른 달은 16일부터 실패 유지
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "target.duckdb"
+            self._fixture(path, source_time="2026-10-16 00:01:00")
+            con = duckdb.connect(str(path))
+            for ym in ("2026-10", "2026-11"):
+                for team in ("ad_gen", "ad_int", "live"):
+                    con.execute("insert into meta.targets values (?, '매출', ?, 'target', 1)", [team, ym])
+            con.close()
+            with contextlib.redirect_stderr(io.StringIO()):
+                result = self._module().validate_snapshot(path, as_of=dt.date(2026, 10, 16))
+            self.assertEqual(result["completed_actual_missing_teams"], ["라이브커머스", "일반광고", "통합광고"])
+            with self.assertRaisesRegex(RuntimeError, "missing completed-month actual teams"):
+                self._module().validate_snapshot(path, as_of=dt.date(2026, 11, 16))
+
     def test_live_renderers_default_never_points_to_retired_local_db(self):
         expected = Path("/tmp/mbd_h2_target_snapshot.duckdb")
         self.assertEqual(refresh.DEFAULT_DUCKDB, expected)
