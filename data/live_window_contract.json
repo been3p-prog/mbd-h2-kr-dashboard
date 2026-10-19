@@ -46,8 +46,7 @@
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
     "월/주간 효율=`방송별 데이터 GMV`",
     "generic GMV 표기 금지",
-    "data-live-retro=\"available\"",
-    "data-live-retro=\"pending\""
+    "data-live-retro=\"available\""
   ],
   "forbidden_in_live_window": [
     "aria-label=\"8월 1주차 라이브 성과 요약\"",
@@ -552,10 +551,10 @@
         "라이브 1H GMV": 74528060
       },
       "retrospective": {
-        "available": false,
-        "official_sha256": "",
-        "official_chars": 0,
-        "sent": false,
+        "available": true,
+        "official_sha256": "9e279e7152b5790a4f8af8357759943d4c5c857472541ed23830e4eb0293a851",
+        "official_chars": 745,
+        "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
       }
