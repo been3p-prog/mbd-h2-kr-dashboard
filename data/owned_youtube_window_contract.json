@@ -52,12 +52,12 @@
     },
     {
       "label": "인게이지먼트",
-      "value": "24,579",
+      "value": "24,582",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "20,401",
+      "value": "20,404",
       "em": "댓글 553"
     },
     {
@@ -79,7 +79,7 @@
     },
     {
       "period": "10/12–10/18",
-      "views": 1422942,
+      "views": 1421576,
       "complete": false
     }
   ],
@@ -93,9 +93,9 @@
   ],
   "verified_api": {
     "actual_end": "2026-10-16",
-    "captured_at": "2026-10-19T11:14:11.007573+09:00",
+    "captured_at": "2026-10-19T16:25:14.819419+09:00",
     "discovered_count": 0,
-    "sha256": "01af546215676a6b50f857b7ae4a63329a059ae3d4b0f2c94da64bc7df6ef8e1"
+    "sha256": "24da5ad017ef5d8fb00c9def18e2a1f93d6c1369ea46fba13eba03ad57cbc4ec"
   },
   "schedule_coverage": {
     "source_count": 28,
@@ -106,8 +106,8 @@
     "published_count": 18,
     "empty_slot_count": 22,
     "rendered_count": 28,
-    "captured_at": "2026-10-19T11:14:08+09:00",
-    "source_sha256": "1e5782c61dc4faf46842aeef0874d8be1e85f002d1da942db8d18ac5ee1c1a02",
+    "captured_at": "2026-10-19T16:25:11+09:00",
+    "source_sha256": "4bf435371716e82bd65e0e2e87980183a7d84a7b58d3e826182e1c816a6db013",
     "source_keys": [
       "0ab7dd244dd2d76fe117e4d2",
       "1196b82ad2cad5866d20b660",
