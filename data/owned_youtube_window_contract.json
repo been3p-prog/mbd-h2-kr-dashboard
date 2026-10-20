@@ -2,12 +2,12 @@
   "contract_id": "owned-youtube-window-2026-10-mtd-v1",
   "source": {
     "duckdb": "read-only YouTube snapshot",
-    "monthly_period": "2026-10-01~2026-10-16",
+    "monthly_period": "2026-10-01~2026-10-17",
     "period_complete": false,
     "raw_status": "ok",
     "source_as_of": {
-      "yt_quality": "2026-10-18T23:56:59+09:00",
-      "owned_media": "2026-10-18T23:56:58+09:00"
+      "yt_quality": "2026-10-19T23:57:08+09:00",
+      "owned_media": "2026-10-19T23:57:07+09:00"
     }
   },
   "required_copy": [
@@ -32,38 +32,38 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "390만",
-      "em": "10/1–10/16"
+      "value": "432만",
+      "em": "10/1–10/17"
     },
     {
       "label": "발행",
-      "value": "18건",
-      "em": "LF 5 · SF 13"
+      "value": "19건",
+      "em": "LF 6 · SF 13"
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "114만",
+      "value": "141만",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "272만",
+      "value": "287만",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "24,582",
+      "value": "28,773",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "20,404",
-      "em": "댓글 553"
+      "value": "24,229",
+      "em": "댓글 652"
     },
     {
       "label": "공유",
-      "value": "3,625",
-      "em": "미매칭 3.9만"
+      "value": "3,892",
+      "em": "미매칭 3.6만"
     }
   ],
   "weekly_rows": [
@@ -79,7 +79,7 @@
     },
     {
       "period": "10/12–10/18",
-      "views": 1421576,
+      "views": 1846240,
       "complete": false
     }
   ],
@@ -92,22 +92,22 @@
     "aP8numqgJRI"
   ],
   "verified_api": {
-    "actual_end": "2026-10-16",
-    "captured_at": "2026-10-19T16:25:14.819419+09:00",
-    "discovered_count": 0,
-    "sha256": "24da5ad017ef5d8fb00c9def18e2a1f93d6c1369ea46fba13eba03ad57cbc4ec"
+    "actual_end": "2026-10-17",
+    "captured_at": "2026-10-20T10:20:35.681439+09:00",
+    "discovered_count": 1,
+    "sha256": "6acc6e8ef5bdd693be1f3859bb8b076927b42b9b505d77b17fadba4e22abb48b"
   },
   "schedule_coverage": {
     "source_count": 28,
     "matched_count": 18,
     "extra_count": 10,
     "issue_count": 0,
-    "published_unmatched_count": 0,
-    "published_count": 18,
+    "published_unmatched_count": 1,
+    "published_count": 19,
     "empty_slot_count": 22,
-    "rendered_count": 28,
-    "captured_at": "2026-10-19T16:25:11+09:00",
-    "source_sha256": "4bf435371716e82bd65e0e2e87980183a7d84a7b58d3e826182e1c816a6db013",
+    "rendered_count": 29,
+    "captured_at": "2026-10-20T10:20:32+09:00",
+    "source_sha256": "8ad2a9cc93037c1f4af2c1aaf5f038c52ca8c2c76cd126826ead9d5ab47fd7dc",
     "source_keys": [
       "0ab7dd244dd2d76fe117e4d2",
       "1196b82ad2cad5866d20b660",
@@ -147,18 +147,18 @@
   "main_surface": {
     "year": 2026,
     "month": 10,
-    "publish_count": 18,
-    "lf_publish_count": 5,
+    "publish_count": 19,
+    "lf_publish_count": 6,
     "sf_publish_count": 13,
-    "latest_publish_date": "2026-10-18",
-    "snapshot_date": "2026-10-18",
+    "latest_publish_date": "2026-10-19",
+    "snapshot_date": "2026-10-19",
     "elapsed_weeks": 3,
     "quality_basis": "analytics-d7",
-    "d7_completed": 9,
-    "average_views": 28745,
+    "d7_completed": 10,
+    "average_views": 29639,
     "lf_average_views": 53263,
-    "sf_average_views": 16487,
-    "subscriber_count": 806000,
+    "sf_average_views": 19514,
+    "subscriber_count": 807000,
     "previous_average_views": 64516
   },
   "quality_history": {
@@ -170,11 +170,11 @@
       "sf_average_views": 61442
     },
     "10": {
-      "publish_count": 18,
-      "d7_completed": 9,
-      "average_views": 28745,
+      "publish_count": 19,
+      "d7_completed": 10,
+      "average_views": 29639,
       "lf_average_views": 53263,
-      "sf_average_views": 16487
+      "sf_average_views": 19514
     }
   }
 }
