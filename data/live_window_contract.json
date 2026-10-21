@@ -3,16 +3,16 @@
   "source": {
     "duckdb": "read-only MBD snapshot",
     "schema_table": "live.raw_slots",
-    "period": "2026-10-01~2026-10-19",
-    "latest_completed_date": "2026-10-19",
-    "completed_row_count": 21,
+    "period": "2026-10-01~2026-10-20",
+    "latest_completed_date": "2026-10-20",
+    "completed_row_count": 23,
     "sheet_rows": []
   },
   "quality_summary": {
     "month": 10,
-    "count": 21,
-    "gmv_1d": 2724843080,
-    "average": 129754432.38095239
+    "count": 23,
+    "gmv_1d": 2849798380,
+    "average": 123904277.39130434
   },
   "rules": {
     "broadcast_card_amount": {
@@ -40,7 +40,7 @@
     "data-live-period=\"mtd\"",
     "data-live-window-latest-date=",
     "10월 금월 누적",
-    "완료 21건",
+    "완료 23건",
     "미집계/0원 편성은 누적 성과에서 제외",
     "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
@@ -61,64 +61,64 @@
   "hero_kpis": [
     {
       "label": "진행",
-      "value": "21건",
-      "em": "10/1–10/19 완료"
+      "value": "23건",
+      "em": "10/1–10/20 완료"
     },
     {
       "label": "1D 거래액",
-      "value": "27.25억",
+      "value": "28.5억",
       "em": "브랜드 일거래액 누적"
     },
     {
       "label": "방송별 GMV",
-      "value": "13.82억",
+      "value": "14.3억",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "6,583만",
+      "value": "6,218만",
       "em": "방송별 GMV 평균"
     },
     {
       "label": "시청",
-      "value": "168만",
-      "em": "평균 8만"
+      "value": "180만",
+      "em": "평균 7.8만"
     },
     {
       "label": "클릭률",
-      "value": "4.5%",
-      "em": "클릭 76,173"
+      "value": "4.4%",
+      "em": "클릭 80,212"
     },
     {
       "label": "구매",
-      "value": "4,707",
-      "em": "구매율 0.28%"
+      "value": "4,788",
+      "em": "구매율 0.27%"
     },
     {
       "label": "1H 거래액",
-      "value": "14.29억",
+      "value": "14.7억",
       "em": "방송 중 거래액 누적"
     }
   ],
   "required_narrative": [
     "월 누적과 주간을 분리",
     "상단은 금월 누적, 아래는 주차별 완료 방송",
-    "최신 완료일 10/19까지 갱신",
+    "최신 완료일 10/20까지 갱신",
     "카드 거래액은 1D 브랜드 일거래액",
     "월/주간 효율은 방송별 데이터 GMV"
   ],
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 83.3% / 방송별 GMV 24.5% · 8건"
+      "value": "시청 77.5% / 방송별 GMV 23.7% · 8건"
     },
     {
       "label": "스마트",
-      "value": "시청 15.3% / 방송별 GMV 69.6% · 8건"
+      "value": "시청 21.2% / 방송별 GMV 70.7% · 10건"
     },
     {
       "label": "에센셜",
-      "value": "시청 1.4% / 방송별 GMV 5.8% · 5건"
+      "value": "시청 1.3% / 방송별 GMV 5.6% · 5건"
     }
   ],
   "broadcast_cards": {
@@ -600,6 +600,52 @@
         "available": true,
         "official_sha256": "20ce614d3048c973261f70803a3057bdd5d93ef0b586ca025321d30c0bf06032",
         "official_chars": 355,
+        "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261020-22": {
+      "brand": "샤크닌자",
+      "meta": "10/20 · 스마트 · 주방캠페인",
+      "metrics": {
+        "시청": "12만",
+        "클릭률": "2.1%",
+        "구매": "56",
+        "거래액": "1D 3,843만"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 38430300,
+        "방송별 데이터 GMV": 15106870,
+        "라이브 1H GMV": 13600600
+      },
+      "retrospective": {
+        "available": true,
+        "official_sha256": "b3fc422e63dfe494b2e8b1b221ef9f95e067bd18474e4753bba0037e8e2ba99c",
+        "official_chars": 585,
+        "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261020-23": {
+      "brand": "일룸",
+      "meta": "10/20 · 스마트 · 일반",
+      "metrics": {
+        "시청": "4,914",
+        "클릭률": "29.8%",
+        "구매": "25",
+        "거래액": "1D 8,652만"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 86525000,
+        "방송별 데이터 GMV": 32551000,
+        "라이브 1H GMV": 27292000
+      },
+      "retrospective": {
+        "available": true,
+        "official_sha256": "1043d2e5f3005faa2ab0f4cf6bb00498955ee2229cda315cbbf2163549d46b17",
+        "official_chars": 631,
         "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
