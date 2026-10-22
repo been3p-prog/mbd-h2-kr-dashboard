@@ -3,16 +3,16 @@
   "source": {
     "duckdb": "read-only MBD snapshot",
     "schema_table": "live.raw_slots",
-    "period": "2026-10-01~2026-10-20",
-    "latest_completed_date": "2026-10-20",
-    "completed_row_count": 23,
+    "period": "2026-10-01~2026-10-21",
+    "latest_completed_date": "2026-10-21",
+    "completed_row_count": 25,
     "sheet_rows": []
   },
   "quality_summary": {
     "month": 10,
-    "count": 23,
-    "gmv_1d": 2849798380,
-    "average": 123904277.39130434
+    "count": 25,
+    "gmv_1d": 3030235680,
+    "average": 121209427.2
   },
   "rules": {
     "broadcast_card_amount": {
@@ -40,7 +40,7 @@
     "data-live-period=\"mtd\"",
     "data-live-window-latest-date=",
     "10월 금월 누적",
-    "완료 23건",
+    "완료 25건",
     "미집계/0원 편성은 누적 성과에서 제외",
     "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
@@ -61,64 +61,64 @@
   "hero_kpis": [
     {
       "label": "진행",
-      "value": "23건",
-      "em": "10/1–10/20 완료"
+      "value": "25건",
+      "em": "10/1–10/21 완료"
     },
     {
       "label": "1D 거래액",
-      "value": "28.5억",
+      "value": "30.3억",
       "em": "브랜드 일거래액 누적"
     },
     {
       "label": "방송별 GMV",
-      "value": "14.3억",
+      "value": "15.48억",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "6,218만",
+      "value": "6,191만",
       "em": "방송별 GMV 평균"
     },
     {
       "label": "시청",
-      "value": "180만",
-      "em": "평균 7.8만"
+      "value": "181만",
+      "em": "평균 7.3만"
     },
     {
       "label": "클릭률",
-      "value": "4.4%",
-      "em": "클릭 80,212"
+      "value": "4.8%",
+      "em": "클릭 87,606"
     },
     {
       "label": "구매",
-      "value": "4,788",
-      "em": "구매율 0.27%"
+      "value": "5,043",
+      "em": "구매율 0.28%"
     },
     {
       "label": "1H 거래액",
-      "value": "14.7억",
+      "value": "15.72억",
       "em": "방송 중 거래액 누적"
     }
   ],
   "required_narrative": [
     "월 누적과 주간을 분리",
     "상단은 금월 누적, 아래는 주차별 완료 방송",
-    "최신 완료일 10/20까지 갱신",
+    "최신 완료일 10/21까지 갱신",
     "카드 거래액은 1D 브랜드 일거래액",
     "월/주간 효율은 방송별 데이터 GMV"
   ],
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 77.5% / 방송별 GMV 23.7% · 8건"
+      "value": "시청 77.1% / 방송별 GMV 21.9% · 8건"
     },
     {
       "label": "스마트",
-      "value": "시청 21.2% / 방송별 GMV 70.7% · 10건"
+      "value": "시청 21.1% / 방송별 GMV 65.3% · 10건"
     },
     {
       "label": "에센셜",
-      "value": "시청 1.3% / 방송별 GMV 5.6% · 5건"
+      "value": "시청 1.9% / 방송별 GMV 12.8% · 7건"
     }
   ],
   "broadcast_cards": {
@@ -646,6 +646,52 @@
         "available": true,
         "official_sha256": "1043d2e5f3005faa2ab0f4cf6bb00498955ee2229cda315cbbf2163549d46b17",
         "official_chars": 631,
+        "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261021-24": {
+      "brand": "리바트",
+      "meta": "10/21 · 에센셜 · 일반",
+      "metrics": {
+        "시청": "5,338",
+        "클릭률": "60.6%",
+        "구매": "158",
+        "거래액": "1D 1.55억"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 155284400,
+        "방송별 데이터 GMV": 105736500,
+        "라이브 1H GMV": 91004700
+      },
+      "retrospective": {
+        "available": true,
+        "official_sha256": "55dbf646ae18fb9693d150be1a633177834e8d91904ee0c9b34859e4c2af5230",
+        "official_chars": 404,
+        "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261021-25": {
+      "brand": "윤도자기",
+      "meta": "10/21 · 에센셜 · 주방캠페인",
+      "metrics": {
+        "시청": "5,007",
+        "클릭률": "83.1%",
+        "구매": "97",
+        "거래액": "1D 2,515만"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 25152900,
+        "방송별 데이터 GMV": 11835700,
+        "라이브 1H GMV": 10806100
+      },
+      "retrospective": {
+        "available": true,
+        "official_sha256": "52e22107a0f2daac8a8f0541d6ef2445fb6a641c80c382fc984c27891edd82aa",
+        "official_chars": 454,
         "sent": true,
         "competitor_sha256": "",
         "competitor_chars": 0
