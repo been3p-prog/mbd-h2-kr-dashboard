@@ -50,7 +50,8 @@ def esc(value) -> str:
 
 def clean_review_text(value) -> str:
     """Preserve authored lines while removing spreadsheet padding whitespace."""
-    lines = [line.rstrip() for line in str(value or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+    # [2026-10-23] split("\n") → splitlines() — render_card의 HTML 정규화(splitlines)가 U+2028 등을 줄바꿈으로 바꿔 계약 해시와 어긋남(스타우브 10/22 RETROSPECTIVE_HASH_MISMATCH)
+    lines = [line.rstrip() for line in str(value or "").splitlines()]
     while lines and not lines[-1]:
         lines.pop()
     return "\n".join(lines).strip()

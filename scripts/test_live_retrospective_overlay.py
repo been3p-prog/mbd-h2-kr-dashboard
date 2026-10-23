@@ -1,5 +1,6 @@
 import datetime as dt
 import hashlib
+import html as html_lib
 import json
 import sys
 import tempfile
@@ -117,6 +118,33 @@ class LiveRetrospectiveOverlayTest(unittest.TestCase):
         self.assertEqual(
             contract["retrospective"]["official_sha256"],
             hashlib.sha256(review.encode("utf-8")).hexdigest(),
+        )
+
+    # [2026-10-23] U+2028 회고 본문 회귀 테스트 — 렌더 HTML과 계약 해시가 같아야 함
+    def test_unicode_line_separator_review_matches_contract_hash(self):
+        review = refresh.clean_review_text("첫 줄 노출\u2028원형 꼬꼬떼 18cm\u2029마지막 줄  ")
+        self.assertEqual(review, "첫 줄 노출\n원형 꼬꼬떼 18cm\n마지막 줄")
+        row = {
+            "date": dt.date(2026, 10, 22),
+            "brand": "테스트 브랜드",
+            "package_key": "스마트",
+            "pgm": "일반",
+            "viewers": 100,
+            "clicks": 10,
+            "buyers": 2,
+            "gmv_1d": 1_000_000,
+            "gmv_1h": 500_000,
+            "broadcast_gmv": 800_000,
+            "official_review": review,
+            "review_sent": True,
+            "competitor_live_history": "",
+        }
+
+        html, contract = refresh.render_card(row, 1, {})
+        rendered = html.split('data-live-retro-field="official">', 1)[1].split("</div>", 1)[0]
+        self.assertEqual(
+            hashlib.sha256(html_lib.unescape(rendered).encode("utf-8")).hexdigest(),
+            contract["retrospective"]["official_sha256"],
         )
 
     def test_contract_verifier_detects_rendered_review_mutation(self):
