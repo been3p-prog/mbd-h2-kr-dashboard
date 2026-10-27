@@ -52,17 +52,17 @@
     },
     {
       "label": "인게이지먼트",
-      "value": "61,993",
+      "value": "61,992",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "53,891",
+      "value": "53,894",
       "em": "댓글 1,518"
     },
     {
       "label": "공유",
-      "value": "6,584",
+      "value": "6,580",
       "em": "미매칭 11만"
     }
   ],
@@ -98,22 +98,23 @@
   ],
   "verified_api": {
     "actual_end": "2026-10-24",
-    "captured_at": "2026-10-27T16:25:17.382310+09:00",
+    "captured_at": "2026-10-27T18:25:15.362691+09:00",
     "discovered_count": 1,
-    "sha256": "4a4aa76601e94afeb432bf0666d63e15b9eed1da133450fc06c92ebda6a422dd"
+    "sha256": "2666c413ef64af6789e995aba532f3804a1d0e9fd2872e84b4ad2154682f9607"
   },
   "schedule_coverage": {
-    "source_count": 39,
-    "matched_count": 26,
+    "source_count": 40,
+    "matched_count": 27,
     "extra_count": 13,
     "issue_count": 0,
-    "published_unmatched_count": 1,
+    "published_unmatched_count": 0,
     "published_count": 27,
-    "empty_slot_count": 8,
+    "empty_slot_count": 7,
     "rendered_count": 40,
-    "captured_at": "2026-10-27T16:25:15+09:00",
-    "source_sha256": "5cc2eb76e5a34fbc3e5ebb8aa9ab6cd73202a5f1eda42246761530525658b917",
+    "captured_at": "2026-10-27T18:25:13+09:00",
+    "source_sha256": "3c5ac1b644f250e44a0b7e773bc9ad19478de19f2b422c80735ec97665d2d0d8",
     "source_keys": [
+      "0ab7dd244dd2d76fe117e4d2",
       "1196b82ad2cad5866d20b660",
       "18a2ab49aaff51ed6472dd5e",
       "2159dc9957c9e6b6edea8d11",
@@ -155,8 +156,8 @@
       "f6d9bbae20da102177ca1fdb"
     ],
     "planned": 0,
-    "unmatched": 3,
-    "community": 9,
+    "unmatched": 2,
+    "community": 10,
     "slot": 1,
     "other_period": 0
   },
