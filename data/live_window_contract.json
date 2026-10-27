@@ -3,16 +3,16 @@
   "source": {
     "duckdb": "read-only MBD snapshot",
     "schema_table": "live.raw_slots",
-    "period": "2026-10-01~2026-10-22",
-    "latest_completed_date": "2026-10-22",
-    "completed_row_count": 27,
+    "period": "2026-10-01~2026-10-26",
+    "latest_completed_date": "2026-10-26",
+    "completed_row_count": 28,
     "sheet_rows": []
   },
   "quality_summary": {
     "month": 10,
-    "count": 27,
-    "gmv_1d": 3209561870,
-    "average": 118872661.85185185
+    "count": 28,
+    "gmv_1d": 3323825870,
+    "average": 118708066.78571428
   },
   "rules": {
     "broadcast_card_amount": {
@@ -40,13 +40,14 @@
     "data-live-period=\"mtd\"",
     "data-live-window-latest-date=",
     "10월 금월 누적",
-    "완료 27건",
+    "완료 28건",
     "미집계/0원 편성은 누적 성과에서 제외",
     "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
     "월/주간 효율=`방송별 데이터 GMV`",
     "generic GMV 표기 금지",
-    "data-live-retro=\"available\""
+    "data-live-retro=\"available\"",
+    "data-live-retro=\"pending\""
   ],
   "forbidden_in_live_window": [
     "aria-label=\"8월 1주차 라이브 성과 요약\"",
@@ -61,64 +62,64 @@
   "hero_kpis": [
     {
       "label": "진행",
-      "value": "27건",
-      "em": "10/1–10/22 완료"
+      "value": "28건",
+      "em": "10/1–10/26 완료"
     },
     {
       "label": "1D 거래액",
-      "value": "32.1억",
+      "value": "33.24억",
       "em": "브랜드 일거래액 누적"
     },
     {
       "label": "방송별 GMV",
-      "value": "16.09억",
+      "value": "16.63억",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "5,958만",
+      "value": "5,941만",
       "em": "방송별 GMV 평균"
     },
     {
       "label": "시청",
-      "value": "182만",
-      "em": "평균 6.8만"
+      "value": "202만",
+      "em": "평균 7.2만"
     },
     {
       "label": "클릭률",
-      "value": "5.2%",
-      "em": "클릭 94,601"
+      "value": "4.8%",
+      "em": "클릭 96,760"
     },
     {
       "label": "구매",
-      "value": "5,234",
-      "em": "구매율 0.29%"
+      "value": "5,275",
+      "em": "구매율 0.26%"
     },
     {
       "label": "1H 거래액",
-      "value": "16.36억",
+      "value": "16.87억",
       "em": "방송 중 거래액 누적"
     }
   ],
   "required_narrative": [
     "월 누적과 주간을 분리",
     "상단은 금월 누적, 아래는 주차별 완료 방송",
-    "최신 완료일 10/22까지 갱신",
+    "최신 완료일 10/26까지 갱신",
     "카드 거래액은 1D 브랜드 일거래액",
     "월/주간 효율은 방송별 데이터 GMV"
   ],
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 76.7% / 방송별 GMV 21.1% · 8건"
+      "value": "시청 78.9% / 방송별 GMV 23.7% · 9건"
     },
     {
       "label": "스마트",
-      "value": "시청 21.5% / 방송별 GMV 66.6% · 12건"
+      "value": "시청 19.5% / 방송별 GMV 64.4% · 12건"
     },
     {
       "label": "에센셜",
-      "value": "시청 1.9% / 방송별 GMV 12.3% · 7건"
+      "value": "시청 1.7% / 방송별 GMV 11.9% · 7건"
     }
   ],
   "broadcast_cards": {
@@ -739,6 +740,29 @@
         "official_sha256": "242121c3c45e8bc9b55888626b71f3a0bcc45d618d543961af55491357c7a600",
         "official_chars": 792,
         "sent": true,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261026-28": {
+      "brand": "에이스침대",
+      "meta": "10/26 · 시그니처 · 일반",
+      "metrics": {
+        "시청": "19만",
+        "클릭률": "1.1%",
+        "구매": "41",
+        "거래액": "1D 1.14억"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 114264000,
+        "방송별 데이터 GMV": 54766000,
+        "라이브 1H GMV": 50657000
+      },
+      "retrospective": {
+        "available": false,
+        "official_sha256": "",
+        "official_chars": 0,
+        "sent": false,
         "competitor_sha256": "",
         "competitor_chars": 0
       }
