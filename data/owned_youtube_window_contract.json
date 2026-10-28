@@ -63,7 +63,7 @@
     {
       "label": "공유",
       "value": "6,839",
-      "em": "미매칭 8.6만"
+      "em": "미매칭 8.7만"
     }
   ],
   "weekly_rows": [
@@ -98,9 +98,9 @@
   ],
   "verified_api": {
     "actual_end": "2026-10-25",
-    "captured_at": "2026-10-28T10:20:28.664007+09:00",
+    "captured_at": "2026-10-28T16:25:14.052152+09:00",
     "discovered_count": 0,
-    "sha256": "14c80912e8e4e401b4c42de7c520f58e6f1f520c9cea8939f6af63dfee2d1c3a"
+    "sha256": "d3d445950ada002b950836cd53e59d7d3edff3b47b5abfd2a3c9e4c0beb31fdb"
   },
   "schedule_coverage": {
     "source_count": 40,
@@ -111,8 +111,8 @@
     "published_count": 29,
     "empty_slot_count": 7,
     "rendered_count": 40,
-    "captured_at": "2026-10-28T10:20:22+09:00",
-    "source_sha256": "91979975a18842eb957c360e50822c98b4b8736ee5b0ac72f48efa285df8fff5",
+    "captured_at": "2026-10-28T16:25:10+09:00",
+    "source_sha256": "16c35d16f290fec4d938ed389be73c5c3c2f59215284171674dbd437fadaec87",
     "source_keys": [
       "0ab7dd244dd2d76fe117e4d2",
       "1196b82ad2cad5866d20b660",
