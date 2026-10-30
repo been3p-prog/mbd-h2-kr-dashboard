@@ -3,16 +3,16 @@
   "source": {
     "duckdb": "read-only MBD snapshot",
     "schema_table": "live.raw_slots",
-    "period": "2026-10-01~2026-10-28",
-    "latest_completed_date": "2026-10-28",
-    "completed_row_count": 31,
+    "period": "2026-10-01~2026-10-29",
+    "latest_completed_date": "2026-10-29",
+    "completed_row_count": 32,
     "sheet_rows": []
   },
   "quality_summary": {
     "month": 10,
-    "count": 31,
-    "gmv_1d": 3491936270,
-    "average": 112643105.48387097
+    "count": 32,
+    "gmv_1d": 3670957100,
+    "average": 114717409.375
   },
   "rules": {
     "broadcast_card_amount": {
@@ -40,7 +40,7 @@
     "data-live-period=\"mtd\"",
     "data-live-window-latest-date=",
     "10월 금월 누적",
-    "완료 31건",
+    "완료 32건",
     "미집계/0원 편성은 누적 성과에서 제외",
     "데이터 사용 룰: 카드 거래액=1D 브랜드 일거래액 · 월/주간 효율=방송별 데이터 GMV · 1H=방송 중 성과.",
     "방송별 카드 거래액=`일 전체 GMV (라이브 브랜드 전체)`",
@@ -62,64 +62,64 @@
   "hero_kpis": [
     {
       "label": "진행",
-      "value": "31건",
-      "em": "10/1–10/28 완료"
+      "value": "32건",
+      "em": "10/1–10/29 완료"
     },
     {
       "label": "1D 거래액",
-      "value": "34.92억",
+      "value": "36.71억",
       "em": "브랜드 일거래액 누적"
     },
     {
       "label": "방송별 GMV",
-      "value": "17.29억",
+      "value": "18.01억",
       "em": "방송 성과 누적"
     },
     {
       "label": "방당 GMV",
-      "value": "5,578만",
+      "value": "5,629만",
       "em": "방송별 GMV 평균"
     },
     {
       "label": "시청",
-      "value": "214만",
-      "em": "평균 6.9만"
+      "value": "215만",
+      "em": "평균 6.7만"
     },
     {
       "label": "클릭률",
       "value": "4.9%",
-      "em": "클릭 104,933"
+      "em": "클릭 106,239"
     },
     {
       "label": "구매",
-      "value": "5,645",
-      "em": "구매율 0.26%"
+      "value": "5,719",
+      "em": "구매율 0.27%"
     },
     {
       "label": "1H 거래액",
-      "value": "17.6억",
+      "value": "18.23억",
       "em": "방송 중 거래액 누적"
     }
   ],
   "required_narrative": [
     "월 누적과 주간을 분리",
     "상단은 금월 누적, 아래는 주차별 완료 방송",
-    "최신 완료일 10/28까지 갱신",
+    "최신 완료일 10/29까지 갱신",
     "카드 거래액은 1D 브랜드 일거래액",
     "월/주간 효율은 방송별 데이터 GMV"
   ],
   "package_lens": [
     {
       "label": "시그니처",
-      "value": "시청 74.1% / 방송별 GMV 22.8% · 9건"
+      "value": "시청 73.9% / 방송별 GMV 21.9% · 9건"
     },
     {
       "label": "스마트",
-      "value": "시청 21.5% / 방송별 GMV 65.7% · 14건"
+      "value": "시청 21.7% / 방송별 GMV 67.0% · 15건"
     },
     {
       "label": "에센셜",
-      "value": "시청 4.3% / 방송별 GMV 11.6% · 8건"
+      "value": "시청 4.3% / 방송별 GMV 11.1% · 8건"
     }
   ],
   "broadcast_cards": {
@@ -831,6 +831,29 @@
         "available": true,
         "official_sha256": "8243376068282f452dc76e62b5801933ae00713662b416de1b2c0379a665a488",
         "official_chars": 643,
+        "sent": false,
+        "competitor_sha256": "",
+        "competitor_chars": 0
+      }
+    },
+    "mtd-20261029-32": {
+      "brand": "오늘의집 layer",
+      "meta": "10/29 · 스마트 · 일반",
+      "metrics": {
+        "시청": "5,199",
+        "클릭률": "25.1%",
+        "구매": "74",
+        "거래액": "1D 1.79억"
+      },
+      "source_won": {
+        "일 전체 GMV (라이브 브랜드 전체)": 179020830,
+        "방송별 데이터 GMV": 71930800,
+        "라이브 1H GMV": 62103600
+      },
+      "retrospective": {
+        "available": false,
+        "official_sha256": "",
+        "official_chars": 0,
         "sent": false,
         "competitor_sha256": "",
         "competitor_chars": 0
