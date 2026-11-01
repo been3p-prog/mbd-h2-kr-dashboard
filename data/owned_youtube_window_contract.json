@@ -1,13 +1,13 @@
 {
-  "contract_id": "owned-youtube-window-2026-10-mtd-v1",
+  "contract_id": "owned-youtube-window-2026-11-mtd-v1",
   "source": {
     "duckdb": "read-only YouTube snapshot",
-    "monthly_period": "2026-10-01~2026-10-28",
+    "monthly_period": "2026-11-01~2026-11-01",
     "period_complete": false,
-    "raw_status": "ok",
+    "raw_status": "awaiting_current_month_analytics",
     "source_as_of": {
-      "yt_quality": "2026-10-30T23:56:05+09:00",
-      "owned_media": "2026-10-30T23:56:02+09:00"
+      "yt_quality": "2026-10-31T23:55:59+09:00",
+      "owned_media": "2026-10-31T23:55:58+09:00"
     }
   },
   "required_copy": [
@@ -17,7 +17,7 @@
     "YouTube Analytics 기준",
     "data-yt-period=\"mtd\"",
     "data-owned-media-window=\"youtube\"",
-    "10월 금월 누적",
+    "11월 금월 누적",
     "월 누적과 주차별을 분리",
     "당월 발행 vs 기발행 분리",
     "콘텐츠 D+N 참고",
@@ -32,173 +32,113 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "836만",
-      "em": "10/1–10/28"
+      "value": "0",
+      "em": "11/1–11/1"
     },
     {
       "label": "발행",
-      "value": "32건",
-      "em": "LF 9 · SF 23"
+      "value": "0건",
+      "em": "LF 0 · SF 0"
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "378만",
+      "value": "0",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "449만",
+      "value": "0",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "69,125",
+      "value": "0",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "59,089",
-      "em": "댓글 1,847"
+      "value": "0",
+      "em": "댓글 0"
     },
     {
       "label": "공유",
-      "value": "8,189",
-      "em": "미매칭 9.7만"
+      "value": "0",
+      "em": "미매칭 0"
     }
   ],
   "weekly_rows": [
     {
-      "period": "9/28–10/4",
-      "views": 2552949,
-      "complete": true
-    },
-    {
-      "period": "10/5–10/11",
-      "views": 1236516,
-      "complete": true
-    },
-    {
-      "period": "10/12–10/18",
-      "views": 2339592,
-      "complete": true
-    },
-    {
-      "period": "10/19–10/25",
-      "views": 2403780,
-      "complete": true
-    },
-    {
       "period": "10/26–11/1",
-      "views": 1140839,
+      "views": 1645276,
       "complete": false
     }
   ],
-  "content_cards": [
-    "XRHJMcyc8II",
-    "59Z5XmwMocQ",
-    "PQ11pTcf1is",
-    "DOC7CnlB2wU",
-    "fjyTFOaxMDc",
-    "J3i63WQ5Uak"
-  ],
+  "content_cards": [],
   "verified_api": {
-    "actual_end": "2026-10-28",
-    "captured_at": "2026-10-31T21:56:37.158196+09:00",
-    "discovered_count": 2,
-    "sha256": "6a8668c7f1bc7300fa7d73fb248aaae3c698a27b7d381ce2b0f5c4fcf6506943"
+    "actual_end": "2026-10-29",
+    "captured_at": "2026-11-01T10:20:41.025170+09:00",
+    "discovered_count": 1,
+    "sha256": "2b2ee500ee2981ee872bcc36e479222559ad4b9ec8460dfd4ac2d627702199ba"
   },
   "schedule_coverage": {
-    "source_count": 42,
-    "matched_count": 29,
-    "extra_count": 13,
+    "source_count": 9,
+    "matched_count": 0,
+    "extra_count": 9,
     "issue_count": 0,
-    "published_unmatched_count": 3,
-    "published_count": 32,
-    "empty_slot_count": 3,
-    "rendered_count": 45,
-    "captured_at": "2026-10-31T21:56:33+09:00",
-    "source_sha256": "7b5cbf5c41cf0f6ee03b6fc793e86131ba1223e06f034724e34fb39cf66cd67b",
+    "published_unmatched_count": 0,
+    "published_count": 0,
+    "empty_slot_count": 51,
+    "rendered_count": 9,
+    "captured_at": "2026-11-01T10:20:34+09:00",
+    "source_sha256": "a667955eaf1a13edf1fc1e3ffc4c7ec6f45b6c5735a5c581ddd87823c1d401fa",
     "source_keys": [
-      "0ab7dd244dd2d76fe117e4d2",
-      "1196b82ad2cad5866d20b660",
-      "18a2ab49aaff51ed6472dd5e",
-      "2159dc9957c9e6b6edea8d11",
-      "2de5c76ee90dcdf1fe0fda54",
-      "35151453fe41d330a957dd21",
-      "381a35dbb0c344385def3547",
-      "38334fe05a3ad3698eb51534",
-      "3d969348ed3db4eac0cff1a7",
-      "42fa0648770359f6936c9683",
-      "52058b6ee02acaee1c84cb62",
-      "594f847e565628c58689eba3",
-      "599557f758484cdc48101dc0",
-      "5ba73ec44736dd52159eccb2",
-      "5d794fd40739fbd62342049c",
-      "5d832145dcd8f88f125f410b",
-      "632fb607b6b6979917c11800",
-      "696d6fd74cf4c0b518757b50",
-      "7a4fa4b04217251fc7ea74e0",
-      "81b73611c215e79380179994",
-      "82a55702b37edb0712752e95",
-      "8513966471b3d79c17fc1c1e",
-      "8738b1bde55845cd8e16c18d",
-      "93f42046e34805ff5e341491",
-      "98b3ef75bc7e6a9029ff1da0",
-      "ac9c2a57ccec04860cbea234",
-      "b62e1a4de1d16e80dcba0ec5",
-      "b7ec7a67153731b9fea1d3ed",
-      "be4f250ee93c27b475275c9a",
-      "bf72d66a0e67e7814e28a8d2",
-      "c2a496221888d6699225b3b5",
-      "c7fc7d113eaa3194ea64d480",
-      "cef0d5de6b618871d1bbb184",
-      "d5197cd93fe78b4bdadbc9f2",
-      "d8fbc4ad76edb889d47aef41",
-      "dad7c5862df532b99ad14c60",
-      "dc8d78fb3bf920880792c005",
-      "de9667892d6d4bd38f65f807",
-      "e8f24d345b02715967d1b1ba",
-      "ea739e2441968e3e1648327c",
-      "f49fb8b0e216300bf264ea33",
-      "f6d9bbae20da102177ca1fdb"
+      "1d1ba70065e195f900c97104",
+      "1df1f7ed9f8259e719df401a",
+      "3b459e6b0733739f11577dfa",
+      "4b6661b1aabd01dbf8950993",
+      "8866e54ec910c975e517f87b",
+      "c7dc328c1186992b39ac27de",
+      "e5c3eb6b57fb40a449ae2855",
+      "ea80fb2de3ca49691d0d504b",
+      "fbc7676151a19f9efd9b52e2"
     ],
     "planned": 0,
-    "unmatched": 1,
-    "community": 11,
-    "slot": 1,
+    "unmatched": 0,
+    "community": 0,
+    "slot": 9,
     "other_period": 0
   },
   "main_surface": {
     "year": 2026,
-    "month": 10,
-    "publish_count": 32,
-    "lf_publish_count": 9,
-    "sf_publish_count": 23,
-    "latest_publish_date": "2026-10-30",
-    "snapshot_date": "2026-10-30",
-    "elapsed_weeks": 5,
+    "month": 11,
+    "publish_count": 0,
+    "lf_publish_count": 0,
+    "sf_publish_count": 0,
+    "latest_publish_date": null,
+    "snapshot_date": "2026-10-31",
+    "elapsed_weeks": 1,
     "quality_basis": "analytics-d7",
-    "d7_completed": 23,
-    "average_views": 113107,
-    "lf_average_views": 154527,
-    "sf_average_views": 94985,
+    "d7_completed": 0,
+    "average_views": 0,
+    "lf_average_views": 0,
+    "sf_average_views": 0,
     "subscriber_count": 809000,
-    "previous_average_views": 64516
+    "previous_average_views": 108948
   },
   "quality_history": {
-    "9": {
-      "publish_count": 43,
-      "d7_completed": 43,
-      "average_views": 64516,
-      "lf_average_views": 89196,
-      "sf_average_views": 61442
-    },
     "10": {
-      "publish_count": 32,
-      "d7_completed": 23,
-      "average_views": 113107,
+      "publish_count": 34,
+      "d7_completed": 24,
+      "average_views": 108948,
       "lf_average_views": 154527,
-      "sf_average_views": 94985
+      "sf_average_views": 90180
+    },
+    "11": {
+      "publish_count": 0,
+      "d7_completed": 0,
+      "average_views": 0,
+      "lf_average_views": 0,
+      "sf_average_views": 0
     }
   }
 }
