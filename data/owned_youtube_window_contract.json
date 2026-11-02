@@ -6,8 +6,8 @@
     "period_complete": false,
     "raw_status": "awaiting_current_month_analytics",
     "source_as_of": {
-      "yt_quality": "2026-10-31T23:55:59+09:00",
-      "owned_media": "2026-10-31T23:55:58+09:00"
+      "yt_quality": "2026-11-01T23:56:08+09:00",
+      "owned_media": "2026-11-01T23:56:07+09:00"
     }
   },
   "required_copy": [
@@ -37,8 +37,8 @@
     },
     {
       "label": "발행",
-      "value": "0건",
-      "em": "LF 0 · SF 0"
+      "value": "2건",
+      "em": "LF 0 · SF 2"
     },
     {
       "label": "당월/당주 발행 기여",
@@ -69,34 +69,37 @@
   "weekly_rows": [
     {
       "period": "10/26–11/1",
-      "views": 1645276,
+      "views": 2029445,
       "complete": false
     }
   ],
   "content_cards": [],
   "verified_api": {
-    "actual_end": "2026-10-29",
-    "captured_at": "2026-11-01T10:20:41.025170+09:00",
+    "actual_end": "2026-10-30",
+    "captured_at": "2026-11-02T10:21:05.309608+09:00",
     "discovered_count": 1,
-    "sha256": "2b2ee500ee2981ee872bcc36e479222559ad4b9ec8460dfd4ac2d627702199ba"
+    "sha256": "911eba753904f688199c9b942340fef8717329bc3e0d3a5f1e0c3083bea2a42a"
   },
   "schedule_coverage": {
-    "source_count": 9,
-    "matched_count": 0,
-    "extra_count": 9,
+    "source_count": 12,
+    "matched_count": 2,
+    "extra_count": 10,
     "issue_count": 0,
     "published_unmatched_count": 0,
-    "published_count": 0,
-    "empty_slot_count": 51,
-    "rendered_count": 9,
-    "captured_at": "2026-11-01T10:20:34+09:00",
-    "source_sha256": "a667955eaf1a13edf1fc1e3ffc4c7ec6f45b6c5735a5c581ddd87823c1d401fa",
+    "published_count": 2,
+    "empty_slot_count": 49,
+    "rendered_count": 12,
+    "captured_at": "2026-11-02T10:21:02+09:00",
+    "source_sha256": "60291fec2f01498ca36457d9a0ed7b73878cd18525219eeaea2db9f2a6336a39",
     "source_keys": [
+      "139cd968f18faeb0a005b216",
       "1d1ba70065e195f900c97104",
       "1df1f7ed9f8259e719df401a",
       "3b459e6b0733739f11577dfa",
       "4b6661b1aabd01dbf8950993",
       "8866e54ec910c975e517f87b",
+      "9799c697f55785254c253230",
+      "98b3ef75bc7e6a9029ff1da0",
       "c7dc328c1186992b39ac27de",
       "e5c3eb6b57fb40a449ae2855",
       "ea80fb2de3ca49691d0d504b",
@@ -104,18 +107,18 @@
     ],
     "planned": 0,
     "unmatched": 0,
-    "community": 0,
+    "community": 1,
     "slot": 9,
     "other_period": 0
   },
   "main_surface": {
     "year": 2026,
     "month": 11,
-    "publish_count": 0,
+    "publish_count": 2,
     "lf_publish_count": 0,
-    "sf_publish_count": 0,
-    "latest_publish_date": null,
-    "snapshot_date": "2026-10-31",
+    "sf_publish_count": 2,
+    "latest_publish_date": "2026-11-01",
+    "snapshot_date": "2026-11-01",
     "elapsed_weeks": 1,
     "quality_basis": "analytics-d7",
     "d7_completed": 0,
@@ -123,18 +126,18 @@
     "lf_average_views": 0,
     "sf_average_views": 0,
     "subscriber_count": 809000,
-    "previous_average_views": 108948
+    "previous_average_views": 106713
   },
   "quality_history": {
     "10": {
       "publish_count": 34,
-      "d7_completed": 24,
-      "average_views": 108948,
+      "d7_completed": 25,
+      "average_views": 106713,
       "lf_average_views": 154527,
-      "sf_average_views": 90180
+      "sf_average_views": 88118
     },
     "11": {
-      "publish_count": 0,
+      "publish_count": 2,
       "d7_completed": 0,
       "average_views": 0,
       "lf_average_views": 0,
