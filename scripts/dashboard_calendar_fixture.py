@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+from dashboard_forecast_state import element_end
 
 _LABELS = {"closed": "확정", "current": "진행 중", "future": "부킹 진행"}
 _GAUGE_CLASS = {"closed": "closed", "current": "cur", "future": "future"}
@@ -62,23 +63,15 @@ def _force_manifest_default_month(html: str, month: int) -> str:
 
 
 def _month_surface(html: str, group: str, month: int) -> str | None:
-    marker = re.compile(rf'class="{re.escape(group)} mv" data-m="(\d+)"')
-    matches = list(marker.finditer(html))
-    for index, match in enumerate(matches):
-        if int(match.group(1)) == month:
-            end = matches[index + 1].start() if index + 1 < len(matches) else len(html)
-            return html[match.start():end]
-    return None
+    # [2026-11-01] 완전한 div만 복제한다 — 다음 월 표식까지 자르면 주변 레이아웃도 섞인다.
+    match = re.search(rf'<div class="{re.escape(group)} mv" data-m="{month}"', html)
+    return html[match.start():element_end(html, match.start())] if match else None
 
 
 def _gauge_surface(html: str, month: int) -> str | None:
-    marker = re.compile(r'class="g [^"]*" data-m="(\d+)"')
-    matches = list(marker.finditer(html))
-    for index, match in enumerate(matches):
-        if int(match.group(1)) == month:
-            end = matches[index + 1].start() if index + 1 < len(matches) else len(html)
-            return html[match.start():end]
-    return None
+    # [2026-11-01] 마지막 게이지도 닫는 div에서 끝낸다 — 범례·사이드바는 원위치에 남긴다.
+    match = re.search(rf'<div class="g [^"]*" data-m="{month}"', html)
+    return html[match.start():element_end(html, match.start())] if match else None
 
 
 def _has_future_layout(html: str, month: int) -> bool:
@@ -153,14 +146,18 @@ def synthetic_month_state(html: str, month: int, *, set_default_month: bool = Fa
     html, cursor_count = re.subn(r"\bvar CUR = \d+;", f"var CUR = {month};", html)
     if cursor_count != 1:
         raise RuntimeError(f"month JS cursor count mismatch: {cursor_count}")
-    next_month = month + 1
-    if next_month <= 12 and not _has_future_layout(html, next_month):
+    # [2026-11-01] A real November artifact can leave multiple post-target
+    #   months with current KPI roles; copy each invalid future month from a
+    #   later valid template before the guard checks phase-specific contracts.
+    for target in (
+        value for value in options if value > month and not _has_future_layout(html, value)
+    ):
         template = next(
-            (value for value in options if value > next_month and _has_future_layout(html, value)),
+            (value for value in options if value > target and _has_future_layout(html, value)),
             None,
         )
         if template is not None:
-            html = _copy_future_layout(html, next_month, template)
+            html = _copy_future_layout(html, target, template)
     if set_default_month:
         html = _force_manifest_default_month(html, month)
     return html

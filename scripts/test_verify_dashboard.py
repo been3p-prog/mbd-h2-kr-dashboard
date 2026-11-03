@@ -268,8 +268,11 @@ class DashboardGuardTest(unittest.TestCase):
             self.assertNotIn('data-live-week-group=', self.html)
         else:
             self.assertIn('data-live-week-group=', self.html)
-            self.assertIn('data-live-retro="available"', self.html)
-            self.assertIn('class="live-retro-trigger"', self.html)
+            # [2026-11-03] 월 초에는 방송만 있고 회고가 아직 없을 수 있다 — available 또는 pending 중 하나를 요구한다.
+            retro_available = 'data-live-retro="available"' in self.html
+            self.assertTrue(retro_available or 'data-live-retro="pending"' in self.html)
+            if retro_available:
+                self.assertIn('class="live-retro-trigger"', self.html)
             self.assertIn('편성별 회고', self.html)
             self.assertGreaterEqual(self.html.count('data-live-broadcast-card='), 1)
         self.assertNotIn('data-live-weekly-analysis=', self.html)
@@ -768,7 +771,20 @@ class DashboardGuardTest(unittest.TestCase):
                 self.assertNotIn("MoM", tip_html)
                 self.assertIn("마감예상", tip_html)
                 self.assertEqual(tip_html.count('class="tr"'), 4)
-                self.assertIn('유상 상세', tip_html)
+                # [2026-11-01] 새 달의 계약 0건도 정상이다 — 제목 유무 대신 구분별 건수와 상세를 대조한다.
+                buckets = {}
+                for section in tip_html.split('<div class="tr">')[1:]:
+                    row = re.match(r'<span>([^<]+)<small>(\d+)건</small></span><b>[^<]+</b></div>', section)
+                    if row is None:
+                        continue
+                    bucket, count = row[1], int(row[2])
+                    self.assertNotIn(bucket, buckets)
+                    buckets[bucket] = count
+                    item_counts = [int(value) for value in
+                                   re.findall(r'<small class="flat">(\d+)건</small>', section)]
+                    self.assertEqual(sum(item_counts), count, bucket)
+                    self.assertEqual(section.count('class="isubs"'), int(count > 0), bucket)
+                self.assertEqual(set(buckets), {"유상", "무상지원", "정부지원"})
                 continue
             self.assertEqual(tip_html.count('class="tr"'), 3)
             self.assertEqual(tip_html.count("MoM "), 3)

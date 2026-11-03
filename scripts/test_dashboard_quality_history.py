@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent))
 import dashboard_quality_history as history
+import dashboard_calendar_fixture as calendar_fixture
 import refresh_live_daily_from_duckdb as live
 import refresh_owned_youtube_window_from_duckdb as youtube
 import test_finalize_month_review as close_fixture
@@ -88,7 +89,12 @@ class QualityHistoryTest(unittest.TestCase):
         fixture.setUp()
         current = dict(fixture.current, as_of="2026-09-30", range_label="9/1~9/30")
         previous = dict(fixture.previous, as_of="2026-08-31")
-        seeded = live.update_default_month_state(self.html, 9, year=2026)
+        # [2026-11-01] Normalize the November artifact before this September close fixture.
+        seeded = live.update_default_month_state(
+            calendar_fixture.synthetic_month_state(self.html, 9),
+            9,
+            year=2026,
+        )
         seeded = live.update_current_raw_surfaces(seeded, current)
         seeded = update_forecast_surfaces(seeded, current, {"ad_gen": 600_000_000, "ad_int": 30_000_000, "live": None, "status": "pending_scope"})
         result = finalize_month_review(seeded, current, previous)
