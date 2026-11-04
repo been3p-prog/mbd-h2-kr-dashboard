@@ -79,9 +79,9 @@
   ],
   "verified_api": {
     "actual_end": "2026-11-01",
-    "captured_at": "2026-11-04T10:21:16.079935+09:00",
+    "captured_at": "2026-11-04T16:25:18.474692+09:00",
     "discovered_count": 0,
-    "sha256": "9a9875a2100ceeaafa07433d7d66690d28dc0c69e8f0ddb58f4f2fe218938afd"
+    "sha256": "14fed0569023861a409b27173fd5f1cd306b3e98b2fd869730df4a2af8a3b3ee"
   },
   "schedule_coverage": {
     "source_count": 18,
@@ -92,8 +92,8 @@
     "published_count": 5,
     "empty_slot_count": 41,
     "rendered_count": 18,
-    "captured_at": "2026-11-04T10:21:08+09:00",
-    "source_sha256": "1acab51d0aed128ed571814776bd5de0cae89661bda73ac139176f58c15c1a5d",
+    "captured_at": "2026-11-04T16:25:14+09:00",
+    "source_sha256": "b10952257e9f51683c77bcbba266ec368de469266de0fb43e2e4cf3e277491b6",
     "source_keys": [
       "0215742667c6f173f9f6cb11",
       "116979d137c6f974b07bbed4",
