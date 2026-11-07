@@ -2,12 +2,12 @@
   "contract_id": "owned-youtube-window-2026-11-mtd-v1",
   "source": {
     "duckdb": "read-only YouTube snapshot",
-    "monthly_period": "2026-11-01~2026-11-03",
+    "monthly_period": "2026-11-01~2026-11-04",
     "period_complete": false,
     "raw_status": "ok",
     "source_as_of": {
-      "yt_quality": "2026-11-05T23:56:01+09:00",
-      "owned_media": "2026-11-05T23:56:00+09:00"
+      "yt_quality": "2026-11-06T23:56:07+09:00",
+      "owned_media": "2026-11-06T23:56:06+09:00"
     }
   },
   "required_copy": [
@@ -32,76 +32,77 @@
   "hero_kpis": [
     {
       "label": "조회수",
-      "value": "68만",
-      "em": "11/1–11/3"
+      "value": "82만",
+      "em": "11/1–11/4"
     },
     {
       "label": "발행",
-      "value": "7건",
-      "em": "LF 2 · SF 5"
+      "value": "8건",
+      "em": "LF 2 · SF 6"
     },
     {
       "label": "당월/당주 발행 기여",
-      "value": "3.9만",
+      "value": "4.8만",
       "em": "기간 내 발행 cohort"
     },
     {
       "label": "기발행 기여",
-      "value": "64만",
+      "value": "77만",
       "em": "기존 library cohort"
     },
     {
       "label": "인게이지먼트",
-      "value": "2,709",
+      "value": "3,307",
       "em": "좋아요+댓글+공유"
     },
     {
       "label": "좋아요",
-      "value": "2,019",
-      "em": "댓글 89"
+      "value": "2,418",
+      "em": "댓글 108"
     },
     {
       "label": "공유",
-      "value": "601",
-      "em": "미매칭 2,681"
+      "value": "781",
+      "em": "미매칭 5,147"
     }
   ],
   "weekly_rows": [
     {
       "period": "10/26–11/1",
-      "views": 2607669,
+      "views": 2600525,
       "complete": true
     },
     {
       "period": "11/2–11/8",
-      "views": 403748,
+      "views": 553614,
       "complete": false
     }
   ],
   "content_cards": [
     "rsLH3qZ_1xk",
+    "eSXDLv-0pkw",
     "ZTFgiokEzMQ",
     "D3153AR6S7w",
-    "pP1HgxieiE0",
-    "AkxA7KDB83Q"
+    "AkxA7KDB83Q",
+    "pP1HgxieiE0"
   ],
   "verified_api": {
-    "actual_end": "2026-11-03",
-    "captured_at": "2026-11-06T10:20:31.381522+09:00",
+    "actual_end": "2026-11-04",
+    "captured_at": "2026-11-07T10:21:08.779062+09:00",
     "discovered_count": 1,
-    "sha256": "bfdf3c0f2bf8797e7570eb03e413699fdba854abe1d5704049ccad6a76e81c14"
+    "sha256": "f852da0c7b87251ef85da55117de8e2f26bbccff7ec010eb078ec3d0b1beee51"
   },
   "schedule_coverage": {
     "source_count": 18,
     "matched_count": 6,
     "extra_count": 12,
     "issue_count": 0,
-    "published_unmatched_count": 1,
-    "published_count": 7,
+    "published_unmatched_count": 2,
+    "published_count": 8,
     "empty_slot_count": 41,
-    "rendered_count": 19,
-    "captured_at": "2026-11-06T10:20:27+09:00",
-    "source_sha256": "1232a6b454d5d8c12906d0e4066bb635edd9a92d33b0d3a9aa544e204d290d4f",
+    "rendered_count": 20,
+    "captured_at": "2026-11-07T10:21:03+09:00",
+    "source_sha256": "acf88b6be92e789448c7542590306cff4b7d54f1016863986b35a0446fe8d867",
     "source_keys": [
       "0215742667c6f173f9f6cb11",
       "116979d137c6f974b07bbed4",
@@ -122,8 +123,8 @@
       "ea1e988f4c5a1d98f2300aaf",
       "fbc7676151a19f9efd9b52e2"
     ],
-    "planned": 2,
-    "unmatched": 2,
+    "planned": 1,
+    "unmatched": 3,
     "community": 1,
     "slot": 7,
     "other_period": 0
@@ -131,11 +132,11 @@
   "main_surface": {
     "year": 2026,
     "month": 11,
-    "publish_count": 7,
+    "publish_count": 8,
     "lf_publish_count": 2,
-    "sf_publish_count": 5,
-    "latest_publish_date": "2026-11-05",
-    "snapshot_date": "2026-11-05",
+    "sf_publish_count": 6,
+    "latest_publish_date": "2026-11-06",
+    "snapshot_date": "2026-11-06",
     "elapsed_weeks": 1,
     "quality_basis": "analytics-d7",
     "d7_completed": 0,
@@ -143,18 +144,18 @@
     "lf_average_views": 0,
     "sf_average_views": 0,
     "subscriber_count": 809000,
-    "previous_average_views": 128173
+    "previous_average_views": 125927
   },
   "quality_history": {
     "10": {
       "publish_count": 34,
-      "d7_completed": 30,
-      "average_views": 128173,
-      "lf_average_views": 273328,
+      "d7_completed": 31,
+      "average_views": 125927,
+      "lf_average_views": 249466,
       "sf_average_views": 75389
     },
     "11": {
-      "publish_count": 7,
+      "publish_count": 8,
       "d7_completed": 0,
       "average_views": 0,
       "lf_average_views": 0,
